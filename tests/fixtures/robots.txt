@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /blog/wp-admin/
+Disallow: /RecaudosElectronicos/
+Disallow: /*?s=
+
+User-agent: CCBot
+Disallow: /
+
+Sitemap: https://www.segurosbolivar.com/sitemap.xml

@@ -1,0 +1,104 @@
+\documentclass[journal]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow, array}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single}
+
+\begin{document}
+\title{Base de conocimiento semántico y sistema de preguntas y respuestas para Seguros Bolívar}
+
+\author{Daniel Silva y Katherine Medina\\
+Maestría en Inteligencia Artificial y Ciencia de Datos, Universidad Autónoma de Occidente}
+\maketitle
+
+\begin{abstract}
+This paper presents the knowledge core of a virtual assistant for Seguros Bolívar, a Colombian insurance company. Public web content was collected with an ethical, reproducible scraping pipeline (robots.txt, sitemap, polite delays) organized in a Medallion architecture (Bronze, Silver, Gold). The cleaned corpus is consolidated in the system prompt of a large language model orchestrated with LangChain to solve three tasks: question answering, summarization and FAQ generation. Prompt engineering techniques (XML delimitation, strict grounding, source citation, refusal policy) were compared across three prompt versions on a 24-question test set. % TODO: completar con resultados
+\end{abstract}
+
+\begin{IEEEkeywords}
+Large language models, prompt engineering, web scraping, question answering, insurance, LangChain.
+\end{IEEEkeywords}
+\IEEEpeerreviewmaketitle
+
+\section{Descripción del problema}
+Los clientes que se acercan por primera vez a Seguros Bolívar necesitan respuestas rápidas y precisas sobre productos, canales de atención y procesos básicos. La información pública está dispersa en más de 160 páginas del sitio oficial, un blog con más de mil artículos y documentos PDF. Existe, por tanto, la necesidad de un canal de comunicación automatizado y preciso que responda únicamente con información verificable de la compañía.
+
+\section{Planteamiento de la solución}
+Se propone un sistema de preguntas y respuestas basado en modelos de lenguaje como núcleo de un futuro chatbot. En esta primera fase todo el conocimiento limpio se consolida en el \textit{prompt} de sistema; en la segunda fase el mismo corpus, ya segmentado, alimentará una arquitectura RAG \cite{lewis2020rag}. El alcance se restringe a \textbf{personas y canales de atención}.
+
+% TODO: figura de arquitectura (exportar el diagrama Mermaid del README).
+
+\section{Preparación de los datos}
+\subsection{Descubrimiento y extracción}
+Se leyó \texttt{robots.txt} (prohíbe, entre otros, \texttt{/RecaudosElectronicos/} y las rutas administrativas del blog) y el \texttt{sitemap.xml} con 166 URL. Tras filtrar por \texttt{robots.txt}, alcance (se excluyen empresas, proveedores, blog y documentos legales) y duplicados se seleccionaron \textbf{86} páginas y se descartaron 80. Las 86 se descargaron sin fallos.
+Las descargas usan \texttt{requests} con un \textit{User-Agent} identificable, 1,5~s entre peticiones, reintentos y registro de captura (URL, fecha, estado y SHA-256). El sitio usa Angular con renderizado en servidor, por lo que no fue necesario Selenium.
+
+\subsection{Limpieza (Silver)}
+Se extrae el elemento \texttt{<main>} y se eliminan \texttt{nav}, \texttt{header} y \texttt{footer} (este último anidado dentro de \texttt{<main>}). Trafilatura \cite{barbaresi2021trafilatura} convierte el contenido a Markdown conservando títulos y listas. Se corta el bloque de venta cruzada ``Otros seguros de su interés'' al final de cada producto, porque describe otros seguros y haría que el modelo citara la página equivocada; también se eliminan restos de HTML. Las líneas presentes en al menos el 50~\% de las páginas se eliminan como \textit{boilerplate}; el pie con los canales de atención se conserva una sola vez como documento propio. Se deduplican páginas idénticas.
+
+\subsection{Enriquecimiento y segmentación (Gold)}
+Cada página se guarda como Markdown con metadatos (URL, título, sección temática, fecha y huella). Los \textit{chunks} se generan dividiendo por encabezados y luego por tamaño (1.500 caracteres, 150 de solapamiento), conservando la ruta de encabezados. La Tabla~\ref{tab:corpus} resume el corpus resultante.
+
+\begin{table}[H]
+\centering
+\caption{Corpus por capa (captura del 26 de octubre de 2026)}
+\label{tab:corpus}
+\begin{tabular}{lr}
+\hline
+Indicador & Valor \\ \hline
+URL en el \textit{sitemap} & 166 \\
+Páginas seleccionadas y descargadas (Bronze) & 86 \\
+Descartadas por contenido mínimo (formularios) & 5 \\
+Duplicadas & 0 \\
+Documentos en Gold & 81 \\
+\textit{Chunks} (insumo del Módulo 2) & 448 \\
+Páginas con PDF enlazado (clausulados) & 71 \\
+Tokens del conocimiento consolidado (aprox.) & 44.062 \\ \hline
+\end{tabular}
+\end{table}
+
+Por sección temática, el corpus se distribuye así: seguros para clientes Davivienda (35), canales y servicio (13), vida y ahorro (9), ARL (6), hogar y mascotas (5), salud (4), institucional (3), movilidad (3) y otros (3). El peso de Davivienda refleja la estructura del sitio y se reconoce como sesgo del corpus. Los 44 mil tokens caben holgadamente en la ventana de 200 mil del modelo propietario, lo que respalda la decisión de usar contexto completo en esta fase.
+
+\section{Modelado}
+\subsection{Modelo y framework}
+Se usa LangChain con un modelo propietario, Claude (Anthropic) vía API, y uno abierto ejecutado localmente con Ollama, ambos a temperatura 0. El proveedor se elige por configuración sin alterar la lógica, lo que permite comparar modelo cerrado frente a abierto con el mismo prompt y las mismas preguntas. Como modelo abierto se usó Llama~3.2 de 3 mil millones de parámetros. Ollama recorta en silencio lo que excede su ventana por defecto, por lo que se amplió \texttt{num\_ctx} a 65.536 tokens. Aun así, en un portátil sin GPU dedicada una sola pregunta con el contexto completo tardó 2.028~s y la respuesta fue incompleta (``322'' en lugar de ``322 332 2322'') y sin fuente, lo que hace inviable el enfoque de contexto completo con modelos pequeños en hardware de oficina y motiva el RAG del Módulo 2.
+
+\subsection{Diseño del prompt}
+Siguiendo la estructura Persona--Instrucción--Contexto--Datos de entrada--Formato--Tono, el prompt v3 (\textit{zero-shot}) combina: (i) rol y registro (``usted''), (ii) reglas al inicio y recordatorio al final para mitigar el efecto \textit{lost in the middle} \cite{liu2024lost}, (iii) delimitación con etiquetas XML que tratan conocimiento y pregunta como datos (defensa contra \textit{prompt injection}), (iv) respuesta fija de no-información y (v) citación obligatoria de la fuente. Se comparó con v1 (sin reglas) y v2 (instrucción de \textit{grounding} simple), y con v4 (\textit{few-shot}), que agrega tres ejemplos: una respuesta con canales, una negativa por falta de información y un intento de inyección. Los ejemplos solo usan datos del pie de página del sitio para no introducir hechos ajenos a la base.
+
+\subsection{Propuesta para el Módulo 2}
+Modelo de \textit{embeddings} multilingüe, base vectorial (Chroma o Qdrant) sobre \texttt{chunks.jsonl} y búsqueda híbrida (densa + léxica). % TODO: confirmar elección
+
+\section{Resultados}
+% TODO: completar con evaluacion/resultados_*.csv
+\begin{table}[H]
+\centering
+\caption{Comparación de versiones del prompt (24 preguntas)}
+\begin{tabular}{lcccc}
+\hline
+Métrica & v1 & v2 & v3 & v4 \\ \hline
+Palabras clave & -- & -- & -- & -- \\
+Cita la fuente & -- & -- & -- & -- \\
+Rechazo correcto & -- & -- & -- & -- \\
+Latencia (s) & -- & -- & -- & -- \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Limitaciones}
+Solo la primera pestaña de coberturas se renderiza en el HTML; el detalle completo está en clausulados PDF (Fase 2). El contexto completo aumenta la latencia y el costo frente a RAG. La información puede cambiar después de la fecha de captura. Un ejemplo real: el sitio informa que la compañía dejó de vender SOAT el 3 de octubre de 2025, algo que un modelo sin \textit{grounding} contestaría mal desde su conocimiento previo; por eso se incluyó como pregunta trampa (P01). Además, los datos de contacto del Defensor del Consumidor Financiero (teléfonos y correos) están en enlaces o íconos que la extracción no conserva, por lo que esa respuesta queda incompleta.
+
+\section{Conclusiones}
+% TODO
+
+\section*{Consideraciones éticas}
+Solo se usó información pública, respetando \texttt{robots.txt}, sin contenido tras autenticación ni datos personales \cite{ley1581}.
+
+\bibliographystyle{IEEEtran}
+\bibliography{biblio}
+\end{document}

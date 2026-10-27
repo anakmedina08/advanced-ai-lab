@@ -1,0 +1,46 @@
+# `pre-commit install` instala ambos ganchos: revisión de código y mensaje semántico.
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: forbid-data-and-secrets
+        name: Bloquear datos scrapeados, .env, pesos y notebooks
+        entry: data/, .env, pesos y notebooks no se versionan
+        language: fail
+        files: (^data/.*\.(html|txt|md|jsonl|json|csv)$|^\.env$|\.(joblib|pt|h5|onnx|safetensors|ipynb)$)
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      # Revisión semántica con IA contra AGENTS.md (después de lo barato).
+      - id: gga
+        name: Gentleman Guardian Angel (AGENTS.md)
+        entry: gga run
+        language: system
+        pass_filenames: false
+        files: \.(py|toml|ya?ml)$
+      # Commits auditados con mensajes semánticos (evidencia pedida en cada entrega).
+      - id: conventional-commit
+        name: Conventional Commits
+        entry: uv run python scripts/check_commit_msg.py
+        language: system
+        stages: [commit-msg]

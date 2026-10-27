@@ -1,0 +1,9 @@
+# Gentleman Guardian Angel · revisión con IA contra AGENTS.md en cada commit
+# Para código de Seguros Bolívar se recomienda un modelo local (ollama) o un proveedor sin retención.
+PROVIDER="claude"
+FILE_PATTERNS="*.py,*.toml,*.yml,*.yaml"
+EXCLUDE_PATTERNS="uv.lock,tests/fixtures/*"
+RULES_FILE="AGENTS.md"
+STRICT_MODE="true"
+TIMEOUT="300"
+PR_BASE_BRANCH="develop"

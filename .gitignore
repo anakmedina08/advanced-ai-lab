@@ -1,0 +1,41 @@
+# Entornos y bytecode
+__pycache__/
+*.py[cod]
+.venv/
+
+# Datos: Bronze/Silver/Gold NO se versionan (se regeneran con `sb discover/scrape/process`)
+data/raw/*
+data/silver/*
+data/gold/*
+!data/*/.gitkeep
+
+# Resultados de evaluación generados (el banco de preguntas SÍ se versiona)
+evaluacion/resultados*.csv
+
+# Secretos
+.env
+*.log
+
+# Pesos, notebooks y artefactos
+*.ipynb
+.ipynb_checkpoints/
+*.joblib
+*.pt
+*.h5
+*.onnx
+*.safetensors
+
+# Herramientas
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+informe/*.aux
+informe/*.log
+informe/*.out
+informe/*.bbl
+informe/*.blg
+
+.DS_Store
