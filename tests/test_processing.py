@@ -229,3 +229,58 @@ def test_process_reapplies_scope_without_rescraping(tmp_path, session, monkeypat
     summary = pipeline.process(bronze, tmp_path / "silver", tmp_path / "gold")
     assert summary["descartadas_fuera_de_alcance"] == [f"{BASE}/soat"]
     assert summary["documentos"] == 2
+
+
+# --- Métricas por etapa para la UI ---------------------------------------------------
+
+
+@pytest.fixture
+def built(tmp_path, session, monkeypatch):
+    monkeypatch.setattr("sb_asistente.scraping.fetch.time.sleep", lambda s: None)
+    bronze, silver, gold_dir = tmp_path / "raw", tmp_path / "silver", tmp_path / "gold"
+    pipeline.discover(session, bronze)
+    pipeline.scrape(session, bronze)
+    pipeline.process(bronze, silver, gold_dir)
+    return bronze, gold_dir
+
+
+def test_stage_report_has_five_stages_in_order(built):
+    etapas = [s["etapa"] for s in pipeline.stage_report(*built)]
+    assert etapas == ["1. Descubrir", "2. Extraer", "3. Limpiar", "4. Deduplicar", "5. Enriquecer"]
+
+
+def test_stage_report_marks_all_stages_done(built):
+    assert all(s["hecha"] for s in pipeline.stage_report(*built))
+
+
+def test_stage_report_counts_downloaded_pages(built):
+    extraer = pipeline.stage_report(*built)[1]["metricas"]
+    assert extraer["Páginas descargadas (200)"] == 4
+
+
+def test_stage_report_counts_duplicates(built):
+    dedup = pipeline.stage_report(*built)[3]["metricas"]
+    assert dedup["Páginas duplicadas descartadas"] == 1
+
+
+def test_stage_report_counts_gold_documents(built):
+    enriquecer = pipeline.stage_report(*built)[4]["metricas"]
+    assert enriquecer["Documentos"] == 3
+
+
+def test_stage_report_without_data_is_empty_not_error(tmp_path):
+    report = pipeline.stage_report(tmp_path / "raw", tmp_path / "gold")
+    assert not any(s["hecha"] for s in report)
+
+
+def test_corpus_table_has_required_metadata(built):
+    fila = pipeline.corpus_table(built[1])[0]
+    assert {"url", "titulo", "seccion", "fecha_captura", "sha256", "tokens"} <= set(fila)
+
+
+def test_corpus_table_one_row_per_document(built):
+    assert len(pipeline.corpus_table(built[1])) == 3
+
+
+def test_corpus_table_without_gold_is_empty(tmp_path):
+    assert pipeline.corpus_table(tmp_path) == []
