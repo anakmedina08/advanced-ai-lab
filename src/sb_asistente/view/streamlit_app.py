@@ -12,10 +12,14 @@ import streamlit as st
 from sb_asistente import pipeline
 from sb_asistente.config import BASE_URL, EVAL_RESULTS, GOLD_DIR, LLM_PROVIDER
 from sb_asistente.evaluation import read_results, summarize_results
-from sb_asistente.llm import prompts
+from sb_asistente.llm import prompts, retrieval
 from sb_asistente.llm.service import KnowledgeAssistant, build_llm, context_budget, load_knowledge
 
 st.set_page_config(page_title="Asistente Seguros Bolívar", page_icon="🛡️", layout="wide")
+
+
+LITE_NUM_CTX = 8192  # ventana de Ollama en modo de contexto reducido
+MAX_TOKENS_ANY = 10_000_000  # solo se lee el archivo para extraer el bloque de canales
 
 
 @st.cache_resource(show_spinner="Cargando la base de conocimiento…")
@@ -24,7 +28,23 @@ def get_assistant(provider: str) -> KnowledgeAssistant:
     return KnowledgeAssistant(build_llm(provider), load_knowledge(max_tokens=context_budget(provider)))
 
 
-def sidebar() -> tuple[str, str]:
+@st.cache_resource(show_spinner="Preparando el modo de contexto reducido…")
+def get_lite_resources(provider: str) -> tuple[object, list[dict[str, object]], str]:
+    """Modelo con ventana pequeña, chunks de Gold y bloque de canales para el contexto reducido."""
+    canales = retrieval.channels_block(load_knowledge(max_tokens=MAX_TOKENS_ANY))
+    return build_llm(provider, num_ctx=LITE_NUM_CTX), retrieval.load_chunks(), canales
+
+
+def answer_question(provider: str, question: str, version: str, lite: bool) -> object:
+    """Responde con toda la base o, en modo reducido, solo con los fragmentos más relevantes."""
+    if not lite:
+        return get_assistant(provider).answer(question, version=version)
+    llm, chunks, canales = get_lite_resources(provider)
+    contexto = canales + "\n" + retrieval.select_context(question, chunks)
+    return KnowledgeAssistant(llm, contexto).answer(question, version=version)
+
+
+def sidebar() -> tuple[str, str, bool]:
     """Panel lateral: proveedor, versión de prompt y estadísticas del corpus."""
     st.sidebar.header("Configuración")
     provider = st.sidebar.selectbox(
@@ -36,6 +56,12 @@ def sidebar() -> tuple[str, str]:
         index=list(prompts.QA_SYSTEM).index("v3"),
         help="v1: ingenuo · v2: grounding simple · v3: zero-shot estructurado · v4: few-shot",
     )
+    lite = st.sidebar.toggle(
+        "Contexto reducido (rápido en CPU)",
+        value=provider == "ollama",
+        help="Envía solo los fragmentos más parecidos a la pregunta, con su URL. "
+        "Con Claude se recomienda apagarlo: va toda la base (diseño de la Fase 1).",
+    )
     summary_path = GOLD_DIR / "resumen.json"
     if summary_path.is_file():
         s = json.loads(summary_path.read_text(encoding="utf-8"))
@@ -43,7 +69,7 @@ def sidebar() -> tuple[str, str]:
         st.sidebar.metric("Chunks (Fase 2)", s["chunks"])
         st.sidebar.metric("Tokens de contexto (aprox.)", f"{s['tokens_conocimiento_est']:,}")
     st.sidebar.caption("Fuente: información pública de segurosbolivar.com · Proyecto académico UAO")
-    return provider, version
+    return provider, version, lite
 
 
 METRIC_LABELS = {
@@ -152,9 +178,9 @@ def pipeline_tab() -> None:
 def main() -> None:
     """Compone la página. La pestaña de Evaluación funciona aunque el modelo no esté disponible."""
     st.title("🛡️ Asistente de Seguros Bolívar · Personas y canales")
-    provider, version = sidebar()
+    provider, version, lite = sidebar()
     try:
-        assistant, error = get_assistant(provider), None
+        assistant, error = (None if lite else get_assistant(provider)), None
     except Exception as exc:  # noqa: BLE001 - se muestra al usuario
         assistant, error = None, f"No se pudo iniciar el asistente ({provider}): {exc}"
 
@@ -164,13 +190,20 @@ def main() -> None:
     with scraping:
         pipeline_tab()
     with qa:
-        if assistant is None:
+        if error:
             st.error(error)
         else:
             question = st.text_input("Escriba su pregunta", placeholder="¿Cuál es el WhatsApp de atención?")
             if st.button("Responder", type="primary", disabled=not question.strip()):
-                with st.spinner("Consultando…"):
-                    ans = assistant.answer(question, version=version)
+                modo = "contexto reducido" if lite else "toda la base"
+                with st.spinner(f"Consultando con {provider} ({modo})…"):
+                    try:
+                        st.session_state["qa"] = answer_question(provider, question, version, lite)
+                    except Exception as exc:  # noqa: BLE001 - p. ej., Ollama apagado o sin clave
+                        st.session_state.pop("qa", None)
+                        st.error(f"No se pudo responder con {provider}: {exc}")
+            if "qa" in st.session_state:  # se conserva aunque la página se recargue
+                ans = st.session_state["qa"]
                 st.markdown(ans.text)
                 st.caption(
                     f"{ans.latency_s:.1f} s · prompt {ans.prompt_version} · "
@@ -181,7 +214,7 @@ def main() -> None:
                     st.markdown("**Fuentes citadas:**\n" + "\n".join(f"- [{u}]({u})" for u in fuentes))
     with summary:
         if assistant is None:
-            st.error(error)
+            st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
         else:
             topic = st.selectbox("Tema", prompts.TOPICS, key="topic_summary")
             if st.button("Generar resumen"):
@@ -189,7 +222,7 @@ def main() -> None:
                     st.markdown(assistant.summarize(topic).text)
     with faq:
         if assistant is None:
-            st.error(error)
+            st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
         else:
             topic = st.selectbox("Tema", prompts.TOPICS, index=1, key="topic_faq")
             n = st.slider("Número de preguntas", 3, 10, 5)

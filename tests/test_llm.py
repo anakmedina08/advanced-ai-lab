@@ -276,3 +276,67 @@ def test_cli_eval_limit_writes_sample_file(monkeypatch, capsys, tmp_path):
     out = capsys.readouterr().out
     assert "Evaluando 2 preguntas · modelo ollama" in out and "[2/2]" in out
     assert (tmp_path / "resultados_ollama_v3_muestra2.csv").is_file()
+
+
+# --- Contexto reducido para modelos locales -----------------------------------------
+from sb_asistente.llm.retrieval import normalize_words, select_context  # noqa: E402
+
+CHUNKS = [
+    {
+        "title": "Canales",
+        "breadcrumb": "Contacto",
+        "url": "https://www.segurosbolivar.com/canales",
+        "text": "Escríbenos por WhatsApp al 322 332 2322.",
+        "tokens_est": 20,
+    },
+    {
+        "title": "SOAT",
+        "breadcrumb": "",
+        "url": "https://www.segurosbolivar.com/soat",
+        "text": "El SOAT cubre gastos médicos.",
+        "tokens_est": 20,
+    },
+]
+
+
+def test_normalize_words_strips_accents_and_stopwords():
+    assert normalize_words("¿Cuál es el WhatsApp de atención?") == ["whatsapp", "atencion"]
+
+
+def test_select_context_puts_best_chunk_with_its_url():
+    contexto = select_context("cual es el whatsapp de atencion", CHUNKS)
+    assert contexto.startswith("### Canales\nFuente: https://www.segurosbolivar.com/canales")
+
+
+def test_select_context_skips_chunks_without_matches():
+    assert "SOAT" not in select_context("whatsapp", CHUNKS)
+
+
+def test_select_context_respects_token_budget():
+    assert select_context("whatsapp soat", CHUNKS, max_tokens=25).count("### ") == 1
+
+
+def test_select_context_empty_when_nothing_matches():
+    assert select_context("pirámides de Egipto", CHUNKS) == ""
+
+
+def test_select_context_rejects_non_positive_budget():
+    with pytest.raises(ValueError):
+        select_context("whatsapp", CHUNKS, max_tokens=0)
+
+
+def test_build_llm_ollama_accepts_smaller_window():
+    assert build_llm("ollama", num_ctx=8192).num_ctx == 8192
+
+
+def test_channels_block_extracts_footer_section():
+    from sb_asistente.llm.retrieval import channels_block
+
+    base = "# Base\n\n## Canales de atención (pie)\nWhatsApp: 322\n\n## Salud\n### Plan\ntexto\n"
+    assert channels_block(base) == "## Canales de atención (pie)\nWhatsApp: 322\n"
+
+
+def test_channels_block_empty_when_missing():
+    from sb_asistente.llm.retrieval import channels_block
+
+    assert channels_block("# Base\n\n## Salud\n") == ""

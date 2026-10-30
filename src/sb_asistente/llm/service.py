@@ -54,8 +54,12 @@ class Answer:
         return "No encuentro esa información" in self.text
 
 
-def build_llm(provider: str = LLM_PROVIDER) -> BaseChatModel:
-    """Crea el modelo de chat según el proveedor (importación diferida)."""
+def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseChatModel:
+    """Crea el modelo de chat según el proveedor (importación diferida).
+
+    ``num_ctx`` permite una ventana más chica en Ollama cuando se usa el contexto reducido:
+    menos memoria y respuestas mucho más rápidas en CPU.
+    """
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
@@ -71,7 +75,7 @@ def build_llm(provider: str = LLM_PROVIDER) -> BaseChatModel:
         return ChatOllama(
             model=OLLAMA_MODEL,
             temperature=LLM_TEMPERATURE,
-            num_ctx=OLLAMA_NUM_CTX,
+            num_ctx=num_ctx or OLLAMA_NUM_CTX,
             num_predict=LLM_MAX_OUTPUT_TOKENS,
         )
     raise ValueError(f"Proveedor no soportado: {provider!r} (use 'anthropic' u 'ollama').")
