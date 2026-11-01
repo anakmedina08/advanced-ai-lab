@@ -50,6 +50,8 @@ omit = ["src/sb_asistente/view/streamlit_app.py"]
 
 [tool.ruff]
 line-length = 110
+extend-exclude = [".claude"]  # skill de terceros (jan-project-standard), se versiona tal cual
+force-exclude = true
 target-version = "py313"
 src = ["src", "tests"]
 
