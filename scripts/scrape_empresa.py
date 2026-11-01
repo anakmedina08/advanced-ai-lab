@@ -8,7 +8,7 @@ Uso:
 import argparse
 import time
 
-from sb_asistente import pipeline
+from sb_asistente.controller import pipeline
 
 
 def main() -> None:

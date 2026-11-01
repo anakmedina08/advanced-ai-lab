@@ -20,7 +20,7 @@ from sb_asistente.config import (
     REQUEST_TIMEOUT_S,
     USER_AGENT,
 )
-from sb_asistente.scraping.discover import SitemapEntry, path_of
+from sb_asistente.model.scraping.discover import SitemapEntry, path_of
 
 
 class HttpResponse(Protocol):

@@ -7,9 +7,9 @@ Fase 1: scraping Medallion → conocimiento consolidado en el system prompt → 
 Q&A con LangChain + Streamlit. Fase 2: RAG con los chunks de `data/gold/chunks.jsonl`.
 
 ## Arquitectura (obligatoria)
-- `src/sb_asistente/scraping/` → descubrir (robots + sitemap) y descargar a Bronze.
-- `src/sb_asistente/processing/` → Silver (limpieza) y Gold (Markdown, corpus, chunks).
-- `src/sb_asistente/llm/` → prompts versionados y servicio LangChain. **Ningún prompt fuera de `prompts.py`.**
+- `src/sb_asistente/model/scraping/` → descubrir (robots + sitemap) y descargar a Bronze.
+- `src/sb_asistente/model/processing/` → Silver (limpieza) y Gold (Markdown, corpus, chunks).
+- `src/sb_asistente/model/llm/` → prompts versionados y servicio LangChain. **Ningún prompt fuera de `prompts.py`.**
 - `src/sb_asistente/view/` → Streamlit; solo llama a `KnowledgeAssistant`, sin lógica de negocio.
 - `pipeline.py` orquesta; `config.py` concentra rutas, alcance, umbrales y modelo (nada de números mágicos).
 - Dependencias por constructor (sesión HTTP, LLM, reloj, sleep) para poder probar sin red ni API.

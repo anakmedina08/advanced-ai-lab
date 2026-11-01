@@ -9,39 +9,29 @@ import re
 import pandas as pd
 import streamlit as st
 
-from sb_asistente import pipeline
-from sb_asistente.config import BASE_URL, EVAL_RESULTS, GOLD_DIR, LLM_PROVIDER
-from sb_asistente.evaluation import read_results, summarize_results
-from sb_asistente.llm import prompts, retrieval
-from sb_asistente.llm.service import KnowledgeAssistant, build_llm, context_budget, load_knowledge
+from sb_asistente.config import BASE_URL, GOLD_DIR, LLM_PROVIDER
+from sb_asistente.controller import assistant as ctrl
+from sb_asistente.controller import pipeline
 
 st.set_page_config(page_title="Asistente Seguros Bolívar", page_icon="🛡️", layout="wide")
 
 
-LITE_NUM_CTX = 8192  # ventana de Ollama en modo de contexto reducido
-MAX_TOKENS_ANY = 10_000_000  # solo se lee el archivo para extraer el bloque de canales
-
-
 @st.cache_resource(show_spinner="Cargando la base de conocimiento…")
-def get_assistant(provider: str) -> KnowledgeAssistant:
-    """Crea el asistente una vez por proveedor."""
-    return KnowledgeAssistant(build_llm(provider), load_knowledge(max_tokens=context_budget(provider)))
+def get_assistant(provider: str) -> ctrl.KnowledgeAssistant:
+    """Crea el asistente con toda la base una vez por proveedor."""
+    return ctrl.full_assistant(provider)
 
 
 @st.cache_resource(show_spinner="Preparando el modo de contexto reducido…")
-def get_lite_resources(provider: str) -> tuple[object, list[dict[str, object]], str]:
-    """Modelo con ventana pequeña, chunks de Gold y bloque de canales para el contexto reducido."""
-    canales = retrieval.channels_block(load_knowledge(max_tokens=MAX_TOKENS_ANY))
-    return build_llm(provider, num_ctx=LITE_NUM_CTX), retrieval.load_chunks(), canales
+def get_lite(provider: str) -> ctrl.LiteAssistant:
+    """Crea el asistente de contexto reducido una vez por proveedor."""
+    return ctrl.LiteAssistant.build(provider)
 
 
-def answer_question(provider: str, question: str, version: str, lite: bool) -> object:
+def answer_question(provider: str, question: str, version: str, lite: bool) -> ctrl.Answer:
     """Responde con toda la base o, en modo reducido, solo con los fragmentos más relevantes."""
-    if not lite:
-        return get_assistant(provider).answer(question, version=version)
-    llm, chunks, canales = get_lite_resources(provider)
-    contexto = canales + "\n" + retrieval.select_context(question, chunks)
-    return KnowledgeAssistant(llm, contexto).answer(question, version=version)
+    chosen = get_lite(provider) if lite else get_assistant(provider)
+    return chosen.answer(question, version=version)
 
 
 def sidebar() -> tuple[str, str, bool]:
@@ -52,8 +42,8 @@ def sidebar() -> tuple[str, str, bool]:
     )
     version = st.sidebar.selectbox(
         "Versión del prompt (Q&A)",
-        list(prompts.QA_SYSTEM),
-        index=list(prompts.QA_SYSTEM).index("v3"),
+        list(ctrl.QA_VERSIONS),
+        index=list(ctrl.QA_VERSIONS).index(ctrl.DEFAULT_QA_VERSION),
         help="v1: ingenuo · v2: grounding simple · v3: zero-shot estructurado · v4: few-shot",
     )
     lite = st.sidebar.toggle(
@@ -81,8 +71,7 @@ METRIC_LABELS = {
 
 def evaluation_tab() -> None:
     """Pestaña 📊: compara las versiones del prompt con los resultados de ``sb eval``."""
-    results_dir = EVAL_RESULTS.parent
-    summary = summarize_results(results_dir)
+    summary = ctrl.evaluation_summary()
     if not summary:
         st.info("Aún no hay resultados. Ejecute, por ejemplo: `uv run sb eval --version v3`")
         return
@@ -102,7 +91,7 @@ def evaluation_tab() -> None:
     st.subheader("Detalle por pregunta")
     choice = st.selectbox("Corrida", df["corrida"].tolist())
     modelo, version = choice.split(" · ")
-    rows = read_results(results_dir / f"resultados_{modelo}_{version}.csv")
+    rows = ctrl.evaluation_detail(modelo, version)
     detail = pd.DataFrame(rows)[
         [
             "id",
@@ -216,7 +205,7 @@ def main() -> None:
         if assistant is None:
             st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
         else:
-            topic = st.selectbox("Tema", prompts.TOPICS, key="topic_summary")
+            topic = st.selectbox("Tema", ctrl.TOPICS, key="topic_summary")
             if st.button("Generar resumen"):
                 with st.spinner("Resumiendo…"):
                     st.markdown(assistant.summarize(topic).text)
@@ -224,7 +213,7 @@ def main() -> None:
         if assistant is None:
             st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
         else:
-            topic = st.selectbox("Tema", prompts.TOPICS, index=1, key="topic_faq")
+            topic = st.selectbox("Tema", ctrl.TOPICS, index=1, key="topic_faq")
             n = st.slider("Número de preguntas", 3, 10, 5)
             if st.button("Generar FAQ"):
                 with st.spinner("Generando preguntas frecuentes…"):

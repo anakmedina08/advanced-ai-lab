@@ -24,7 +24,7 @@ from sb_asistente.config import (
     DEFAULT_SECTION,
     SECTION_RULES,
 )
-from sb_asistente.scraping.discover import path_of
+from sb_asistente.model.scraping.discover import path_of
 
 SECTION_TITLES: dict[str, str] = {
     "institucional": "Información institucional",

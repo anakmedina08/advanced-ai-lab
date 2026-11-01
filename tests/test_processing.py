@@ -5,9 +5,9 @@ import json
 import pytest
 
 from conftest import BASE, FIXTURES
-from sb_asistente import pipeline
-from sb_asistente.processing import clean, gold
-from sb_asistente.scraping.discover import in_scope
+from sb_asistente.controller import pipeline
+from sb_asistente.model.processing import clean, gold
+from sb_asistente.model.scraping.discover import in_scope
 
 HOGAR = (FIXTURES / "hogar.html").read_text(encoding="utf-8")
 PAGES = [(FIXTURES / n).read_text(encoding="utf-8") for n in ("hogar.html", "soat.html", "quienes.html")]
@@ -132,7 +132,7 @@ def test_write_gold_outputs_all_artifacts(tmp_path):
 
 
 def test_end_to_end_pipeline(tmp_path, session, monkeypatch):
-    monkeypatch.setattr("sb_asistente.scraping.fetch.time.sleep", lambda s: None)
+    monkeypatch.setattr("sb_asistente.model.scraping.fetch.time.sleep", lambda s: None)
     bronze, silver, gold_dir = tmp_path / "raw", tmp_path / "silver", tmp_path / "gold"
 
     plan = pipeline.discover(session, bronze)
@@ -221,7 +221,7 @@ def test_trim_noise_detects_marker_as_heading_or_bold(marker):
 
 
 def test_process_reapplies_scope_without_rescraping(tmp_path, session, monkeypatch):
-    monkeypatch.setattr("sb_asistente.scraping.fetch.time.sleep", lambda s: None)
+    monkeypatch.setattr("sb_asistente.model.scraping.fetch.time.sleep", lambda s: None)
     bronze = tmp_path / "raw"
     pipeline.discover(session, bronze)
     pipeline.scrape(session, bronze)
@@ -236,7 +236,7 @@ def test_process_reapplies_scope_without_rescraping(tmp_path, session, monkeypat
 
 @pytest.fixture
 def built(tmp_path, session, monkeypatch):
-    monkeypatch.setattr("sb_asistente.scraping.fetch.time.sleep", lambda s: None)
+    monkeypatch.setattr("sb_asistente.model.scraping.fetch.time.sleep", lambda s: None)
     bronze, silver, gold_dir = tmp_path / "raw", tmp_path / "silver", tmp_path / "gold"
     pipeline.discover(session, bronze)
     pipeline.scrape(session, bronze)

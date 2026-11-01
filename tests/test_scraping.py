@@ -6,7 +6,7 @@ import pytest
 
 from conftest import BASE, FIXTURES, FakeSession
 from sb_asistente.config import USER_AGENT
-from sb_asistente.scraping.discover import (
+from sb_asistente.model.scraping.discover import (
     SitemapEntry,
     build_robots,
     in_scope,
@@ -14,7 +14,7 @@ from sb_asistente.scraping.discover import (
     path_of,
     select_urls,
 )
-from sb_asistente.scraping.fetch import BronzeFetcher, load_captured, slugify_path
+from sb_asistente.model.scraping.fetch import BronzeFetcher, load_captured, slugify_path
 
 ROBOTS = build_robots((FIXTURES / "robots.txt").read_text(), f"{BASE}/robots.txt")
 

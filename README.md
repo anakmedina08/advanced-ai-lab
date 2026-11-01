@@ -48,9 +48,9 @@ flowchart LR
 
 | Capa | Dónde | Qué hace |
 |---|---|---|
-| Scraping | `src/sb_asistente/scraping/` | robots + sitemap, filtro de alcance, descarga con cortesía (1,5 s) |
-| Procesamiento | `src/sb_asistente/processing/` | `<main>` → Markdown (trafilatura), quita boilerplate, pie de canales una vez |
-| LLM | `src/sb_asistente/llm/` | prompts versionados (v1–v4: zero-shot a few-shot), servicio LangChain |
+| Scraping | `src/sb_asistente/model/scraping/` | robots + sitemap, filtro de alcance, descarga con cortesía (1,5 s) |
+| Procesamiento | `src/sb_asistente/model/processing/` | `<main>` → Markdown (trafilatura), quita boilerplate, pie de canales una vez |
+| LLM | `src/sb_asistente/model/llm/` | prompts versionados (v1–v4: zero-shot a few-shot), servicio LangChain |
 | Vista | `src/sb_asistente/view/`, `app.py` | Streamlit: pipeline por etapas, Q&A con fuentes, Resumen, FAQ, Evaluación |
 | Orquestación | `pipeline.py`, `cli.py` | comando `sb` |
 
