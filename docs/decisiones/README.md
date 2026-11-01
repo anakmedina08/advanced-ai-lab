@@ -23,3 +23,14 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-003](ADR-003-requests-sin-selenium.md) | `requests` + trafilatura (SSR), sin Selenium | 2026-10-24 |
 | [ADR-004](ADR-004-llm-deepseek-ollama.md) | ~~DeepSeek por API~~ · reemplazada por ADR-005 | 2026-10-24 |
 | [ADR-005](ADR-005-llm-claude-ollama.md) | Claude (API de Anthropic) con Ollama local como respaldo | 2026-10-24 |
+| [ADR-006](ADR-006-contexto-reducido-ollama.md) | Contexto reducido para que Ollama responda en CPU | 2026-10-30 |
+| [ADR-007](ADR-007-estructura-mvc.md) | Estructura MVC igual a la del proyecto de Gestión | 2026-11-01 |
+| [ADR-008](ADR-008-docker-multistage-y-estandar.md) | Docker multi-stage y estándar jan-project-standard | 2026-11-01 |
+
+## Cómo registrar una decisión nueva en Engram
+
+1. Escribir el ADR aquí con el formato **What / Why / Where / Learned**.
+2. En Claude Code (con `engram setup claude-code` hecho), pedir:
+   *«Guarda en Engram la decisión del archivo docs/decisiones/ADR-00X-….md como tipo decision,
+   proyecto advanced-ai-lab»*. El agente la guarda con `mem_save`.
+3. Verificar con `engram tui` (o preguntando en una sesión nueva: *«¿Qué decidimos sobre …?»*).
