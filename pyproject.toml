@@ -29,7 +29,7 @@ dependencies = [
 sb = "sb_asistente.view.cli:main"
 
 [build-system]
-requires = ["uv_build>=0.11.32,<0.12.0"]
+requires = ["uv_build>=0.11.32,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
