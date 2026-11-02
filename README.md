@@ -1,12 +1,33 @@
 # 🛡️ Asistente de conocimiento · Seguros Bolívar
 
+[![CI](https://github.com/anakmedina08/advanced-ai-lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/anakmedina08/advanced-ai-lab/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.13-blue) ![uv](https://img.shields.io/badge/deps-uv-purple)
 ![LangChain](https://img.shields.io/badge/LLM-LangChain-1c3c3c) ![Ruff](https://img.shields.io/badge/lint-ruff-orange)
-![pytest](https://img.shields.io/badge/tests-pytest-green) ![License](https://img.shields.io/badge/license-MIT-green)
+![pytest](https://img.shields.io/badge/tests-pytest-green) ![Docker](https://img.shields.io/badge/docker-multi--stage%20CPU-2496ED)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-Proyecto integrador de **Técnicas Avanzadas de IA en Modelos de Lenguaje** (UAO · Grupo 10 ·
-Daniel Silva y Katherine Medina). **Fase 1:** base de conocimiento semántico y sistema Q&A sobre la
-información **pública** de Seguros Bolívar, alcance **personas + canales de atención**.
+Proyecto integrador de **Técnicas Avanzadas de IA en Modelos de Lenguaje** (UAO · Daniel Silva y
+Katherine Medina). **Fase 1:** base de conocimiento y sistema Q&A sobre la información **pública**
+de Seguros Bolívar, alcance **personas + canales de atención**.
+
+> 📘 La fuente única de verdad del proyecto es [`CONSTITUTION.md`](CONSTITUTION.md).
+
+## Tabla de contenidos
+
+- [Problema y solución](#problema-y-solución)
+- [Inicio rápido](#inicio-rápido)
+- [Capturas](#capturas)
+- [Arquitectura MVC](#arquitectura-mvc)
+- [Flujo de inferencia](#flujo-de-inferencia)
+- [Uso](#uso)
+- [Docker](#docker)
+- [Pruebas y calidad](#pruebas-y-calidad)
+- [Spec-Driven Development y tablero](#spec-driven-development-y-tablero)
+- [Agentes de IA](#agentes-de-ia)
+- [Estructura](#estructura)
+- [Ética y datos](#ética-y-datos)
+- [Contribución](#contribución)
+- [Licencia y créditos](#licencia)
 
 ## Problema y solución
 
@@ -21,10 +42,21 @@ preguntas, resume y genera FAQ **citando la URL de origen**.
 ## Inicio rápido
 
 ```bash
-uv sync
-uv run python scripts/scrape_empresa.py     # descubrir → extraer → limpiar → deduplicar → enriquecer
-uv run streamlit run app.py                 # interfaz: pipeline por etapas + Q&A con fuente
+make dev        # uv sync + hooks de pre-commit
+make data       # descubrir → extraer → limpiar → deduplicar → enriquecer (~4 min)
+make app        # interfaz en http://localhost:8501
 ```
+
+Sin `make` (por ejemplo, en Windows):
+
+```bash
+uv sync
+uv run python scripts/scrape_empresa.py
+uv run streamlit run app.py
+```
+
+Para usar Claude, copie `.env.example` a `.env` y escriba su `ANTHROPIC_API_KEY`. Para usar el modelo
+local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 
 ## Capturas
 
@@ -32,91 +64,155 @@ uv run streamlit run app.py                 # interfaz: pipeline por etapas + Q&
 |---|---|
 | ![Pipeline](docs/capturas/pipeline.png) | ![Q&A](docs/capturas/qa.png) |
 
-## Arquitectura
+## Arquitectura MVC
 
 ```mermaid
 flowchart LR
-    R[robots.txt + sitemap.xml] --> D[discover]
-    D --> B[(Bronze<br/>HTML crudo + capture.jsonl)]
-    B --> S[(Silver<br/>texto limpio)]
-    S --> G[(Gold<br/>.md + corpus + chunks)]
-    G --> K[conocimiento consolidado]
-    K --> L[LangChain + Claude/Ollama<br/>Q&A · Resumen · FAQ]
-    L --> UI[Streamlit]
-    G -.Fase 2.-> V[(Base vectorial / RAG)]
+    subgraph V[Vista]
+        UI[streamlit_app.py]
+        CLI[cli.py · comando sb]
+    end
+    subgraph C[Controlador]
+        P[pipeline.py<br/>etapas del scraping]
+        A[assistant.py<br/>Q&A · evaluación]
+    end
+    subgraph M[Modelo]
+        SC[scraping<br/>discover · fetch]
+        PR[processing<br/>clean · gold]
+        LLM[llm<br/>prompts · service · retrieval]
+        EV[evaluation]
+    end
+    W[(segurosbolivar.com<br/>robots.txt + sitemap)] --> SC
+    SC --> B[(Bronze<br/>data/raw)] --> PR --> G[(Gold<br/>data/gold)]
+    UI --> P & A
+    CLI --> P & A
+    P --> SC & PR
+    A --> LLM & EV
+    G --> LLM
+    LLM --> CL[Claude API / Ollama local]
 ```
 
-| Capa | Dónde | Qué hace |
-|---|---|---|
-| Scraping | `src/sb_asistente/scraping/` | robots + sitemap, filtro de alcance, descarga con cortesía (1,5 s) |
-| Procesamiento | `src/sb_asistente/processing/` | `<main>` → Markdown (trafilatura), quita boilerplate, pie de canales una vez |
-| LLM | `src/sb_asistente/llm/` | prompts versionados (v1–v4: zero-shot a few-shot), servicio LangChain |
-| Vista | `src/sb_asistente/view/`, `app.py` | Streamlit: pipeline por etapas, Q&A con fuentes, Resumen, FAQ, Evaluación |
-| Orquestación | `pipeline.py`, `cli.py` | comando `sb` |
+La vista **solo** habla con el controlador; el controlador orquesta el modelo. Detalle en
+[`docs/arquitectura.md`](docs/arquitectura.md) y decisiones en [`docs/decisiones/`](docs/decisiones/).
 
-## Instalación
+## Flujo de inferencia
 
-```bash
-uv sync
-cp .env.example .env          # y escriba su ANTHROPIC_API_KEY
-uv run pre-commit install     # ruff + bloqueo de datos/secretos + GGA + mensaje semántico (commit-msg)
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant UI as Streamlit (vista)
+    participant A as assistant.py (controlador)
+    participant R as retrieval (modelo)
+    participant S as service + prompts (modelo)
+    participant L as LLM (Claude u Ollama)
+    U->>UI: «¿Cuál es el WhatsApp de atención?»
+    UI->>A: answer(pregunta, versión, modo)
+    alt Base completa (Claude, Fase 1)
+        A->>S: conocimiento consolidado (~36 000 tokens)
+    else Contexto reducido (Ollama en CPU)
+        A->>R: select_context(pregunta, chunks)
+        R-->>A: canales + fragmentos relevantes con su URL
+        A->>S: contexto reducido (~2 500 tokens)
+    end
+    S->>L: system prompt (reglas, <conocimiento>, cita obligatoria) + pregunta
+    L-->>S: respuesta
+    S-->>A: Answer(texto, latencia, cita_fuente)
+    A-->>UI: respuesta
+    UI-->>U: respuesta + «Fuentes citadas» (URLs)
 ```
 
 ## Uso
 
 ```bash
-# 1. Datos (Bronze → Silver → Gold). ~4 minutos por la pausa de cortesía.
-uv run sb discover
-uv run sb scrape
-uv run sb process
-uv run sb stats
-
-# 2. Tareas
+make help                     # lista todos los comandos
+make process                  # Bronze → Silver → Gold sin volver a la web
+uv run sb stats               # resumen del corpus Gold
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"
 uv run sb faq --topic "Canales de atención y servicio al cliente" -n 5
-
-# 3. Evaluación (24 preguntas) y experimentación de prompts
-uv run sb eval --version v3
-uv run sb eval --version v1          # línea base para comparar
-uv run sb eval --provider ollama     # gratis, local
-
-# 4. Interfaz
-uv run streamlit run app.py
+make eval PROVIDER=anthropic VERSION=v3   # banco de 24 preguntas
 ```
 
-## Pruebas
+## Docker
+
+Imagen **multi-stage** (CPU): la etapa *builder* resuelve `uv.lock` con `uv`; la etapa *runtime*
+solo lleva Python, el `.venv` y el código, y corre como usuario sin privilegios. `data/` se monta
+como volumen (el contenido de Seguros Bolívar no va dentro de la imagen).
 
 ```bash
-uv run pytest -v --cov     # sin red ni API: fixtures HTML y LLM falso
-uv run ruff check . && uv run ruff format --check .
+make docker-build
+make docker-run      # http://localhost:8501 · Ollama del host vía host.docker.internal
 ```
 
-## Ética y datos
-Solo información pública; se respeta `robots.txt`; sin login, sin datos personales (Ley 1581 de 2012).
-`data/` y `.env` no se versionan. Ver `docs/alcance.md` y `docs/decisiones/`.
+Equivalente sin `make`:
 
-## Documentación
-- `docs/alcance.md` · investigación de fuentes y alcance del Q&A
-- `docs/decisiones/` · decisiones técnicas (espejo de Engram)
-- `openspec/` · especificación de la Fase 1
-- `informe/` · artículo IEEE
+```bash
+docker build -t sb-asistente .
+docker run --rm -p 8501:8501 -v "$(pwd)/data:/app/data" \
+  -e OLLAMA_HOST=http://host.docker.internal:11434 sb-asistente
+```
+
+## Pruebas y calidad
+
+```bash
+make check                    # ruff + formato + pytest (lo mismo que corre la CI)
+uv run pytest -v --cov        # sin red ni API: fixtures HTML y LLM falso
+make pre-commit               # higiene, ruff, uv.lock, GGA y bloqueo de datos/secretos
+```
+
+La CI de GitHub Actions corre lint, formato, pruebas con cobertura ≥ 85 % y el build de la imagen
+Docker en cada Pull Request.
+
+## Spec-Driven Development y tablero
+
+- **Spec:** [`openspec/specs/fase1-base-conocimiento/`](openspec/specs/fase1-base-conocimiento/) —
+  [`spec.md`](openspec/specs/fase1-base-conocimiento/spec.md) (qué y cómo se verifica),
+  [`plan.md`](openspec/specs/fase1-base-conocimiento/plan.md) (cómo se construye) y
+  [`tasks.md`](openspec/specs/fase1-base-conocimiento/tasks.md) (trabajo hecho y pendiente).
+- **Tablero Kanban público:** [GitHub Projects del repositorio](https://github.com/anakmedina08/advanced-ai-lab/projects),
+  generado desde `tasks.md` con `uv run python scripts/crear_kanban.py --repo anakmedina08/advanced-ai-lab --project N`.
+
+## Agentes de IA
+
+- [`AGENTS.md`](AGENTS.md): reglas para agentes (arquitectura, ética, calidad, comandos).
+- **GGA** (Gentleman Guardian Angel): revisión con IA contra `AGENTS.md` en cada commit
+  (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
+- **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
+  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-008).
+- **Skill del estándar:** [`jan-project-standard`](.claude/skills/jan-project-standard/SKILL.md)
+  (Jan Polanco Velasco, MIT), instalada en el repositorio para que el agente aplique y audite el
+  estándar. Instalación oficial: `npx skills add https://github.com/hamsomp3/jan_skills_repository --skill jan-project-standard`.
 
 ## Estructura
 
 ```
-app.py                     # entrada de Streamlit
-scripts/scrape_empresa.py  # pipeline completo (o --solo-proceso, sin red)
+app.py                         # entrada de Streamlit
 src/sb_asistente/
-├── scraping/              # discover (robots + sitemap) y fetch (Bronze, cortesía 1,5 s)
-├── processing/            # clean (Silver) y gold (Markdown con front-matter, corpus.jsonl, chunks)
-├── llm/                   # prompts versionados y servicio LangChain (Claude u Ollama)
-├── view/streamlit_app.py  # interfaz
-├── pipeline.py            # orquesta las etapas y reporta sus métricas
-└── cli.py                 # comando `sb`
-data/raw · data/silver · data/gold   # Medallion (no versionado)
-tests/                     # pytest con fixtures HTML y LLM falso, sin red
+├── config.py                  # rutas, alcance, cortesía y modelo
+├── model/                     # M · scraping · processing · llm · evaluation
+├── controller/                # C · pipeline.py · assistant.py
+└── view/                      # V · streamlit_app.py · cli.py
+scripts/                       # scrape_empresa.py · crear_kanban.py · check_commit_msg.py
+tests/                         # pytest por capa (AAA, sin red ni API)
+openspec/                      # spec · plan · tasks
+docs/                          # arquitectura · decisiones (Engram) · sustentación · capturas
+data/raw · silver · gold       # Medallion (no versionado)
+Dockerfile · Makefile · CONSTITUTION.md · AGENTS.md · .gga
 ```
+
+Estructura completa y convenciones en [`CONSTITUTION.md`](CONSTITUTION.md).
+
+## Ética y datos
+
+Solo información pública; se respeta `robots.txt`; 1,5 s entre peticiones con User-Agent
+identificado; sin login ni datos personales (Ley 1581 de 2012). `data/` y `.env` no se versionan.
+Ver [`docs/alcance.md`](docs/alcance.md).
+
+## Contribución
+
+Lea [`CONTRIBUTING.md`](CONTRIBUTING.md) y el [Código de conducta](CODE_OF_CONDUCT.md). Ramas
+`feat/…`, `fix/…`, `docs/…`; Conventional Commits; toda PR con la plantilla y aprobada por el Code
+Reviewer.
 
 ## Licencia
 
@@ -127,5 +223,6 @@ Bolívar S.A. y se usa solo con fines académicos; no se redistribuye (`data/` n
 
 - **Equipo:** Daniel Silva y Katherine Medina (Code Reviewer: Daniel Silva).
 - **Curso:** Técnicas Avanzadas de IA en Modelos de Lenguaje · Maestría en IA y Ciencia de Datos · UAO.
+- **Estándar del repositorio:** skill `jan-project-standard` de Jan Polanco Velasco.
 - **Librerías:** LangChain, trafilatura, BeautifulSoup, Streamlit, requests, uv, pytest y ruff.
 - **Fuente de datos:** sitio público www.segurosbolivar.com.

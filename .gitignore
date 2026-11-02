@@ -14,6 +14,10 @@ evaluacion/resultados*.csv
 
 # Secretos
 .env
+.env.*
+!.env.example
+*.pem
+*.key
 *.log
 
 # Pesos, notebooks y artefactos
@@ -39,3 +43,6 @@ informe/*.bbl
 informe/*.blg
 
 .DS_Store
+
+# Agentes: índice de tgrep
+.tgrep/
