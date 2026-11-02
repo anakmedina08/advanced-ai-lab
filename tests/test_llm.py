@@ -4,9 +4,8 @@ import pytest
 import yaml
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
-from sb_asistente import cli
 from sb_asistente.config import EVAL_QUESTIONS
-from sb_asistente.evaluation import (
+from sb_asistente.model.evaluation import (
     EvalQuestion,
     keyword_hit,
     load_questions,
@@ -15,8 +14,8 @@ from sb_asistente.evaluation import (
     score,
     summarize_results,
 )
-from sb_asistente.llm import prompts
-from sb_asistente.llm.service import (
+from sb_asistente.model.llm import prompts
+from sb_asistente.model.llm.service import (
     Answer,
     KnowledgeAssistant,
     KnowledgeTooLargeError,
@@ -24,6 +23,7 @@ from sb_asistente.llm.service import (
     context_budget,
     load_knowledge,
 )
+from sb_asistente.view import cli
 
 KNOWLEDGE = "### SOAT\nFuente: https://www.segurosbolivar.com/soat\n\nCompre su SOAT en línea."
 
@@ -271,15 +271,15 @@ def test_run_eval_reports_progress(tmp_path):
 
 def test_cli_eval_limit_writes_sample_file(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(cli, "_assistant", lambda provider: assistant())
-    monkeypatch.setattr(cli, "EVAL_RESULTS", tmp_path / "resultados.csv")
+    monkeypatch.setattr("sb_asistente.controller.assistant.EVAL_RESULTS", tmp_path / "resultados.csv")
     assert cli.main(["eval", "--provider", "ollama", "--limit", "2"]) == 0
     out = capsys.readouterr().out
-    assert "Evaluando 2 preguntas · modelo ollama" in out and "[2/2]" in out
+    assert "Evaluando · modelo ollama" in out and "[2/2]" in out
     assert (tmp_path / "resultados_ollama_v3_muestra2.csv").is_file()
 
 
 # --- Contexto reducido para modelos locales -----------------------------------------
-from sb_asistente.llm.retrieval import normalize_words, select_context  # noqa: E402
+from sb_asistente.model.llm.retrieval import normalize_words, select_context  # noqa: E402
 
 CHUNKS = [
     {
@@ -330,13 +330,13 @@ def test_build_llm_ollama_accepts_smaller_window():
 
 
 def test_channels_block_extracts_footer_section():
-    from sb_asistente.llm.retrieval import channels_block
+    from sb_asistente.model.llm.retrieval import channels_block
 
     base = "# Base\n\n## Canales de atención (pie)\nWhatsApp: 322\n\n## Salud\n### Plan\ntexto\n"
     assert channels_block(base) == "## Canales de atención (pie)\nWhatsApp: 322\n"
 
 
 def test_channels_block_empty_when_missing():
-    from sb_asistente.llm.retrieval import channels_block
+    from sb_asistente.model.llm.retrieval import channels_block
 
     assert channels_block("# Base\n\n## Salud\n") == ""

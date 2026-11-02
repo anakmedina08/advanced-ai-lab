@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from sb_asistente.llm.service import Answer
+from sb_asistente.model.llm.service import Answer
 
 
 @dataclass(slots=True)

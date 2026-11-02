@@ -4,9 +4,10 @@ import argparse
 import json
 from collections.abc import Sequence
 
-from sb_asistente import pipeline
-from sb_asistente.config import EVAL_QUESTIONS, EVAL_RESULTS, GOLD_DIR, LLM_PROVIDER
-from sb_asistente.llm import prompts
+from sb_asistente.config import GOLD_DIR, LLM_PROVIDER
+from sb_asistente.controller import assistant, pipeline
+
+VERSION_ARG = {"default": assistant.DEFAULT_QA_VERSION, "choices": list(assistant.QA_VERSIONS)}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,23 +24,26 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--provider", default=LLM_PROVIDER, choices=["anthropic", "ollama"])
         if name == "ask":
             p.add_argument("question")
-            p.add_argument("--version", default=prompts.DEFAULT_QA_VERSION, choices=list(prompts.QA_SYSTEM))
+            p.add_argument(
+                "--version", default=assistant.DEFAULT_QA_VERSION, choices=list(assistant.QA_VERSIONS)
+            )
         if name in ("summary", "faq"):
-            p.add_argument("--topic", default=prompts.TOPICS[0])
+            p.add_argument("--topic", default=assistant.TOPICS[0])
         if name == "faq":
             p.add_argument("-n", type=int, default=5)
         if name == "eval":
-            p.add_argument("--version", default=prompts.DEFAULT_QA_VERSION, choices=list(prompts.QA_SYSTEM))
+            p.add_argument(
+                "--version", default=assistant.DEFAULT_QA_VERSION, choices=list(assistant.QA_VERSIONS)
+            )
             p.add_argument(
                 "--limit", type=int, default=None, help="Solo las primeras N preguntas (prueba rápida)"
             )
     return parser
 
 
-def _assistant(provider: str):  # noqa: ANN202 - importación diferida de LangChain
-    from sb_asistente.llm.service import KnowledgeAssistant, build_llm, context_budget, load_knowledge
-
-    return KnowledgeAssistant(build_llm(provider), load_knowledge(max_tokens=context_budget(provider)))
+def _assistant(provider: str) -> assistant.KnowledgeAssistant:
+    """Asistente con toda la base (punto de inyección para las pruebas)."""
+    return assistant.full_assistant(provider)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -68,23 +72,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.command == "faq":
         print(_assistant(args.provider).faq(args.topic, args.n).text)
     elif args.command == "eval":
-        from sb_asistente.evaluation import load_questions, run_eval
-
-        questions = load_questions(EVAL_QUESTIONS)[: args.limit]
-        # Una muestra parcial no se mezcla con las corridas completas de la pestaña Evaluación.
-        suffix = f"_muestra{len(questions)}" if args.limit else ""
-        out = EVAL_RESULTS.with_name(f"resultados_{args.provider}_{args.version}{suffix}.csv")
-        print(
-            f"Evaluando {len(questions)} preguntas · modelo {args.provider} · prompt {args.version}",
-            flush=True,
-        )
-        assistant = _assistant(args.provider)
 
         def progress(i: int, total: int, row: dict[str, object]) -> None:
             fuente = "fuente ✓" if row["cita_fuente"] else "sin fuente"
             print(f"  [{i}/{total}] {row['id']} · {row['latencia_s']} s · {fuente}", flush=True)
 
-        metrics = run_eval(questions, lambda q: assistant.answer(q, args.version), out, progress)
+        print(f"Evaluando · modelo {args.provider} · prompt {args.version}", flush=True)
+        metrics, out = assistant.evaluate(
+            args.provider, args.version, args.limit, progress, factory=_assistant
+        )
         print(json.dumps(metrics, ensure_ascii=False, indent=2), f"\n→ {out}")
     return 0
 

@@ -25,8 +25,8 @@ from sb_asistente.config import (
     OLLAMA_MODEL,
     OLLAMA_NUM_CTX,
 )
-from sb_asistente.llm import prompts
-from sb_asistente.processing.gold import estimate_tokens
+from sb_asistente.model.llm import prompts
+from sb_asistente.model.processing.gold import estimate_tokens
 
 
 class KnowledgeTooLargeError(ValueError):

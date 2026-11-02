@@ -16,9 +16,15 @@ from sb_asistente.config import (
     SITEMAP_URL,
     USER_AGENT,
 )
-from sb_asistente.processing import clean, gold
-from sb_asistente.scraping.discover import SitemapEntry, build_robots, in_scope, parse_sitemap, select_urls
-from sb_asistente.scraping.fetch import BronzeFetcher, HttpSession, load_captured, slugify_path
+from sb_asistente.model.processing import clean, gold
+from sb_asistente.model.scraping.discover import (
+    SitemapEntry,
+    build_robots,
+    in_scope,
+    parse_sitemap,
+    select_urls,
+)
+from sb_asistente.model.scraping.fetch import BronzeFetcher, HttpSession, load_captured, slugify_path
 
 
 def new_session() -> requests.Session:
