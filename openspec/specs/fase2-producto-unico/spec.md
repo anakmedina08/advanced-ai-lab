@@ -42,6 +42,20 @@ y para que el desarrollo con agentes sea visible en vivo (ADR-011).
 - La CI DEBE publicar su resultado como evento.
 - **Escenario:** dado un `Write` sobre `.env`, cuando el hook publica, entonces el evento no trae la ruta.
 
+### R11 · Chat orquestado (ADR-013)
+- `POST /chat` DEBE clasificar el mensaje antes de usar el LLM y devolver intención, herramienta,
+  fuentes, recomendaciones y la `traza` de pasos.
+- Saludos y temas ajenos NO DEBEN llamar al LLM.
+- Una recomendación DEBE poder pedirse describiendo el perfil, sin identificación.
+- **Escenario:** dado «¿Qué seguro me recomiendas? Tengo carro y un perro», entonces responde el
+  recomendador con perfil `{vehiculo: carro, tiene_mascota: true}`.
+
+### R12 · Skills (ADR-014)
+- El proyecto DEBE aceptar skills en `.claude/skills`, `.agents/skills` y `.opencode/skills` con las
+  reglas de OpenCode, y solo las de `metadata.uso: asistente` DEBEN llegar al chat.
+- **Escenario:** dada una skill instalada con `npx skills add`, entonces no aparece en `GET /skills`
+  hasta que se marque con `uso: asistente`.
+
 ## Criterios de aceptación de la fase
 - `make check` en verde con cobertura ≥ 85 %.
 - Matriz [`docs/requisitos.md`](../../../docs/requisitos.md) sin requisitos en estado «falta».

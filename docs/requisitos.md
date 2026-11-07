@@ -15,7 +15,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Type hints y docstrings | ✅ | regla `ANN` y `D` de Ruff en `pyproject.toml` |
 | Pydantic | ✅ | `src/sb_asistente/view/schemas.py` · ADR-010 |
 | FastAPI | ✅ | `src/sb_asistente/view/api.py`, `uv run sb api` → `/docs` · ADR-010 |
-| Pruebas AAA sin red ni API, cobertura ≥ 85 % | ✅ | `tests/` (235 pruebas), `make check`, umbral en la CI |
+| Pruebas AAA sin red ni API, cobertura ≥ 85 % | ✅ | `tests/` (296 pruebas), `make check`, umbral en la CI |
 | Ruff (lint y formato) | ✅ | `make lint`, `make format-check` |
 | pre-commit con hook de GGA | ✅ | `.pre-commit-config.yaml` (higiene, Ruff, `uv lock --check`, GGA, bloqueo de datos y secretos) |
 | Conventional Commits | ✅ | hook `commit-msg` → `scripts/check_commit_msg.py` |
@@ -29,6 +29,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | `AGENTS.md` | ✅ | [`AGENTS.md`](../AGENTS.md) |
 | Engram (memoria de decisiones) | 🟡 | `docs/decisiones/` ADR-001 a ADR-012; registrar ADR-009 a 012 en Engram: T-29 |
 | Skill del estándar del repositorio | ✅ | `.claude/skills/jan-project-standard/` |
+| Skills propias y de terceros (Claude Code, OpenCode, skills.sh) | ✅ | `.claude/skills/`, `model/skills.py`, `make skills`, `make skill-new`, `make skill-add`, `opencode.json` · ADR-014 |
 | Subagentes de Claude Code | ✅ | `.claude/agents/` (7 subagentes) · ADR-011 |
 | Hooks de Claude Code y trazabilidad de agentes | ✅ | `.claude/settings.json`, `scripts/agent_events.py`, `logs/agent-events.jsonl` |
 | Panel en vivo del desarrollo con agentes | 🟡 | código listo en yellowdata.com.co/casos; publicar y cargar secretos: T-22 |
@@ -49,7 +50,8 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Proveedor de LLM intercambiable | ✅ | Anthropic / DeepSeek / Ollama · ADR-005, ADR-012 |
 | Contexto reducido para modelos locales | ✅ | `model/llm/retrieval.py` · ADR-006 |
 | Fase 2: RAG con embeddings | ⏳ | T-16 |
-| Clasificador de intención | ⏳ | T-27 |
+| Clasificador de intención | 🟡 | línea base por reglas en `model/intencion.py` (en uso en el chat); modelo entrenado: T-27 |
+| Chat con orquestador (Q&A, recomendador, clasificador) | ✅ | `POST /chat`, `controller/chat.py`, pestaña de chat en yellowdata.com.co/casos · ADR-013 |
 
 ## Gestión de Proyectos en IA y CD (módulo de recomendación)
 
@@ -63,5 +65,6 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Modelo e5-small + LightGBM (Recall@5 ≥ 0,70) | ⏳ | T-23 |
 | MLflow | ⏳ | T-24 |
 | Auditoría de sesgo | ⏳ | T-25 |
-| Front web | ⏳ | T-26 |
-| Despliegue de la API | ⏳ | T-28 |
+| Front web | 🟡 | chat público listo (yellowdata.com.co/casos/asistente-seguros/chat); consola del asesor: T-26 |
+| Recomendación por perfil descrito (sin identificación) | ✅ | `recomendar_por_perfil`, `POST /chat` |
+| Despliegue de la API | ⏳ | `passenger_wsgi.py` listo para cPanel: T-33; imagen Docker con la API: T-28 |

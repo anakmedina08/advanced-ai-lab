@@ -48,6 +48,13 @@ Los hooks de `.claude/settings.json` registran cada evento (sin prompts ni conte
 `logs/agent-events.jsonl` y, con `AGENT_EVENTS_URL`/`AGENT_EVENTS_TOKEN` en `.env`, lo publican en
 el panel de yellowdata.com.co/casos. No desactivar los hooks ni enviar datos privados por ellos.
 
+## Skills
+- Propias en `.claude/skills/<nombre>/SKILL.md` (`make skill-new`); externas con `make skill-add`
+  (quedan en `.agents/skills/` y `skills-lock.json`). Validar con `make skills`.
+- Solo `metadata.uso: asistente` llega al chat público; cambiar una skill a ese uso requiere PR revisado
+  por `revisor` y `guardian-datos`.
+- La skill `operar-asistente` resume cómo levantar y depurar cada parte del producto.
+
 ## Calidad
 - Python 3.13 y **solo uv** (`uv add`, `uv run`); prohibido `pip` y `requirements.txt`.
 - Type hints y docstrings en español en lo público. Pruebas AAA en `tests/` sin red ni API

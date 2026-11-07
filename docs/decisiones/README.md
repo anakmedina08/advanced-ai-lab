@@ -30,6 +30,8 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-010](ADR-010-api-fastapi-pydantic.md) | API REST con FastAPI, Pydantic y type hints | 2026-11-06 |
 | [ADR-011](ADR-011-subagentes-y-telemetria.md) | Subagentes de Claude Code y telemetría en vivo | 2026-11-06 |
 | [ADR-012](ADR-012-proveedor-deepseek.md) | DeepSeek como proveedor alterno del LLM | 2026-11-06 |
+| [ADR-013](ADR-013-chat-orquestado.md) | Chat orquestado: clasificador de intención antes del LLM | 2026-11-06 |
+| [ADR-014](ADR-014-skills.md) | Skills propias y de terceros (Claude Code, OpenCode, skills.sh) | 2026-11-06 |
 
 ## Cómo registrar una decisión nueva en Engram
 

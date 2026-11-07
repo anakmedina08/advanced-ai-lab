@@ -24,6 +24,8 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 - [Flujo de inferencia](#flujo-de-inferencia)
 - [Uso](#uso)
 - [API (FastAPI + Pydantic)](#api-fastapi--pydantic)
+- [Chat orquestado](#chat-orquestado)
+- [Skills](#skills)
 - [Recomendador (curso de Gestión)](#recomendador-curso-de-gestión)
 - [Docker](#docker)
 - [Pruebas y calidad](#pruebas-y-calidad)
@@ -152,6 +154,8 @@ make api        # o: uv run sb api  →  http://127.0.0.1:8000/docs
 | `POST /preguntas` | Q&A con `fuentes` citadas (`modo`: `reducido` o `completo`) |
 | `POST /resumen` · `POST /faq` | resumen y preguntas frecuentes de un tema |
 | `GET /recomendaciones/{cliente_id}?k=5` | top-k de seguros que el cliente aún no tiene |
+| `POST /chat` | turno del chat: clasificador → herramienta, con traza |
+| `GET /skills` | skills que el chat puede aplicar |
 
 Cada petición se valida con Pydantic (`view/schemas.py`): campos desconocidos, rangos y proveedor;
 las preguntas con correo, teléfono o número de documento se rechazan con 422 (Ley 1581).
@@ -160,6 +164,34 @@ las preguntas con correo, teléfono o número de documento se rechazan con 422 (
 curl -X POST localhost:8000/preguntas -H 'Content-Type: application/json' \
   -d '{"pregunta": "¿Cuál es el WhatsApp de atención?"}'
 ```
+
+## Chat orquestado
+
+`POST /chat` (o `make chat MSG="..."`) clasifica cada mensaje **sin LLM** y lo envía a la
+herramienta: Q&A con fuentes, recomendador (por perfil descrito o cliente sintético) o una
+respuesta fija para saludos y temas ajenos. La respuesta trae la `traza` de pasos. El front es la
+pestaña **Probar el chat** de [yellowdata.com.co/casos/asistente-seguros](https://yellowdata.com.co/casos/asistente-seguros/chat).
+
+| Modo | Qué hace |
+|---|---|
+| `auto` | el clasificador decide |
+| `conocimiento` | fuerza el Q&A con fuentes |
+| `recomendador` | fuerza el recomendador (`cliente_id` opcional, p. ej. `C000123`) |
+| `clasificador` | solo devuelve la intención, la sección y el perfil (no gasta tokens) |
+
+## Skills
+
+Carpetas con `SKILL.md` en `.claude/skills/` (Claude Code y OpenCode), `.agents/skills/` u
+`.opencode/skills/`. Las marcadas con `metadata: {uso: asistente}` se pueden elegir en el chat.
+
+```bash
+make skills                                                   # lista y valida
+make skill-new NAME=mi-skill DESC="Qué hace" USO=asistente    # skill propia
+make skill-find Q=fastapi                                     # busca en el directorio abierto (skills.sh)
+make skill-add REPO=anthropics/skills SKILL=skill-creator     # instala para Claude Code y OpenCode
+```
+Una skill externa entra como herramienta de desarrollo; para usarla en el chat se marca
+`uso: asistente` en un PR revisado (ADR-014).
 
 ## Recomendador (curso de Gestión)
 
