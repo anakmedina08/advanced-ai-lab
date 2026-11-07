@@ -32,6 +32,9 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-012](ADR-012-proveedor-deepseek.md) | DeepSeek como proveedor alterno del LLM | 2026-11-06 |
 | [ADR-013](ADR-013-chat-orquestado.md) | Chat orquestado: clasificador de intención antes del LLM | 2026-11-06 |
 | [ADR-014](ADR-014-skills.md) | Skills propias y de terceros (Claude Code, OpenCode, skills.sh) | 2026-11-06 |
+| [ADR-015](ADR-015-json-rpc.md) | JSON-RPC 2.0 sobre FastAPI | 2026-11-07 |
+| [ADR-016](ADR-016-rag-chroma-hibrido.md) | RAG con Chroma y recuperación híbrida | 2026-11-07 |
+| [ADR-017](ADR-017-agente-memoria-salida-estructurada.md) | Agente con tools, salida estructurada, memoria y LangSmith | 2026-11-07 |
 
 ## Cómo registrar una decisión nueva en Engram
 

@@ -24,6 +24,8 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 - [Flujo de inferencia](#flujo-de-inferencia)
 - [Uso](#uso)
 - [API (FastAPI + Pydantic)](#api-fastapi--pydantic)
+- [JSON-RPC 2.0](#json-rpc-20)
+- [RAG y agente](#rag-y-agente)
 - [Chat orquestado](#chat-orquestado)
 - [Skills](#skills)
 - [Recomendador (curso de Gestión)](#recomendador-curso-de-gestión)
@@ -164,6 +166,40 @@ las preguntas con correo, teléfono o número de documento se rechazan con 422 (
 curl -X POST localhost:8000/preguntas -H 'Content-Type: application/json' \
   -d '{"pregunta": "¿Cuál es el WhatsApp de atención?"}'
 ```
+
+## JSON-RPC 2.0
+
+`POST /rpc` es la entrada principal del front (ADR-015). Cada método valida sus `params` con Pydantic.
+
+```bash
+curl -s -X POST localhost:8000/rpc -H 'Content-Type: application/json' -d '{
+  "jsonrpc": "2.0", "id": 1, "method": "agente.conversar",
+  "params": {"mensaje": "Tengo moto, ¿qué me sirve?", "conversacion_id": "demo-0001"}}'
+```
+
+Métodos: `sistema.salud`, `conocimiento.buscar`, `asistente.preguntar`, `asistente.chat`,
+`agente.conversar`, `agente.historial`, `agente.olvidar`, `recomendador.recomendar`,
+`recomendador.por_perfil`, `clasificador.clasificar`, `skills.listar` y `rpc.descubrir` (lista
+todos con su JSON Schema). Errores del estándar (-32700 a -32603) más -32001 (no encontrado) y
+-32002 (datos no listos).
+
+## RAG y agente
+
+```bash
+ollama pull nomic-embed-text          # embeddings locales (o EMBEDDINGS_PROVIDER=voyage)
+make rag                              # indexa data/gold en Chroma (data/vector/)
+make rag-buscar Q="whatsapp de atención"
+uv run sb rag evaluar -k 3 6          # hit@k con el banco de preguntas
+make agente MSG="Tengo moto y vivo en arriendo, ¿qué me sirve?" CONV=demo-0001
+make agente MSG="¿Y por dónde los contacto?" CONV=demo-0001   # recuerda el turno anterior
+```
+
+- **Tools:** `buscar_conocimiento` (BM25 + vectores con RRF), `recomendar_seguros`, `clasificar_intencion`.
+- **Salida estructurada:** `RespuestaAgente` (respuesta, fuentes verificadas, intención, confianza,
+  productos, requiere_asesor).
+- **Memoria:** SQLite por conversación en `data/memoria/`; `uv run sb agente "" --conversacion X --olvidar` la borra.
+- **LangSmith:** `LANGSMITH_TRACING=true` y `LANGSMITH_API_KEY` en `.env`; `make langsmith-dataset`
+  sube el banco de 24 preguntas.
 
 ## Chat orquestado
 
