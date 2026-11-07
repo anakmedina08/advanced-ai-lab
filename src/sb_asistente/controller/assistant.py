@@ -49,9 +49,11 @@ class LiteAssistant:
         """Bloque de canales + fragmentos relevantes (cada uno con su URL)."""
         return self.channels + "\n" + retrieval.select_context(question, self.chunks)
 
-    def answer(self, question: str, version: str = DEFAULT_QA_VERSION) -> Answer:
-        """Responde usando solo el contexto reducido."""
-        return KnowledgeAssistant(self.llm, self.context_for(question)).answer(question, version=version)
+    def answer(self, question: str, version: str = DEFAULT_QA_VERSION, skill: str | None = None) -> Answer:
+        """Responde usando solo el contexto reducido (``skill``: instrucciones opcionales de formato)."""
+        return KnowledgeAssistant(self.llm, self.context_for(question)).answer(
+            question, version=version, skill=skill
+        )
 
 
 def evaluate(

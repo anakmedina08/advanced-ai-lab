@@ -36,3 +36,24 @@ jobs:
           tags: sb-asistente:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Publica el resultado de la CI en el panel en vivo de yellowdata.com.co/casos (opcional:
+  # solo si el repositorio tiene los secretos AGENT_EVENTS_URL y AGENT_EVENTS_TOKEN).
+  notificar:
+    name: Evento al panel de agentes
+    runs-on: ubuntu-latest
+    needs: [quality, docker]
+    if: always()
+    steps:
+      - name: Enviar resultado
+        env:
+          URL: ${{ secrets.AGENT_EVENTS_URL }}
+          TOKEN: ${{ secrets.AGENT_EVENTS_TOKEN }}
+          OK: ${{ needs.quality.result == 'success' && needs.docker.result == 'success' }}
+          REF: ${{ github.ref_name }}
+        run: |
+          if [ -z "$URL" ]; then echo "Sin AGENT_EVENTS_URL: se omite"; exit 0; fi
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          curl -fsS -m 10 -X POST "$URL" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"ts\":\"$ts\",\"evento\":\"CI\",\"agente\":\"github-actions\",\"comando\":\"ruff + pytest + docker\",\"rama\":\"$REF\",\"ok\":$OK}" \
+            || echo "No se pudo publicar el evento (no bloquea la CI)"

@@ -87,7 +87,11 @@ CHUNK_OVERLAP_CHARS: Final[int] = 150
 CHARS_PER_TOKEN_ES: Final[float] = 3.6  # estimación conservadora para español
 
 # --- LLM -----------------------------------------------------------------------------------
-LLM_PROVIDER: Final[str] = os.getenv("LLM_PROVIDER", "anthropic")  # anthropic | ollama
+PROVIDERS: Final[tuple[str, ...]] = ("anthropic", "deepseek", "ollama")
+LLM_PROVIDER: Final[str] = os.getenv("LLM_PROVIDER", "anthropic")  # anthropic | deepseek | ollama
+# DeepSeek cobra solo por tokens y es compatible con LangChain; ventana de 64K tokens (la base cabe).
+DEEPSEEK_MODEL: Final[str] = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_CONTEXT_TOKENS: Final[int] = 65_536
 ANTHROPIC_MODEL: Final[str] = os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
 LLM_MAX_OUTPUT_TOKENS: Final[int] = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "1024"))
 OLLAMA_MODEL: Final[str] = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
@@ -97,6 +101,15 @@ OLLAMA_NUM_CTX: Final[int] = int(os.getenv("OLLAMA_NUM_CTX", "65536"))
 CONTEXT_OUTPUT_RESERVE: Final[int] = 4096  # tokens reservados para instrucciones, pregunta y respuesta
 LLM_TEMPERATURE: Final[float] = 0.0  # tareas factuales: determinismo (Clase 4)
 MAX_CONTEXT_TOKENS: Final[int] = int(os.getenv("MAX_CONTEXT_TOKENS", "200000"))
+
+# --- Recomendador (curso de Gestión) -------------------------------------------------------
+# Carpeta propia para no mezclar las tablas sintéticas con el HTML de Bronze (data/raw).
+RECO_DIR: Final[Path] = DATA_DIR / "recomendador"
+RECO_N_CLIENTES: Final[int] = 20_000
+RECO_SEMILLA: Final[int] = 42
+RECO_K: Final[int] = 5
+RECO_SEGMENTO: Final[tuple[str, ...]] = ("vehiculo", "vivienda", "tiene_mascota", "tiene_credito")
+RECO_MODELO_BASE: Final[str] = "intfloat/multilingual-e5-small"
 
 EVAL_QUESTIONS: Final[Path] = PROJECT_ROOT / "evaluacion" / "preguntas.yaml"
 EVAL_RESULTS: Final[Path] = PROJECT_ROOT / "evaluacion" / "resultados.csv"

@@ -60,8 +60,10 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **Build backend** | `uv_build` (src-layout) |
 | **Paquete Python** | `sb_asistente` (MVC: `model/`, `controller/`, `view/`) |
 | **Scraping** | `requests` + `BeautifulSoup` + `trafilatura` (sin Selenium: el sitio es SSR) |
-| **LLM** | LangChain · Claude Haiku (API de Anthropic) · Ollama `llama3.2:3b` (local) |
-| **Interfaz** | Streamlit (`app.py`) y CLI `sb` |
+| **LLM** | LangChain · Claude Haiku (API de Anthropic) · DeepSeek (alterno) · Ollama `llama3.2:3b` (local) |
+| **API** | FastAPI + Pydantic v2 (`view/api.py`, `view/schemas.py`), `uv run sb api` |
+| **Recomendador** | pandas + numpy (datos sintéticos, líneas base); M3: multilingual-e5-small + LightGBM + MLflow |
+| **Interfaz** | Front web (consume la API), Streamlit (`app.py`) y CLI `sb` |
 | **Testing** | [`pytest`](https://docs.pytest.org/) (AAA, sin red ni API) |
 | **Linting / Formato** | [Ruff](https://docs.astral.sh/ruff/) |
 | **Pre-commit** | higiene + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + Conventional Commits |
@@ -70,6 +72,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) |
 | **Especificación** | OpenSpec (`openspec/`: `spec.md`, `plan.md`, `tasks.md`) |
 | **Memoria del agente** | Engram (espejo versionado en `docs/decisiones/`) |
+| **Agentes** | Claude Code con 7 subagentes (`.claude/agents/`) y hooks de telemetría (`.claude/settings.json`) |
 
 > ⚠️ **Regla dura:** toda gestión de dependencias y entornos pasa por `uv`. Está
 > **prohibido** `pip` y `requirements.txt`.
@@ -85,22 +88,26 @@ advanced-ai-lab/
 │   │   ├── scraping/              #   discover (robots + sitemap) · fetch (Bronze)
 │   │   ├── processing/            #   clean (Silver) · gold (Markdown, corpus, chunks)
 │   │   ├── llm/                   #   prompts versionados · service (LangChain) · retrieval
-│   │   └── evaluation.py          #   banco de preguntas y métricas
+│   │   ├── evaluation.py          #   banco de preguntas y métricas
+│   │   └── recomendador/          #   sintético · contrato · líneas base · métricas (Gestión)
 │   ├── controller/                # C · casos de uso
 │   │   ├── pipeline.py            #   descubrir → extraer → limpiar → deduplicar → enriquecer
-│   │   └── assistant.py           #   Q&A completo / contexto reducido, evaluación
+│   │   ├── assistant.py           #   Q&A completo / contexto reducido, evaluación
+│   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
-│       ├── streamlit_app.py       #   interfaz web
+│       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
+│       ├── streamlit_app.py       #   consola interna
 │       └── cli.py                 #   comando `sb`
 ├── scripts/                       # scrape_empresa.py, crear_kanban.py, check_commit_msg.py
 ├── tests/                         # pytest por capa (AAA, fixtures HTML, LLM falso)
 ├── evaluacion/preguntas.yaml      # banco de 24 preguntas
 ├── openspec/                      # Spec-Driven Development (spec, plan, tasks)
-├── docs/                          # arquitectura, decisiones (ADR / Engram), sustentación, capturas
+├── docs/                          # requisitos, arquitectura, decisiones (ADR / Engram), gestion (M2), capturas
 ├── informe/                       # artículo IEEE (LaTeX)
 ├── data/raw · silver · gold       # Medallion (NO versionado)
 ├── Dockerfile · .dockerignore     # imagen multi-stage CPU
 ├── .github/                       # PR/issue templates, CI, Dependabot, labels
+├── .claude/                       # agents/ (subagentes) · settings.json (hooks) · skills/
 ├── .opencode/rules/               # reglas para agentes (tgrep)
 ├── AGENTS.md · .gga               # reglas para agentes y revisión GGA en pre-commit
 ├── CONSTITUTION.md                # este archivo — verdad central
@@ -171,6 +178,10 @@ git push
 | 2026-10-30 | Contexto reducido para modelos locales ([ADR-006](docs/decisiones/ADR-006-contexto-reducido-ollama.md)) | En CPU, la base completa tardaba ~30 min por respuesta |
 | 2026-11-01 | Estructura MVC (`model/`, `controller/`, `view/`) como el proyecto de Gestión ([ADR-007](docs/decisiones/ADR-007-estructura-mvc.md)) | Bajo acoplamiento: la vista solo habla con el controlador |
 | 2026-11-01 | Imagen Docker multi-stage CPU y estándar `jan-project-standard` ([ADR-008](docs/decisiones/ADR-008-docker-multistage-y-estandar.md)) | Reproducibilidad y gobernanza del repositorio |
+| 2026-11-06 | Un solo repositorio público para Técnicas y Gestión ([ADR-009](docs/decisiones/ADR-009-repositorio-unico.md)) | Mismo producto y misma gobernanza en ambos cursos |
+| 2026-11-06 | API REST con FastAPI + Pydantic ([ADR-010](docs/decisiones/ADR-010-api-fastapi-pydantic.md)) | Front real y validación en la frontera |
+| 2026-11-06 | Subagentes de Claude Code y telemetría en vivo ([ADR-011](docs/decisiones/ADR-011-subagentes-y-telemetria.md)) | Desarrollo con agentes visible y trazable |
+| 2026-11-06 | DeepSeek como proveedor alterno ([ADR-012](docs/decisiones/ADR-012-proveedor-deepseek.md)) | Controlar el costo de tokens |
 
 ## 10. Notas y tareas pendientes
 

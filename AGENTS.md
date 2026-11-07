@@ -2,15 +2,17 @@
 
 > **Fuente única de verdad:** [`CONSTITUTION.md`](CONSTITUTION.md). Este archivo resume las reglas
 > que un agente debe respetar; si algo cambia, se actualiza primero la constitución.
-> Spec del trabajo: [`openspec/specs/fase1-base-conocimiento/`](openspec/specs/fase1-base-conocimiento/)
-> (`spec.md`, `plan.md`, `tasks.md`). Estándar del repo: skill `jan-project-standard`
+> Spec del trabajo: [`openspec/specs/fase2-producto-unico/`](openspec/specs/fase2-producto-unico/)
+> (activa) y [`fase1-base-conocimiento/`](openspec/specs/fase1-base-conocimiento/) (`spec.md`, `plan.md`,
+> `tasks.md`). Requisitos de ambos cursos y su evidencia: [`docs/requisitos.md`](docs/requisitos.md). Estándar del repo: skill `jan-project-standard`
 > (`.claude/skills/jan-project-standard/`).
 
 ## Contexto
 Asistente de conocimiento de **Seguros Bolívar** (información pública, alcance PERSONAS +
 CANALES DE ATENCIÓN). Proyecto integrador de Técnicas Avanzadas de IA (UAO · Grupo 10).
 Fase 1: scraping Medallion → conocimiento consolidado en el system prompt → Resumen, FAQ y
-Q&A con LangChain + Streamlit. Fase 2: RAG con los chunks de `data/gold/chunks.jsonl`.
+Q&A con LangChain + Streamlit. Fase 2 (producto único, ADR-009): este repositorio sirve a los cursos
+de Técnicas (módulo de conocimiento) y de Gestión (módulo de recomendación), con API FastAPI y RAG.
 
 ## Arquitectura MVC (obligatoria)
 - **Modelo** `src/sb_asistente/model/`
@@ -18,8 +20,10 @@ Q&A con LangChain + Streamlit. Fase 2: RAG con los chunks de `data/gold/chunks.j
   - `processing/` → Silver (limpieza) y Gold (Markdown, corpus, chunks).
   - `llm/` → prompts versionados, servicio LangChain y contexto reducido. **Ningún prompt fuera de `prompts.py`.**
   - `evaluation.py` → banco de preguntas y métricas.
-- **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (etapas del scraping) y `assistant.py` (Q&A, evaluación).
-- **Vista** `src/sb_asistente/view/` → `streamlit_app.py` y `cli.py`; **solo llaman al controlador**, sin lógica de negocio.
+  - `recomendador/` → datos sintéticos, contrato de datos, líneas base y métricas (curso de Gestión).
+- **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (scraping), `assistant.py` (Q&A, evaluación) y `recomendador.py`.
+- **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `streamlit_app.py` y `cli.py`;
+  **solo llaman al controlador**, sin lógica de negocio. Toda entrada de la API es un modelo Pydantic.
 - `config.py` concentra rutas, alcance, umbrales y modelo (nada de números mágicos).
 - Dependencias por constructor (sesión HTTP, LLM, reloj, sleep) para poder probar sin red ni API.
 
@@ -27,7 +31,29 @@ Q&A con LangChain + Streamlit. Fase 2: RAG con los chunks de `data/gold/chunks.j
 - Solo información **pública**. Respetar `robots.txt`, 1–2 s entre peticiones, User-Agent identificable.
 - Prohibido: contenido tras login, portales transaccionales, datos personales (Ley 1581 de 2012),
   información interna de la compañía aunque un integrante tenga acceso por su trabajo.
-- `data/` (raw, silver, gold) **nunca** se versiona. `.env` con `ANTHROPIC_API_KEY` **nunca** se versiona.
+- `data/` (raw, silver, gold) **nunca** se versiona. `.env` (claves de Anthropic/DeepSeek y token de eventos) **nunca** se versiona.
+
+## Subagentes (`.claude/agents/`) y telemetría
+| Subagente | Modelo | Cuándo |
+|---|---|---|
+| `arquitecto` | opus | antes de un plan no trivial o si el mismo error se repite; solo lectura, nunca escribe código |
+| `explorador` | haiku | mapear el repo o encontrar llamadas sin llenar el contexto del líder |
+| `probador` | haiku | después de cada cambio: ruff, formato y pytest con cobertura |
+| `revisor` | sonnet | antes de cada commit o PR: revisa el diff contra estas reglas |
+| `guardian-datos` | haiku | cambios en scraping, datos, API o configuración |
+| `ml-recomendador` | sonnet | historias HU del recomendador (worktree aislado) |
+| `documentador` | sonnet | al cerrar una tarea: README, ADR, tasks y `docs/requisitos.md` |
+
+Los hooks de `.claude/settings.json` registran cada evento (sin prompts ni contenido) en
+`logs/agent-events.jsonl` y, con `AGENT_EVENTS_URL`/`AGENT_EVENTS_TOKEN` en `.env`, lo publican en
+el panel de yellowdata.com.co/casos. No desactivar los hooks ni enviar datos privados por ellos.
+
+## Skills
+- Propias en `.claude/skills/<nombre>/SKILL.md` (`make skill-new`); externas con `make skill-add`
+  (quedan en `.agents/skills/` y `skills-lock.json`). Validar con `make skills`.
+- Solo `metadata.uso: asistente` llega al chat público; cambiar una skill a ese uso requiere PR revisado
+  por `revisor` y `guardian-datos`.
+- La skill `operar-asistente` resume cómo levantar y depurar cada parte del producto.
 
 ## Calidad
 - Python 3.13 y **solo uv** (`uv add`, `uv run`); prohibido `pip` y `requirements.txt`.
@@ -44,6 +70,8 @@ make process        # Bronze → Silver → Gold sin red
 make app            # uv run streamlit run app.py
 make check          # ruff + formato + pytest (lo mismo que la CI)
 make docker-build   # imagen multi-stage CPU
+make api            # API FastAPI en http://127.0.0.1:8000/docs
+make reco           # datos sintéticos + validación + líneas base del recomendador
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 ```
 

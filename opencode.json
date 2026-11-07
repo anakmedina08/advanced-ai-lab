@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "CONSTITUTION.md"],
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "jan-project-standard": "ask"
+    }
+  }
+}
