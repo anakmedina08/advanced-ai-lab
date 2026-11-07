@@ -1,8 +1,8 @@
 """Servicio LLM con LangChain: Resumen, FAQ y Q&A sobre el conocimiento consolidado.
 
 Fase 1: todo el texto limpio va en el *system prompt* (sin RAG). El proveedor se elige por
-configuración (Claude por la API de Anthropic u Ollama local) sin cambiar la lógica (Clase 5: Agent = Model
-+ Harness).
+configuración (Claude por la API de Anthropic, DeepSeek u Ollama local) sin cambiar la lógica
+(Clase 5: Agent = Model + Harness).
 """
 
 import time
@@ -17,6 +17,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from sb_asistente.config import (
     ANTHROPIC_MODEL,
     CONTEXT_OUTPUT_RESERVE,
+    DEEPSEEK_CONTEXT_TOKENS,
+    DEEPSEEK_MODEL,
     KNOWLEDGE_MD,
     LLM_MAX_OUTPUT_TOKENS,
     LLM_PROVIDER,
@@ -69,6 +71,15 @@ def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseC
             max_tokens=LLM_MAX_OUTPUT_TOKENS,
             max_retries=2,
         )
+    if provider == "deepseek":
+        from langchain_deepseek import ChatDeepSeek
+
+        return ChatDeepSeek(
+            model=DEEPSEEK_MODEL,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_OUTPUT_TOKENS,
+            max_retries=2,
+        )
     if provider == "ollama":
         from langchain_ollama import ChatOllama
 
@@ -78,12 +89,12 @@ def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseC
             num_ctx=num_ctx or OLLAMA_NUM_CTX,
             num_predict=LLM_MAX_OUTPUT_TOKENS,
         )
-    raise ValueError(f"Proveedor no soportado: {provider!r} (use 'anthropic' u 'ollama').")
+    raise ValueError(f"Proveedor no soportado: {provider!r} (use 'anthropic', 'deepseek' u 'ollama').")
 
 
 def context_budget(provider: str = LLM_PROVIDER) -> int:
     """Tokens disponibles para la base de conocimiento según el proveedor."""
-    window = OLLAMA_NUM_CTX if provider == "ollama" else MAX_CONTEXT_TOKENS
+    window = {"ollama": OLLAMA_NUM_CTX, "deepseek": DEEPSEEK_CONTEXT_TOKENS}.get(provider, MAX_CONTEXT_TOKENS)
     return window - CONTEXT_OUTPUT_RESERVE
 
 
