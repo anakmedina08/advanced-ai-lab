@@ -124,3 +124,49 @@ def test_extraer_fuentes_sin_duplicados():
 
 def test_rechazar_datos_personales_acepta_texto_normal():
     assert rechazar_datos_personales("  ¿Cubre el SOAT 2026?  ") == "¿Cubre el SOAT 2026?"
+
+
+@pytest.fixture
+def chat_client(client):
+    api.app.dependency_overrides[api.get_chat_qa] = lambda: (
+        lambda proveedor: (
+            lambda pregunta, skill: Answer(f"Escríbanos por WhatsApp. Fuente: {URL}", "qa", "v3", 0.01, 100)
+        )
+    )
+    return client
+
+
+def test_chat_conocimiento(chat_client):
+    r = chat_client.post("/chat", json={"mensaje": "¿Cuál es el WhatsApp?"})
+    cuerpo = r.json()
+    assert r.status_code == 200 and cuerpo["herramienta"] == "conocimiento" and cuerpo["fuentes"] == [URL]
+    assert cuerpo["traza"][0]["agente"] == "clasificador"
+
+
+def test_chat_saludo(chat_client):
+    assert chat_client.post("/chat", json={"mensaje": "hola"}).json()["intencion"] == "saludo"
+
+
+def test_chat_rechaza_datos_personales(chat_client):
+    assert chat_client.post("/chat", json={"mensaje": "mi correo es a@b.co"}).status_code == 422
+
+
+def test_chat_cliente_id_con_formato_invalido(chat_client):
+    assert chat_client.post("/chat", json={"mensaje": "hola", "cliente_id": "1012345678"}).status_code == 422
+
+
+def test_chat_skill_desconocida_es_404(chat_client):
+    r = chat_client.post("/chat", json={"mensaje": "¿Qué cubre el SOAT?", "skill": "no-existe"})
+    assert r.status_code == 404
+
+
+def test_chat_modo_clasificador(chat_client):
+    r = chat_client.post(
+        "/chat", json={"mensaje": "¿Qué seguro me recomiendas si tengo moto?", "modo": "clasificador"}
+    )
+    assert r.json()["intencion"] == "recomendacion" and r.json()["perfil"] == {"vehiculo": "moto"}
+
+
+def test_skills_lista_solo_las_del_asistente(client):
+    nombres = {s["nombre"] for s in client.get("/skills").json()}
+    assert "comparar-seguros" in nombres and "jan-project-standard" not in nombres

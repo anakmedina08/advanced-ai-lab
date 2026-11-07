@@ -81,6 +81,54 @@ def comparar_baselines(tablas: dict[str, pd.DataFrame], k: int = RECO_K) -> dict
 
 
 @lru_cache(maxsize=4)
+def _tablas_cache(directorio: Path) -> dict[str, pd.DataFrame]:
+    """Lee las tablas una sola vez por carpeta (el chat recomienda en cada mensaje)."""
+    return leer_tablas(directorio)
+
+
+PERFIL_COLUMNAS: tuple[str, ...] = RECO_SEGMENTO
+
+
+def recomendar_por_perfil(
+    perfil: dict[str, object], k: int = RECO_K, directorio: Path = RECO_DIR
+) -> tuple[list[dict[str, str]], int]:
+    """Top-k más contratado entre clientes con el perfil descrito, sin pedir identificación.
+
+    Sirve al chat público: el usuario describe su situación («tengo carro y un perro») y se le
+    sugieren los productos más frecuentes entre clientes sintéticos parecidos.
+
+    Returns:
+        Recomendaciones y número de clientes similares usados como evidencia.
+
+    """
+    if not 1 <= k <= 10:
+        raise ValueError("k debe estar entre 1 y 10.")
+    desconocidas = set(perfil) - set(PERFIL_COLUMNAS)
+    if desconocidas:
+        raise KeyError(f"Campos de perfil no soportados: {sorted(desconocidas)}")
+    tablas = _tablas_cache(directorio)
+    clientes = tablas["clientes"]
+    mascara = pd.Series(True, index=clientes.index)
+    for columna, valor in perfil.items():
+        mascara &= clientes[columna] == valor
+    similares = clientes.loc[mascara, "cliente_id"]
+    polizas = tablas["polizas"]
+    conteo = polizas[polizas["cliente_id"].isin(similares)]["product_id"].value_counts()
+    if conteo.empty:  # perfil sin clientes: popularidad global
+        conteo = polizas["product_id"].value_counts()
+    razon = (
+        f"Lo tienen muchos clientes con un perfil como el suyo ({len(similares):,} clientes similares)."
+        if perfil
+        else "Es de los seguros más contratados."
+    )
+    items = [
+        {"product_id": pid, "nombre": POR_ID[pid].nombre, "linea": POR_ID[pid].linea, "razon": razon}
+        for pid in conteo.index[:k]
+    ]
+    return items, int(len(similares))
+
+
+@lru_cache(maxsize=4)
 def _modelo_segmento(directorio: Path) -> RecomendadorSegmento:
     """Entrena una sola vez la línea base por segmento (caché por carpeta)."""
     tablas = leer_tablas(directorio)

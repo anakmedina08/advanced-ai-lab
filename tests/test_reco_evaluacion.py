@@ -139,3 +139,21 @@ def test_recomendar_cliente_desconocido(tmp_path):
 def test_recomendar_k_fuera_de_rango(tmp_path):
     with pytest.raises(ValueError):
         recomendador.recomendar("X", 0, tmp_path)
+
+
+def test_recomendar_por_perfil(tmp_path):
+    recomendador.generar(400, 3, tmp_path)
+    items, similares = recomendador.recomendar_por_perfil({"vehiculo": "carro"}, 3, tmp_path)
+    assert len(items) == 3 and similares > 0
+    assert "clientes similares" in items[0]["razon"]
+
+
+def test_recomendar_por_perfil_vacio_usa_popularidad(tmp_path):
+    recomendador.generar(400, 3, tmp_path)
+    items, similares = recomendador.recomendar_por_perfil({}, 2, tmp_path)
+    assert len(items) == 2 and similares == 400
+
+
+def test_recomendar_por_perfil_campo_invalido(tmp_path):
+    with pytest.raises(KeyError):
+        recomendador.recomendar_por_perfil({"estrato": 3}, 2, tmp_path)

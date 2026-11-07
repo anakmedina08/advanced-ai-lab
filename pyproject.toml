@@ -11,6 +11,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "a2wsgi>=1.10",
     "beautifulsoup4>=4.15.0",
     "fastapi>=0.120",
     "langchain>=1.4.7",

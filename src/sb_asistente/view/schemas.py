@@ -49,7 +49,7 @@ class PreguntaIn(_Entrada):
     pregunta: Annotated[
         str, Field(min_length=3, max_length=500, examples=["¿Cuál es el WhatsApp de atención?"])
     ]
-    version: Literal["v1", "v2", "v3"] = "v3"
+    version: Literal["v1", "v2", "v3", "v4"] = "v3"
     modo: Modo = "reducido"
     proveedor: str | None = Field(default=None, description=f"Uno de {', '.join(PROVIDERS)}")
 
@@ -126,3 +126,60 @@ class SaludOut(BaseModel):
     proveedor: str
     corpus_listo: bool
     recomendador_listo: bool
+
+
+class ChatIn(_Entrada):
+    """Mensaje del chat (estilo conversación)."""
+
+    mensaje: Annotated[
+        str, Field(min_length=1, max_length=800, examples=["¿Qué seguro me sirve si tengo moto?"])
+    ]
+    modo: Literal["auto", "conocimiento", "recomendador", "clasificador"] = "auto"
+    cliente_id: Annotated[str | None, Field(default=None, pattern=r"^C\d{6}$", examples=["C000123"])] = None
+    skill: Annotated[str | None, Field(default=None, max_length=64, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")] = (
+        None
+    )
+    k: Annotated[int, Field(ge=1, le=10)] = 5
+    proveedor: str | None = None
+
+    @field_validator("mensaje")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+    @field_validator("proveedor")
+    @classmethod
+    def _proveedor_valido(cls, valor: str | None) -> str | None:
+        return PreguntaIn._proveedor_valido(valor)
+
+
+class PasoOut(BaseModel):
+    """Un paso del orquestador."""
+
+    agente: str
+    accion: str
+    detalle: str
+    ms: int
+
+
+class ChatOut(BaseModel):
+    """Respuesta de un turno del chat con su traza."""
+
+    respuesta: str
+    intencion: str
+    confianza: float
+    herramienta: str
+    seccion: str | None = None
+    perfil: dict[str, str | bool] = {}
+    fuentes: list[str] = []
+    recomendaciones: list[RecomendacionOut] = []
+    skill: str | None = None
+    traza: list[PasoOut] = []
+
+
+class SkillOut(BaseModel):
+    """Skill disponible para el chat."""
+
+    nombre: str
+    descripcion: str
+    licencia: str | None = None

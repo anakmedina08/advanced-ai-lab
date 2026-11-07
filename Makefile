@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help api reco agentes install dev pre-commit-install pre-commit lint format format-check test check build clean \
+.PHONY: help api reco agentes chat skills skill-new skill-find skill-add install dev pre-commit-install pre-commit lint format format-check test check build clean \
 	data process app eval docker-build docker-run
 
 help: ## Muestra esta ayuda
@@ -55,6 +55,22 @@ reco: ## Recomendador: genera datos sintéticos, valida el contrato y mide las l
 	uv run sb reco generar
 	uv run sb reco validar
 	uv run sb reco baseline
+
+chat: ## Un turno del chat en la terminal: make chat MSG="¿Qué seguro me sirve si tengo moto?"
+	uv run sb chat "$(MSG)"
+
+skills: ## Lista y valida las skills (.claude/skills, .agents/skills, .opencode/skills)
+	uv run sb skills listar
+
+skill-new: ## Crea una skill propia: make skill-new NAME=mi-skill DESC="Qué hace" USO=asistente|desarrollo
+	uv run sb skills nueva $(NAME) --descripcion "$(DESC)" --uso $(or $(USO),desarrollo)
+
+skill-find: ## Busca skills existentes en el directorio abierto (skills.sh): make skill-find Q=fastapi
+	npx -y skills find $(Q)
+
+skill-add: ## Instala una skill existente para Claude Code y OpenCode: make skill-add REPO=owner/repo SKILL=nombre
+	npx -y skills add $(REPO) --skill $(SKILL) -a claude-code -a opencode -y
+	uv run sb skills validar
 
 agentes: ## Muestra los últimos eventos de agentes registrados por los hooks
 	@tail -n 20 logs/agent-events.jsonl 2>/dev/null || echo "Aún no hay eventos (se crean al usar Claude Code en este repo)"

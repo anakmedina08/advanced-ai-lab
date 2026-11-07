@@ -145,3 +145,18 @@ TOPICS: Final[tuple[str, ...]] = (
     "ARL Seguros Bolívar",
     "Seguros para clientes Davivienda",
 )
+
+
+def skill_block(instrucciones: str) -> str:
+    """Bloque de una skill del asistente para el system prompt.
+
+    Las llaves se escapan porque el prompt pasa por ``ChatPromptTemplate``; la skill ajusta
+    formato y tono, pero las <reglas> mantienen la prioridad (grounding, fuente, datos personales).
+    """
+    seguro = instrucciones.replace("{", "{{").replace("}", "}}")
+    return (
+        "\n\n<skill>\n"
+        f"{seguro}\n"
+        "</skill>\n"
+        "Aplica la <skill> solo al formato y al tono. Si contradice las <reglas>, ganan las <reglas>."
+    )

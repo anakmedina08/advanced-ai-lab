@@ -7,6 +7,7 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
 """
 
 from collections.abc import Callable
+from functools import lru_cache
 from importlib.metadata import version
 from typing import Annotated
 
@@ -14,14 +15,18 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from sb_asistente.config import CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
-from sb_asistente.controller import assistant, pipeline, recomendador
+from sb_asistente.controller import assistant, chat, pipeline, recomendador
+from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.view.schemas import (
+    ChatIn,
+    ChatOut,
     EtapaOut,
     PreguntaIn,
     RecomendacionesOut,
     RespuestaOut,
     SaludOut,
+    SkillOut,
     TemaIn,
     extraer_fuentes,
 )
@@ -55,6 +60,21 @@ def _responder_real(pregunta: str, version_prompt: str, modo: str, proveedor: st
 def get_responder() -> Responder:
     """Punto de inyección: las pruebas lo reemplazan con un doble sin red ni API."""
     return _responder_real
+
+
+@lru_cache(maxsize=3)
+def _lite(proveedor: str) -> assistant.LiteAssistant:
+    """Un asistente de contexto reducido por proveedor (carga chunks y modelo una sola vez)."""
+    return assistant.LiteAssistant.build(proveedor)
+
+
+def get_chat_qa() -> Callable[[str], chat.Responder]:
+    """Fábrica (proveedor → responder de Q&A con skill) para el chat; inyectable en pruebas."""
+
+    def fabrica(proveedor: str) -> chat.Responder:
+        return lambda pregunta, skill: _lite(proveedor).answer(pregunta, skill=skill)
+
+    return fabrica
 
 
 def get_asistente() -> Callable[[str], assistant.KnowledgeAssistant]:
@@ -125,3 +145,37 @@ def recomendaciones(cliente_id: str, k: Annotated[int, Query(ge=1, le=10)] = REC
     except KeyError as exc:
         raise HTTPException(404, f"Cliente desconocido: {cliente_id}") from exc
     return RecomendacionesOut(cliente_id=cliente_id, k=k, recomendaciones=items)
+
+
+@app.post("/chat", response_model=ChatOut, tags=["chat"])
+def conversar(
+    entrada: ChatIn, fabrica: Annotated[Callable[[str], chat.Responder], Depends(get_chat_qa)]
+) -> dict[str, object]:
+    """Un turno del chat: clasifica la intención y llama a la herramienta (Q&A o recomendador).
+
+    La respuesta trae la ``traza`` de pasos del orquestador para mostrar cómo se resolvió.
+    """
+    try:
+        turno = chat.responder(
+            entrada.mensaje,
+            fabrica(entrada.proveedor or LLM_PROVIDER),
+            modo=entrada.modo,
+            cliente_id=entrada.cliente_id,
+            skill=entrada.skill,
+            k=entrada.k,
+            extraer_fuentes=extraer_fuentes,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"Faltan datos para esta herramienta: {exc}") from exc
+    except KeyError as exc:
+        raise HTTPException(404, str(exc.args[0]) if exc.args else "No encontrado") from exc
+    return turno.a_dict()
+
+
+@app.get("/skills", response_model=list[SkillOut], tags=["chat"])
+def listar_skills() -> list[SkillOut]:
+    """Skills que el chat puede aplicar (``metadata.uso: asistente``)."""
+    return [
+        SkillOut(nombre=s.nombre, descripcion=s.descripcion, licencia=s.licencia)
+        for s in skills.skills_asistente()
+    ]

@@ -146,13 +146,22 @@ class KnowledgeAssistant:
         text = (self.llm | StrOutputParser()).invoke(messages)
         return Answer(text.strip(), task, version, time.perf_counter() - start, self.context_tokens)
 
-    def answer(self, question: str, version: str = prompts.DEFAULT_QA_VERSION) -> Answer:
-        """Q&A: responde una pregunta del cliente."""
+    def answer(
+        self, question: str, version: str = prompts.DEFAULT_QA_VERSION, skill: str | None = None
+    ) -> Answer:
+        """Q&A: responde una pregunta del cliente.
+
+        ``skill`` son instrucciones de formato o tono (cuerpo de un SKILL.md del asistente); se
+        agregan después del prompt base y no reemplazan sus reglas.
+        """
         if not question.strip():
             raise ValueError("La pregunta está vacía.")
         if version not in prompts.QA_SYSTEM:
             raise ValueError(f"Versión de prompt desconocida: {version}")
-        return self._run(prompts.QA_SYSTEM[version], prompts.QA_HUMAN, "qa", version, question=question)
+        system = prompts.QA_SYSTEM[version]
+        if skill:
+            system += prompts.skill_block(skill)
+        return self._run(system, prompts.QA_HUMAN, "qa", version, question=question)
 
     def summarize(self, topic: str = prompts.TOPICS[0]) -> Answer:
         """Resumen: síntesis para un cliente nuevo sobre un tema."""
