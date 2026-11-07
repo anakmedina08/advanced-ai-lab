@@ -26,6 +26,10 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-006](ADR-006-contexto-reducido-ollama.md) | Contexto reducido para que Ollama responda en CPU | 2026-10-30 |
 | [ADR-007](ADR-007-estructura-mvc.md) | Estructura MVC igual a la del proyecto de Gestión | 2026-11-01 |
 | [ADR-008](ADR-008-docker-multistage-y-estandar.md) | Docker multi-stage y estándar jan-project-standard | 2026-11-01 |
+| [ADR-009](ADR-009-repositorio-unico.md) | Un solo repositorio público para los dos cursos | 2026-11-06 |
+| [ADR-010](ADR-010-api-fastapi-pydantic.md) | API REST con FastAPI, Pydantic y type hints | 2026-11-06 |
+| [ADR-011](ADR-011-subagentes-y-telemetria.md) | Subagentes de Claude Code y telemetría en vivo | 2026-11-06 |
+| [ADR-012](ADR-012-proveedor-deepseek.md) | DeepSeek como proveedor alterno del LLM | 2026-11-06 |
 
 ## Cómo registrar una decisión nueva en Engram
 

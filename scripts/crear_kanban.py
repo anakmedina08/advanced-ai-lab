@@ -16,7 +16,9 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-TASKS = Path(__file__).resolve().parents[1] / "openspec" / "specs" / "fase1-base-conocimiento" / "tasks.md"
+SPECS = Path(__file__).resolve().parents[1] / "openspec" / "specs"
+# Todas las fases: fase1-base-conocimiento, fase2-producto-unico, … (IDs T-NN únicos entre fases)
+TASKS_FILES = sorted(SPECS.glob("*/tasks.md"))
 LINE = re.compile(
     r"^- \[(?P<done>[ x])\] (?P<id>T-\d+) \[(?P<label>[\w-]+)\] (?P<title>.+?) \((?P<owner>[^)]+)\)$"
 )
@@ -49,7 +51,7 @@ def body(task: Task) -> str:
     """Cuerpo del issue."""
     return (
         f"**Responsable:** {task.owner}\n\n"
-        "_Generado desde `openspec/specs/fase1-base-conocimiento/tasks.md`. "
+        "_Generado desde `openspec/specs/*/tasks.md`. "
         "Para cambiarlo, edite la spec y vuelva a ejecutar `scripts/crear_kanban.py`._"
     )
 
@@ -69,7 +71,7 @@ def main() -> None:
     parser.add_argument("--project", type=int, help="Número del GitHub Project (opcional)")
     parser.add_argument("--dry-run", action="store_true", help="Solo muestra los comandos")
     args = parser.parse_args()
-    tasks = parse_tasks(TASKS.read_text(encoding="utf-8"))
+    tasks = parse_tasks("\n".join(f.read_text(encoding="utf-8") for f in TASKS_FILES))
     owner = args.repo.split("/")[0]
     existing: dict[str, dict] = {}
     if not args.dry_run:

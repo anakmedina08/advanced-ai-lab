@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev pre-commit-install pre-commit lint format format-check test check build clean \
+.PHONY: help api reco agentes install dev pre-commit-install pre-commit lint format format-check test check build clean \
 	data process app eval docker-build docker-run
 
 help: ## Muestra esta ayuda
@@ -45,8 +45,19 @@ process: ## Reprocesa Bronze → Silver → Gold sin volver a la web (segundos)
 app: ## Abre la interfaz Streamlit en http://localhost:8501
 	uv run streamlit run app.py
 
-eval: ## Evalúa el banco de preguntas (PROVIDER=anthropic|ollama, VERSION=v1..v4)
+eval: ## Evalúa el banco de preguntas (PROVIDER=anthropic|deepseek|ollama, VERSION=v1..v4)
 	uv run sb eval --provider $(or $(PROVIDER),anthropic) --version $(or $(VERSION),v3)
+
+api: ## Levanta la API FastAPI en http://127.0.0.1:8000/docs
+	uv run sb api
+
+reco: ## Recomendador: genera datos sintéticos, valida el contrato y mide las líneas base
+	uv run sb reco generar
+	uv run sb reco validar
+	uv run sb reco baseline
+
+agentes: ## Muestra los últimos eventos de agentes registrados por los hooks
+	@tail -n 20 logs/agent-events.jsonl 2>/dev/null || echo "Aún no hay eventos (se crean al usar Claude Code en este repo)"
 
 docker-build: ## Construye la imagen Docker multi-stage (CPU)
 	docker build -t sb-asistente .
