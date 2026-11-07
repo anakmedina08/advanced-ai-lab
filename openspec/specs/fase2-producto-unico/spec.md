@@ -56,6 +56,22 @@ y para que el desarrollo con agentes sea visible en vivo (ADR-011).
 - **Escenario:** dada una skill instalada con `npx skills add`, entonces no aparece en `GET /skills`
   hasta que se marque con `uso: asistente`.
 
+### R13 · RPC (ADR-015)
+- `POST /rpc` DEBE cumplir JSON-RPC 2.0: lotes, notificaciones y códigos de error del estándar; los
+  parámetros de cada método DEBEN validarse con Pydantic y `rpc.descubrir` DEBE listar sus esquemas.
+- **Escenario:** dado `{"jsonrpc":"2.0","method":"no.existe","id":1}`, entonces responde `error.code = -32601`.
+
+### R14 · RAG con base vectorial (ADR-016)
+- Los fragmentos Gold DEBEN indexarse en Chroma persistente; la búsqueda DEBE combinar BM25 y
+  vectores; el índice DEBE rechazar consultas con embeddings distintos a los de su creación.
+- `sb rag evaluar` DEBE reportar hit@k sobre el banco de preguntas en alcance.
+
+### R15 · Agente (ADR-017)
+- El agente DEBE responder con `RespuestaAgente` y solo DEBE conservar fuentes que devolvieron sus tools.
+- La memoria DEBE persistir por `conversacion_id` entre reinicios y DEBE poder borrarse.
+- Correos, tarjetas y números de documento DEBEN redactarse antes de llegar al modelo o a la memoria.
+- **Escenario:** dado «mi cédula es 1012345678», entonces el modelo recibe `[REDACTED…]` en su lugar.
+
 ## Criterios de aceptación de la fase
 - `make check` en verde con cobertura ≥ 85 %.
 - Matriz [`docs/requisitos.md`](../../../docs/requisitos.md) sin requisitos en estado «falta».

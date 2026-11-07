@@ -15,7 +15,9 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Type hints y docstrings | ✅ | regla `ANN` y `D` de Ruff en `pyproject.toml` |
 | Pydantic | ✅ | `src/sb_asistente/view/schemas.py` · ADR-010 |
 | FastAPI | ✅ | `src/sb_asistente/view/api.py`, `uv run sb api` → `/docs` · ADR-010 |
-| Pruebas AAA sin red ni API, cobertura ≥ 85 % | ✅ | `tests/` (296 pruebas), `make check`, umbral en la CI |
+| RPC (JSON-RPC 2.0) | ✅ | `POST /rpc`, `view/rpc.py`, `rpc.descubrir`, `make rpc-demo` · ADR-015 |
+| LangSmith (trazas y dataset de evaluación) | 🟡 | `LANGSMITH_*` en `.env`, etiquetas por turno, `make langsmith-dataset`; falta cargar la clave y correr un experimento |
+| Pruebas AAA sin red ni API, cobertura ≥ 85 % | ✅ | `tests/` (359 pruebas), `make check`, umbral en la CI |
 | Ruff (lint y formato) | ✅ | `make lint`, `make format-check` |
 | pre-commit con hook de GGA | ✅ | `.pre-commit-config.yaml` (higiene, Ruff, `uv lock --check`, GGA, bloqueo de datos y secretos) |
 | Conventional Commits | ✅ | hook `commit-msg` → `scripts/check_commit_msg.py` |
@@ -49,7 +51,11 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Comparar versiones de prompt con Claude e informe | ⏳ | T-14, `informe/main.tex` |
 | Proveedor de LLM intercambiable | ✅ | Anthropic / DeepSeek / Ollama · ADR-005, ADR-012 |
 | Contexto reducido para modelos locales | ✅ | `model/llm/retrieval.py` · ADR-006 |
-| Fase 2: RAG con embeddings | ⏳ | T-16 |
+| Base de datos vectorial | ✅ | Chroma persistente (`data/vector/`), `sb rag indexar` · ADR-016 |
+| Fase 2: RAG con embeddings | 🟡 | recuperación híbrida BM25 + vectores (`model/rag/`), hit@6 = 16/21 solo con BM25 (`sb rag evaluar`); falta medir con `nomic-embed-text`: T-34 |
+| Tools (function calling) | ✅ | `buscar_conocimiento`, `recomendar_seguros`, `clasificar_intencion` (`model/agente.py`) · ADR-017 |
+| Salidas estructuradas | ✅ | `RespuestaAgente` (Pydantic, `ToolStrategy`) con validación de fuentes · ADR-017 |
+| Memoria persistente | ✅ | `SqliteSaver` por conversación (`data/memoria/`), `agente.historial`, `agente.olvidar` · ADR-017 |
 | Clasificador de intención | 🟡 | línea base por reglas en `model/intencion.py` (en uso en el chat); modelo entrenado: T-27 |
 | Chat con orquestador (Q&A, recomendador, clasificador) | ✅ | `POST /chat`, `controller/chat.py`, pestaña de chat en yellowdata.com.co/casos · ADR-013 |
 

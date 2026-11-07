@@ -48,6 +48,14 @@ Los hooks de `.claude/settings.json` registran cada evento (sin prompts ni conte
 `logs/agent-events.jsonl` y, con `AGENT_EVENTS_URL`/`AGENT_EVENTS_TOKEN` en `.env`, lo publican en
 el panel de yellowdata.com.co/casos. No desactivar los hooks ni enviar datos privados por ellos.
 
+## RAG, agente y RPC
+- La vista nueva es `view/rpc.py` (JSON-RPC 2.0); todo método nuevo se registra en `METODOS` con su
+  modelo Pydantic de parámetros y su prueba en `tests/test_rpc.py`.
+- Las tools del agente viven en `model/agente.py` y reciben sus dependencias inyectadas; nunca leen
+  `.env` ni archivos fuera de `data/gold/`.
+- Antes de cambiar la recuperación (`model/rag/`), correr `uv run sb rag evaluar` y registrar el hit@k.
+- `data/vector/` y `data/memoria/` no se versionan (contienen texto de usuarios y del sitio).
+
 ## Skills
 - Propias en `.claude/skills/<nombre>/SKILL.md` (`make skill-new`); externas con `make skill-add`
   (quedan en `.agents/skills/` y `skills-lock.json`). Validar con `make skills`.

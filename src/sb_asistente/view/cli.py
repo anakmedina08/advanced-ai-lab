@@ -9,9 +9,12 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from sb_asistente.config import (
+    EMBEDDINGS_PROVIDER,
+    EMBEDDINGS_PROVIDERS,
     GOLD_DIR,
     LLM_PROVIDER,
     PROVIDERS,
+    RAG_K,
     RECO_DIR,
     RECO_K,
     RECO_N_CLIENTES,
@@ -80,6 +83,22 @@ def build_parser() -> argparse.ArgumentParser:
     nueva.add_argument("nombre")
     nueva.add_argument("--descripcion", required=True)
     nueva.add_argument("--uso", default="desarrollo", choices=["asistente", "desarrollo"])
+    rag = sub.add_parser("rag", help="Base vectorial Chroma y búsqueda híbrida")
+    rag_sub = rag.add_subparsers(dest="rag_command", required=True)
+    idx = rag_sub.add_parser("indexar", help="Indexa data/gold/chunks.jsonl en data/vector/")
+    idx.add_argument("--embeddings", default=EMBEDDINGS_PROVIDER, choices=list(EMBEDDINGS_PROVIDERS))
+    idx.add_argument("--reset", action="store_true", help="Vacía el índice antes de indexar")
+    bus = rag_sub.add_parser("buscar", help="Prueba la recuperación híbrida")
+    bus.add_argument("consulta")
+    bus.add_argument("-k", type=int, default=RAG_K)
+    bus.add_argument("--seccion", default=None)
+    ev = rag_sub.add_parser("evaluar", help="hit@k de la recuperación con el banco de preguntas")
+    ev.add_argument("-k", type=int, nargs="+", default=[3, 6])
+    ag = sub.add_parser("agente", help="Turno del agente (tools + salida estructurada + memoria)")
+    ag.add_argument("mensaje")
+    ag.add_argument("--conversacion", default="cli-local", help="Id de la conversación (memoria)")
+    ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
+    ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
@@ -119,6 +138,52 @@ def _skills(args: argparse.Namespace) -> int:
     return 1 if errores else 0
 
 
+def _rag(args: argparse.Namespace) -> int:
+    """Subcomandos de la base vectorial."""
+    from sb_asistente.controller.agente import recuperador_por_defecto
+    from sb_asistente.model.rag import indice
+    from sb_asistente.model.rag.fuentes import fragmentos_rag
+
+    if args.rag_command == "indexar":
+        info = indice.indexar(fragmentos_rag(), args.embeddings, reset=args.reset)
+        print(f"Índice listo: {info.fragmentos} fragmentos · {info.proveedor}/{info.modelo} → data/vector/")
+        return 0
+    recuperador, modo = recuperador_por_defecto()
+    print(f"Modo: {modo}\n")
+    if args.rag_command == "evaluar":
+        from sb_asistente.config import EVAL_QUESTIONS
+        from sb_asistente.model.evaluation import load_questions
+        from sb_asistente.model.rag.evaluacion import hit_at_k
+
+        preguntas = load_questions(EVAL_QUESTIONS)
+        for k in args.k:
+            r = hit_at_k(recuperador, preguntas, k)
+            print(f"hit@{k}: {r.aciertos}/{r.total} ({r.tasa:.0%})  fallos: {', '.join(r.fallos) or '—'}")
+        return 0
+    for f in recuperador.buscar(args.consulta, k=args.k, seccion=args.seccion):
+        print(f"{f.puntaje:.4f}  {'+'.join(f.origen):<11} {f.titulo[:50]:<50} {f.url}")
+    return 0
+
+
+def _agente(args: argparse.Namespace) -> int:
+    """Un turno del agente con su salida estructurada y la traza de tools."""
+    from sb_asistente.controller.agente import agente_por_defecto
+
+    agente = agente_por_defecto(args.provider)
+    if args.olvidar:
+        agente.olvidar(args.conversacion)
+        print(f"Memoria de «{args.conversacion}» borrada.")
+        return 0
+    turno = agente.responder(args.mensaje, args.conversacion)
+    for paso in turno.pasos:
+        print(f"  · tool {paso.tool}({json.dumps(paso.argumentos, ensure_ascii=False)})")
+    print()
+    print(json.dumps(turno.salida.model_dump(), indent=2, ensure_ascii=False))
+    if turno.fuentes_descartadas:
+        print(f"\nFuentes descartadas (no vistas en las tools): {turno.fuentes_descartadas}")
+    return 0
+
+
 def _chat(args: argparse.Namespace) -> int:
     """Un turno del chat en la terminal, con su traza."""
     lite: list[assistant.LiteAssistant] = []
@@ -149,6 +214,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _skills(args)
     if args.command == "chat":
         return _chat(args)
+    if args.command == "rag":
+        return _rag(args)
+    if args.command == "agente":
+        return _agente(args)
     if args.command == "api":
         import uvicorn
 

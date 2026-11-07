@@ -1,0 +1,7 @@
+# ADR-017 · Agente con tools, salida estructurada, memoria persistente y LangSmith
+
+- **Fecha:** 2026-11-07
+- **What:** `create_agent` de LangChain (`model/agente.py`) con tres tools (`buscar_conocimiento`, `recomendar_seguros`, `clasificar_intencion`), salida obligatoria `RespuestaAgente` (Pydantic, vía `ToolStrategy`), memoria por conversación en SQLite (`data/memoria/checkpoints.sqlite`, `SqliteSaver`) y middleware: redacción de correo, tarjeta y número de documento antes del modelo y de la memoria, límite de 6 llamadas al modelo y 5 a tools por turno, y relectura de solo los últimos 20 mensajes. Con `LANGSMITH_TRACING=true` cada turno se traza con etiquetas; `scripts/langsmith_dataset.py` sube el banco de 24 preguntas como dataset.
+- **Why:** temas de clase (tools, RAG, memoria, salidas estructuradas, observabilidad) en el mismo producto. Se eligió `create_agent` y no `create_deep_agent` (el del ejercicio) porque la planificación y el sistema de archivos de deepagents gastan más tokens por pregunta y el presupuesto inicial es de 10 USD.
+- **Where:** `model/agente.py`, `controller/agente.py`, `agente.conversar` en RPC, `sb agente`, modo «Agente» del chat de yellowdata.com.co, `tests/test_agente.py`.
+- **Learned:** el controlador conserva en `fuentes` solo las URLs que de verdad devolvió `buscar_conocimiento` en el turno y reporta las descartadas (defensa contra fuentes inventadas). `agente.olvidar` borra la memoria (derecho de supresión) y el sitio lo llama al eliminar una conversación.

@@ -11,6 +11,9 @@
 - [x] T-30 [backend] Chat orquestado POST /chat con clasificador por reglas, recomendación por perfil y traza (Daniel)
 - [x] T-31 [infra] Skills propias y de terceros: cargador, sb skills, make skill-add/skill-find y opencode.json (Daniel)
 - [x] T-32 [ui] Pestaña de chat estilo ChatGPT en yellowdata.com.co/casos (Daniel)
+- [x] T-35 [backend] JSON-RPC 2.0 en POST /rpc con métodos Pydantic y rpc.descubrir (Daniel)
+- [x] T-36 [ml] Base vectorial Chroma y recuperación híbrida BM25 + vectores con evaluación hit@k (Daniel)
+- [x] T-37 [ml] Agente con tools, salida estructurada, memoria SQLite y trazas LangSmith (Daniel)
 
 ## Pendiente
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)
@@ -21,4 +24,5 @@
 - [ ] T-27 [ml] Clasificador de intención entrenado que supere la línea base por reglas (Katherine)
 - [ ] T-28 [infra] Imagen Docker con la API (uvicorn) y despliegue (Daniel)
 - [ ] T-29 [documentation] Registrar ADR-009 a ADR-014 en Engram (Katherine)
+- [ ] T-34 [ml] Indexar con nomic-embed-text, medir hit@k del híbrido y subir el dataset a LangSmith (Katherine)
 - [ ] T-33 [infra] Publicar la API en cPanel (Setup Python App + passenger_wsgi.py) y ASSISTANT_API_URL (Daniel)
