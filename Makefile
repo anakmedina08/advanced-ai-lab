@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help api reco agentes chat skills skill-new skill-find skill-add install dev pre-commit-install pre-commit lint format format-check test check build clean \
+.PHONY: help api reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
 	data process app eval docker-build docker-run
 
 help: ## Muestra esta ayuda
@@ -55,6 +55,22 @@ reco: ## Recomendador: genera datos sintéticos, valida el contrato y mide las l
 	uv run sb reco generar
 	uv run sb reco validar
 	uv run sb reco baseline
+
+rag: ## Indexa los fragmentos Gold en Chroma (data/vector/) con los embeddings de EMBEDDINGS_PROVIDER
+	uv run sb rag indexar
+
+rag-buscar: ## Prueba la búsqueda híbrida: make rag-buscar Q="whatsapp de atención"
+	uv run sb rag buscar "$(Q)"
+
+agente: ## Turno del agente con memoria: make agente MSG="..." CONV=mi-conversacion
+	uv run sb agente "$(MSG)" --conversacion $(or $(CONV),cli-local)
+
+rpc-demo: ## Llama a JSON-RPC (requiere make api en otra terminal)
+	curl -s -X POST http://127.0.0.1:8000/rpc -H 'Content-Type: application/json' \
+	  -d '{"jsonrpc":"2.0","method":"rpc.descubrir","id":1}' | python3 -m json.tool | head -40
+
+langsmith-dataset: ## Sube el banco de 24 preguntas como dataset de LangSmith
+	uv run python scripts/langsmith_dataset.py
 
 chat: ## Un turno del chat en la terminal: make chat MSG="¿Qué seguro me sirve si tengo moto?"
 	uv run sb chat "$(MSG)"
