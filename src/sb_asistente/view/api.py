@@ -7,7 +7,6 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
 """
 
 from collections.abc import Callable
-from functools import lru_cache
 from importlib.metadata import version
 from typing import Annotated
 
@@ -15,9 +14,10 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from sb_asistente.config import CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
-from sb_asistente.controller import assistant, chat, pipeline, recomendador
+from sb_asistente.controller import chat, pipeline, recomendador
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
+from sb_asistente.view.dependencias import Responder, get_asistente, get_chat_qa, get_responder
 from sb_asistente.view.schemas import (
     ChatIn,
     ChatOut,
@@ -30,9 +30,6 @@ from sb_asistente.view.schemas import (
     TemaIn,
     extraer_fuentes,
 )
-
-Responder = Callable[[str, str, str, str], Answer]
-"""(pregunta, versión, modo, proveedor) → Answer."""
 
 app = FastAPI(
     title="Asistente Seguros Bolívar · API",
@@ -48,38 +45,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
-
-
-def _responder_real(pregunta: str, version_prompt: str, modo: str, proveedor: str) -> Answer:
-    """Usa el contexto reducido (rápido y barato) o la base completa."""
-    if modo == "reducido":
-        return assistant.LiteAssistant.build(proveedor).answer(pregunta, version=version_prompt)
-    return assistant.full_assistant(proveedor).answer(pregunta, version=version_prompt)
-
-
-def get_responder() -> Responder:
-    """Punto de inyección: las pruebas lo reemplazan con un doble sin red ni API."""
-    return _responder_real
-
-
-@lru_cache(maxsize=3)
-def _lite(proveedor: str) -> assistant.LiteAssistant:
-    """Un asistente de contexto reducido por proveedor (carga chunks y modelo una sola vez)."""
-    return assistant.LiteAssistant.build(proveedor)
-
-
-def get_chat_qa() -> Callable[[str], chat.Responder]:
-    """Fábrica (proveedor → responder de Q&A con skill) para el chat; inyectable en pruebas."""
-
-    def fabrica(proveedor: str) -> chat.Responder:
-        return lambda pregunta, skill: _lite(proveedor).answer(pregunta, skill=skill)
-
-    return fabrica
-
-
-def get_asistente() -> Callable[[str], assistant.KnowledgeAssistant]:
-    """Fábrica del asistente completo para resumen y FAQ (inyectable)."""
-    return assistant.full_assistant
 
 
 def _salida(ans: Answer) -> RespuestaOut:
@@ -179,3 +144,9 @@ def listar_skills() -> list[SkillOut]:
         SkillOut(nombre=s.nombre, descripcion=s.descripcion, licencia=s.licencia)
         for s in skills.skills_asistente()
     ]
+
+
+# JSON-RPC 2.0 (recomendado en clase): mismo contrato Pydantic, un solo endpoint POST /rpc.
+from sb_asistente.view import rpc as _rpc  # noqa: E402
+
+app.include_router(_rpc.router)
