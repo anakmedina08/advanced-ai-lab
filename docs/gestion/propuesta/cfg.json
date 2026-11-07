@@ -1,0 +1,1 @@
+{"theme": "neutral", "themeVariables": {"fontFamily": "Arial", "fontSize": "16px"}, "gantt": {"barHeight": 28, "barGap": 6, "fontSize": 15, "sectionFontSize": 16, "leftPadding": 95, "topPadding": 40, "gridLineStartPadding": 40, "numberSectionStyles": 2, "rightPadding": 120}, "themeCSS": ".tick text{font-size:15px !important;} .taskTextOutsideRight{font-size:15px;}"}

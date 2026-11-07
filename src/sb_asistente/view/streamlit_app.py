@@ -9,7 +9,7 @@ import re
 import pandas as pd
 import streamlit as st
 
-from sb_asistente.config import BASE_URL, GOLD_DIR, LLM_PROVIDER
+from sb_asistente.config import BASE_URL, GOLD_DIR, LLM_PROVIDER, PROVIDERS
 from sb_asistente.controller import assistant as ctrl
 from sb_asistente.controller import pipeline
 
@@ -38,7 +38,9 @@ def sidebar() -> tuple[str, str, bool]:
     """Panel lateral: proveedor, versión de prompt y estadísticas del corpus."""
     st.sidebar.header("Configuración")
     provider = st.sidebar.selectbox(
-        "Modelo", ["anthropic", "ollama"], index=0 if LLM_PROVIDER == "anthropic" else 1
+        "Modelo",
+        list(PROVIDERS),
+        index=list(PROVIDERS).index(LLM_PROVIDER) if LLM_PROVIDER in PROVIDERS else 0,
     )
     version = st.sidebar.selectbox(
         "Versión del prompt (Q&A)",

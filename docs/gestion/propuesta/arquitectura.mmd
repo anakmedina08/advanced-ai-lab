@@ -1,0 +1,16 @@
+flowchart TB
+    subgraph F1[" Preparación y representación "]
+        direction LR
+        S[(Sintéticos)] --> K{Contrato de datos<br/>sin PII}
+        R[(Reales<br/>anonimizados)] --> K
+        K --> P[Perfil textual<br/>query: ...]
+        P --> E[multilingual-e5-small<br/>CPU · safetensors]
+        CAT[Catálogo<br/>passage: ...] --> E
+    end
+    subgraph F2[" Recomendación y servicio "]
+        direction LR
+        C[Candidatos ≤ 17<br/>similitud coseno] --> L[Ranking<br/>LightGBM]
+        L --> API[API FastAPI<br/>top-5 + razón] --> UI[UI asesores<br/>Streamlit]
+        L -. tracking .-> M[(MLflow)]
+    end
+    E --> C
