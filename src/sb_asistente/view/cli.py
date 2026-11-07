@@ -1,11 +1,20 @@
-"""CLI: ``sb discover | scrape | process | stats | ask | summary | faq | eval``."""
+"""CLI: ``sb discover | scrape | process | stats | ask | summary | faq | eval | reco | api``."""
 
 import argparse
 import json
 from collections.abc import Sequence
+from pathlib import Path
 
-from sb_asistente.config import GOLD_DIR, LLM_PROVIDER
-from sb_asistente.controller import assistant, pipeline
+from sb_asistente.config import (
+    GOLD_DIR,
+    LLM_PROVIDER,
+    PROVIDERS,
+    RECO_DIR,
+    RECO_K,
+    RECO_N_CLIENTES,
+    RECO_SEMILLA,
+)
+from sb_asistente.controller import assistant, pipeline, recomendador
 
 VERSION_ARG = {"default": assistant.DEFAULT_QA_VERSION, "choices": list(assistant.QA_VERSIONS)}
 
@@ -21,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("stats", help="Resumen del corpus Gold")
     for name in ("ask", "summary", "faq", "eval"):
         p = sub.add_parser(name)
-        p.add_argument("--provider", default=LLM_PROVIDER, choices=["anthropic", "ollama"])
+        p.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
         if name == "ask":
             p.add_argument("question")
             p.add_argument(
@@ -38,7 +47,42 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument(
                 "--limit", type=int, default=None, help="Solo las primeras N preguntas (prueba rápida)"
             )
+    reco = sub.add_parser("reco", help="Recomendador de seguros (curso de Gestión)")
+    reco_sub = reco.add_subparsers(dest="reco_command", required=True)
+    gen = reco_sub.add_parser("generar", help="Dataset sintético → data/recomendador/")
+    gen.add_argument("--clientes", type=int, default=RECO_N_CLIENTES)
+    gen.add_argument("--semilla", type=int, default=RECO_SEMILLA)
+    gen.add_argument("--salida", type=Path, default=RECO_DIR)
+    for name in ("validar", "baseline", "cliente"):
+        p = reco_sub.add_parser(name)
+        p.add_argument("--entrada", type=Path, default=RECO_DIR)
+        if name in ("baseline", "cliente"):
+            p.add_argument("-k", type=int, default=RECO_K)
+        if name == "cliente":
+            p.add_argument("cliente_id")
+    api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
+    api.add_argument("--host", default="127.0.0.1")
+    api.add_argument("--port", type=int, default=8000)
     return parser
+
+
+def _reco(args: argparse.Namespace) -> int:
+    """Subcomandos del recomendador."""
+    if args.reco_command == "generar":
+        for nombre, filas in recomendador.generar(args.clientes, args.semilla, args.salida).items():
+            print(f"{nombre:<11} {filas:>7,} filas → {args.salida / (nombre + '.csv')}")
+        return 0
+    if args.reco_command == "validar":
+        errores = recomendador.validar(args.entrada)
+        print("\n".join(errores) if errores else "Contrato de datos: OK")
+        return 1 if errores else 0
+    if args.reco_command == "baseline":
+        resultado = recomendador.comparar_baselines(recomendador.leer_tablas(args.entrada), args.k)
+        print(json.dumps(resultado, indent=2, ensure_ascii=False))
+        return 0
+    recomendaciones = recomendador.recomendar(args.cliente_id, args.k, args.entrada)
+    print(json.dumps(recomendaciones, indent=2, ensure_ascii=False))
+    return 0
 
 
 def _assistant(provider: str) -> assistant.KnowledgeAssistant:
@@ -49,6 +93,13 @@ def _assistant(provider: str) -> assistant.KnowledgeAssistant:
 def main(argv: Sequence[str] | None = None) -> int:
     """Punto de entrada; devuelve el código de salida."""
     args = build_parser().parse_args(argv)
+    if args.command == "reco":
+        return _reco(args)
+    if args.command == "api":
+        import uvicorn
+
+        uvicorn.run("sb_asistente.view.api:app", host=args.host, port=args.port)
+        return 0
     if args.command == "discover":
         plan = pipeline.discover(pipeline.new_session())
         print(
