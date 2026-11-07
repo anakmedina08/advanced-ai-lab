@@ -46,3 +46,6 @@ informe/*.blg
 
 # Agentes: índice de tgrep
 .tgrep/
+
+# Telemetría local de agentes (hooks de Claude Code)
+logs/
