@@ -7,6 +7,7 @@ cliente: el asistente responde con sus propios prompts (``model/llm/prompts.py``
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Literal, Protocol
 
 from sb_asistente.model.vision.deteccion import Deteccion
 
@@ -123,3 +124,100 @@ def sugerir(detecciones: Iterable[Deteccion], temas: tuple[Tema, ...] = TEMAS) -
         por_tema[tema.clave] = (tema, objetos, max(mejor, det.confianza))
     sugerencias = [Sugerencia(t, tuple(objs), round(conf, 4)) for t, objs, conf in por_tema.values()]
     return sorted(sugerencias, key=lambda s: -s.confianza)
+
+
+# --- De la situación de la foto a «¿qué hago?» --------------------------------------------------
+@dataclass(frozen=True, slots=True)
+class Plan:
+    """Qué hacer con una foto: tipo de respuesta, pregunta al asistente y páginas de respaldo."""
+
+    tipo: Literal["siniestro", "asegurar", "documento", "ninguno"]
+    nombre: str
+    pregunta: str | None = None
+    rutas: tuple[str, ...] = ()
+
+
+SINIESTROS: dict[str, Plan] = {
+    "accidente_transito": Plan(
+        "siniestro",
+        "Accidente de tránsito",
+        "¿Qué debo hacer después de un accidente de tránsito y cómo uso el SOAT o el seguro de mi vehículo?",
+        ("/soat", "/seguro-todo-riesgo-vehiculo", "/canales-de-atencion"),
+    ),
+    "dano_hogar": Plan(
+        "siniestro",
+        "Daño en la vivienda",
+        "¿Qué cubre el seguro de hogar ante daños en la vivienda y cómo reporto lo que pasó?",
+        ("/seguro-de-hogar", "/canales-de-atencion"),
+    ),
+    "robo": Plan(
+        "siniestro",
+        "Posible robo",
+        "¿Qué debo hacer si me roban y por qué canal reporto el siniestro a mi seguro?",
+        ("/canales-de-atencion", "/seguro-de-hogar", "/seguro-todo-riesgo-vehiculo"),
+    ),
+}
+DOCUMENTO = Plan("documento", "Documento con datos personales")
+NINGUNO = Plan("ninguno", "Sin situación asegurable")
+MENSAJE_DOCUMENTO = (
+    "La foto parece mostrar un documento con datos personales. Por su seguridad no lo analizamos: "
+    "no envíe cédulas, pólizas ni facturas. Si necesita un trámite, use los canales oficiales."
+)
+_TEMA_POR_VEHICULO = {"carro": "vehiculo", "moto": "vehiculo", "electrico": "vehiculo"}
+
+
+class EscenaLike(Protocol):
+    """Lo que se usa de ``escena.Escena`` (evita acoplar este módulo a Pydantic)."""
+
+    situacion: str
+    vehiculo: str | None
+    tiene_mascota: bool | None
+    contiene_documento: bool
+    confianza: str
+
+
+def _tema(clave: str) -> Tema:
+    return next(t for t in TEMAS if t.clave == clave)
+
+
+def _segun_yolo(sugerencias: list[Sugerencia]) -> Plan:
+    tema = sugerencias[0].tema if sugerencias else None
+    return Plan("asegurar", tema.nombre, tema.pregunta, tema.rutas) if tema else NINGUNO
+
+
+def planear(escena: EscenaLike | None, sugerencias: list[Sugerencia]) -> Plan:
+    """Decide la respuesta: un documento se rechaza, un siniestro va a pasos y canales, un bien a su seguro.
+
+    Si hay ``escena`` (se pidió entender la foto), su lectura manda sobre YOLO: un bus de transporte
+    público es «otro», no un vehículo del cliente. Excepción: si el modelo no ve con claridad
+    (``confianza`` baja, p. ej. porque una persona difuminada tapaba casi toda la foto), se usa YOLO,
+    que vio la foto original en local. Sin ``escena``, se usa la sugerencia de YOLO.
+    """
+    if escena is None:
+        return _segun_yolo(sugerencias)
+    if escena.contiene_documento:
+        return DOCUMENTO
+    if escena.situacion in SINIESTROS:
+        return SINIESTROS[escena.situacion]
+    if escena.situacion != "asegurar_bien":
+        return _segun_yolo(sugerencias) if escena.confianza == "baja" else NINGUNO
+    tema: Tema | None = sugerencias[0].tema if sugerencias else None
+    if tema is None and escena.vehiculo:
+        tema = _tema(_TEMA_POR_VEHICULO[escena.vehiculo])
+    elif tema is None and escena.tiene_mascota:
+        tema = _tema("mascota")
+    return Plan("asegurar", tema.nombre, tema.pregunta, tema.rutas) if tema else NINGUNO
+
+
+def perfil(escena: EscenaLike | None, sugerencias: list[Sugerencia]) -> dict[str, object]:
+    """Perfil para el recomendador de Gestión (solo lo que la foto muestra con claridad)."""
+    datos: dict[str, object] = {}
+    claves = {s.tema.clave for s in sugerencias}
+    if escena is not None and escena.vehiculo:
+        datos["vehiculo"] = escena.vehiculo
+    elif "vehiculo" in claves:
+        objetos = {o for s in sugerencias for o in s.objetos}
+        datos["vehiculo"] = "moto" if "moto" in objetos and "carro" not in objetos else "carro"
+    if (escena is not None and escena.tiene_mascota) or "mascota" in claves:
+        datos["tiene_mascota"] = True
+    return datos

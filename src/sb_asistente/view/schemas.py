@@ -215,12 +215,38 @@ class SugerenciaOut(BaseModel):
     paginas: list[str] = Field(description="Páginas de la base pública que respaldan la sugerencia")
 
 
+class EscenaOut(BaseModel):
+    """Lo que el modelo multimodal entendió de la foto (ya sin personas)."""
+
+    situacion: Literal["accidente_transito", "dano_hogar", "robo", "asegurar_bien", "otro"]
+    descripcion: str
+    objetos: list[str] = []
+    vehiculo: str | None = None
+    tiene_mascota: bool | None = None
+    contiene_documento: bool = False
+    confianza: Literal["alta", "media", "baja"] = "media"
+
+
+class PlanOut(BaseModel):
+    """Qué se hizo con la foto: atender un siniestro, sugerir un seguro, rechazar un documento o nada."""
+
+    tipo: Literal["siniestro", "asegurar", "documento", "ninguno"]
+    nombre: str
+    pregunta: str | None = None
+    paginas: list[str] = []
+
+
 class FotoOut(BaseModel):
-    """Resultado de analizar una foto: detecciones, seguros sugeridos y respuesta opcional."""
+    """Resultado de analizar una foto: privacidad, detecciones, situación, respuesta y recomendaciones."""
 
     tiempo_inferencia_ms: float
     ancho: int
     alto: int
+    personas_difuminadas: int = Field(0, description="Personas difuminadas antes de enviar la foto")
     detecciones: list[DeteccionOut]
     sugerencias: list[SugerenciaOut]
+    escena: EscenaOut | None = None
+    plan: PlanOut
+    aviso: str | None = None
     respuesta: RespuestaOut | None = None
+    recomendaciones: list[RecomendacionOut] = []

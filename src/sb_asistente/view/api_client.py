@@ -43,11 +43,17 @@ class ClienteAPI:
         return RespuestaOut.model_validate(respuesta.json())
 
     def analizar_foto(
-        self, imagen: bytes, nombre: str, responder: bool = False, proveedor: str | None = None
+        self,
+        imagen: bytes,
+        nombre: str,
+        responder: bool = False,
+        proveedor: str | None = None,
+        interpretar: bool = False,
     ) -> FotoOut:
         """``POST /fotos`` con la imagen como multipart."""
         tipo = mimetypes.guess_type(nombre)[0] or "image/jpeg"
-        params = {"responder": str(responder).lower()} | ({"proveedor": proveedor} if proveedor else {})
+        params = {"responder": str(responder).lower(), "interpretar": str(interpretar).lower()}
+        params |= {"proveedor": proveedor} if proveedor else {}
         respuesta = self.http.post(
             self._url("/fotos"), files={"archivo": (nombre, imagen, tipo)}, params=params
         )

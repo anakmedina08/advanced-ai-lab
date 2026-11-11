@@ -28,6 +28,8 @@ from sb_asistente.view.dependencias import (
     get_chat_qa,
     get_detector,
     get_foto_qa,
+    get_interprete,
+    get_recomendar,
     get_responder,
 )
 from sb_asistente.view.schemas import (
@@ -35,10 +37,13 @@ from sb_asistente.view.schemas import (
     ChatIn,
     ChatOut,
     DeteccionOut,
+    EscenaOut,
     EtapaOut,
     FotoOut,
+    PlanOut,
     PreguntaIn,
     RecomendacionesOut,
+    RecomendacionOut,
     RespuestaOut,
     SaludOut,
     SkillOut,
@@ -183,31 +188,44 @@ async def analizar_foto(
     archivo: Annotated[UploadFile, File(description="Foto JPG o PNG (máx. 8 MB); no se guarda")],
     detector: Annotated[Callable, Depends(get_detector)],
     fabrica_qa: Annotated[Callable, Depends(get_foto_qa)],
-    responder: Annotated[bool, Query(description="Preguntar al asistente por el seguro sugerido")] = False,
-    proveedor: Annotated[str | None, Query(description="Proveedor del LLM si responder=true")] = None,
+    fabrica_interprete: Annotated[Callable, Depends(get_interprete)],
+    recomendar: Annotated[Callable, Depends(get_recomendar)],
+    interpretar: Annotated[
+        bool, Query(description="Entender la situación con un modelo multimodal (Claude)")
+    ] = False,
+    responder: Annotated[bool, Query(description="Que el asistente explique qué hacer, con fuente")] = False,
+    proveedor: Annotated[str | None, Query(description="Proveedor del LLM")] = None,
 ) -> FotoOut:
-    """Foto → seguro sugerido: YOLO detecta objetos asegurables y se sugiere el seguro que aplica.
+    """Foto → ¿qué hago?: privacidad local, situación, respuesta con fuente y recomendaciones.
 
-    Las personas no se reportan y la imagen se procesa en memoria. Con ``responder=true`` el
-    asistente explica el seguro sugerido citando la página oficial.
+    1. YOLO (local) detecta objetos y **difumina a las personas** antes de que la foto salga.
+    2. Con ``interpretar=true``, Claude entiende la situación (accidente, daño en el hogar, robo o
+       un bien que asegurar). Si ve un documento, no se procesa.
+    3. Con ``responder=true``, el asistente explica los pasos o el seguro citando la página oficial;
+       para bienes asegurables, el recomendador de Gestión sugiere qué más contratan perfiles similares.
     """
     if not (archivo.content_type or "").startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen (JPG o PNG).")
     datos = await archivo.read()
+    llm = proveedor or LLM_PROVIDER
     try:
-        asistente = fabrica_qa(proveedor or LLM_PROVIDER) if responder else None
-        analisis = await run_in_threadpool(vision.analizar_foto, datos, detector(), asistente)
+        interprete = fabrica_interprete(llm) if interpretar else None
+        asistente = fabrica_qa(llm) if responder else None
+        analisis = await run_in_threadpool(
+            vision.analizar_foto, datos, detector(), asistente, interprete, recomendar if responder else None
+        )
     except vision.ImagenInvalidaError as exc:
         raise HTTPException(422, str(exc)) from exc
     except vision.VisionNoDisponibleError as exc:
         raise HTTPException(503, str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(503, f"La base de conocimiento no está lista: {exc}") from exc
-    res = analisis.resultado
+    res, plan = analisis.resultado, analisis.plan
     return FotoOut(
         tiempo_inferencia_ms=res.tiempo_ms,
         ancho=res.ancho,
         alto=res.alto,
+        personas_difuminadas=analisis.personas_difuminadas,
         detecciones=[
             DeteccionOut(
                 clase=d.clase,
@@ -228,7 +246,16 @@ async def analizar_foto(
             )
             for s in analisis.sugerencias
         ],
+        escena=EscenaOut(**analisis.escena.model_dump()) if analisis.escena else None,
+        plan=PlanOut(
+            tipo=plan.tipo,
+            nombre=plan.nombre,
+            pregunta=plan.pregunta,
+            paginas=[BASE_URL + ruta for ruta in plan.rutas],
+        ),
+        aviso=analisis.aviso,
         respuesta=_salida(analisis.respuesta) if analisis.respuesta else None,
+        recomendaciones=[RecomendacionOut(**r) for r in analisis.recomendaciones],
     )
 
 

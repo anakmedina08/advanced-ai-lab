@@ -1,4 +1,4 @@
-"""Pruebas de «foto → seguro sugerido» (YOLO simulado; sin red, sin API y sin ultralytics)."""
+"""Pruebas de detección y sugerencias por foto (YOLO simulado; sin red, sin API y sin ultralytics)."""
 
 import sys
 from io import BytesIO
@@ -34,14 +34,15 @@ def det(clase: str, confianza: float = 0.9) -> Deteccion:
 class FakeDetector:
     """Detector falso: devuelve detecciones fijas y registra las fotos recibidas."""
 
-    def __init__(self, *detecciones: Deteccion) -> None:
+    def __init__(self, *detecciones: Deteccion, personas: tuple[Caja, ...] = ()) -> None:
         self.detecciones = detecciones
+        self.personas = personas
         self.llamadas = 0
 
     def detectar(self, datos: bytes) -> ResultadoDeteccion:
         imagen = deteccion.abrir_imagen(datos)
         self.llamadas += 1
-        return ResultadoDeteccion(self.detecciones, 12.5, *imagen.size)
+        return ResultadoDeteccion(self.detecciones, 12.5, *imagen.size, self.personas)
 
 
 class RecordingAssistant:
@@ -238,4 +239,4 @@ def test_cli_foto_muestra_la_sugerencia(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(vision, "detector_por_defecto", lambda: FakeDetector(det("bicycle", 0.77)))
     assert cli.main(["foto", str(ruta)]) == 0
     salida = capsys.readouterr().out
-    assert "bicicleta" in salida and "Seguro sugerido: Bicicletas" in salida
+    assert "bicicleta" in salida and "Plan: Bicicletas" in salida

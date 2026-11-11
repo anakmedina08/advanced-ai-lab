@@ -18,7 +18,13 @@ from typing import Protocol
 
 from PIL import Image, UnidentifiedImageError
 
-from sb_asistente.config import MAX_IMAGE_BYTES, VISION_IGNORED_CLASSES, YOLO_CONFIDENCE, YOLO_MODEL_PATH
+from sb_asistente.config import (
+    MAX_IMAGE_BYTES,
+    VISION_BLUR_CONFIDENCE,
+    VISION_IGNORED_CLASSES,
+    YOLO_CONFIDENCE,
+    YOLO_MODEL_PATH,
+)
 
 
 class ImagenInvalidaError(ValueError):
@@ -56,6 +62,7 @@ class ResultadoDeteccion:
     tiempo_ms: float
     ancho: int
     alto: int
+    personas: tuple[Caja, ...] = ()  # solo para difuminarlas; nunca se reportan
 
 
 class Detector(Protocol):
@@ -127,12 +134,17 @@ class DetectorYolo:
                 self._yolo = modelo
 
     def detectar(self, datos: bytes) -> ResultadoDeteccion:
-        """Detecta objetos en la foto; descarta personas y detecciones de baja confianza."""
+        """Detecta objetos en la foto; aparta a las personas (para difuminarlas) y la baja confianza.
+
+        Las personas se buscan con un umbral más bajo (``VISION_BLUR_CONFIDENCE``): en privacidad es
+        mejor difuminar de más que dejar pasar un rostro.
+        """
         imagen = abrir_imagen(datos)
         self.cargar()
         with self._candado:
             inicio = perf_counter()
-            resultados = self._yolo(imagen, conf=self.confianza, verbose=False)  # type: ignore[operator]
+            umbral = min(self.confianza, VISION_BLUR_CONFIDENCE)
+            resultados = self._yolo(imagen, conf=umbral, verbose=False)  # type: ignore[operator]
             tiempo_ms = (perf_counter() - inicio) * 1000
         crudas = [
             Deteccion(
@@ -143,6 +155,7 @@ class DetectorYolo:
             for resultado in resultados
             for caja in resultado.boxes
         ]
+        personas = tuple(d.caja for d in crudas if d.clase in VISION_IGNORED_CLASSES)
         return ResultadoDeteccion(
-            filtrar(crudas, confianza_minima=self.confianza), round(tiempo_ms, 1), *imagen.size
+            filtrar(crudas, confianza_minima=self.confianza), round(tiempo_ms, 1), *imagen.size, personas
         )

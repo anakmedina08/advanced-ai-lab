@@ -37,7 +37,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-017](ADR-017-agente-memoria-salida-estructurada.md) | Agente con tools, salida estructurada, memoria y LangSmith | 2026-11-07 |
 | [ADR-018](ADR-018-rag-qdrant-deep-agents.md) | Modos «rag» (Ollama + Qdrant) y «agente» (Deep Agents) | 2026-11-10 |
 | [ADR-019](ADR-019-claude-sin-temperatura.md) | Claude sin `temperature` y con esfuerzo `low` | 2026-11-10 |
-| [ADR-020](ADR-020-foto-seguro-yolo.md) | Foto → seguro sugerido con YOLO (FastAPI, `httpx`) | 2026-11-11 |
+| [ADR-020](ADR-020-foto-seguro-yolo.md) | Foto → «¿qué hago?»: YOLO local + Claude con visión (FastAPI, `httpx`) | 2026-11-11 |
 
 ## Cómo registrar una decisión nueva en Engram
 

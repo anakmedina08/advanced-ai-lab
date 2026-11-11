@@ -162,7 +162,7 @@ make api        # o: uv run sb api  →  http://127.0.0.1:8000/docs
 | `GET /recomendaciones/{cliente_id}?k=5` | top-k de seguros que el cliente aún no tiene |
 | `POST /chat` | turno del chat: clasificador → herramienta, con traza |
 | `GET /skills` | skills que el chat puede aplicar |
-| `POST /fotos?responder=true` | foto → seguro sugerido con YOLO (extra `vision`, ver abajo) |
+| `POST /fotos?interpretar=true&responder=true` | foto → «¿qué hago?» con YOLO + Claude (ver abajo) |
 
 Cada petición se valida con Pydantic (`view/schemas.py`): campos desconocidos, rangos y proveedor;
 las preguntas con correo, teléfono o número de documento se rechazan con 422 (Ley 1581).
@@ -222,32 +222,37 @@ make eval PROVIDER=anthropic MODO=rag VERSION=v3
 
 En Streamlit, el selector **Modo de contexto** ofrece: toda la base, contexto reducido, RAG y agente.
 
-## Foto → seguro sugerido (YOLO)
+## Foto → «¿qué hago?» (YOLO + Claude con visión)
 
 Adapta el ejercicio [`ejercicio_gestion_fastapi`](https://github.com/anakmedina08/ejercicio_gestion_fastapi)
-([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)): el cliente sube una foto, YOLO detecta
-objetos asegurables y el asistente explica el seguro que aplica, con su fuente.
+([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)). El cliente sube una foto y recibe qué hacer:
 
-```bash
-make vision                                              # uv sync --extra vision (ultralytics + torch CPU, ~1 GB)
-uv run sb foto mi_moto.jpg --responder                   # en local
-uv run sb foto mi_moto.jpg --api http://127.0.0.1:8000   # por HTTP con el cliente httpx (view/api_client.py)
-curl -F "archivo=@mi_moto.jpg" "localhost:8000/fotos?responder=true"
+```
+Foto → YOLO (local): detecta objetos y difumina personas
+     → Claude (visión): ¿accidente, daño en el hogar, robo, algo para asegurar u otra cosa?
+     → siniestro: pasos, cobertura y canales (RAG con fuente)
+       bien:      su seguro (RAG con fuente) + recomendador de Gestión por perfil
+       documento: no se procesa
 ```
 
-| Se ve en la foto | Seguro sugerido |
-|---|---|
-| carro, moto, camión, bus | SOAT y todo riesgo |
-| bicicleta | seguro de bicicletas |
-| perro, gato | seguro para mascotas |
-| sofá, cama, nevera, televisor… | seguro de hogar |
-| celular, portátil | Datecnologia |
+```bash
+make vision                                                    # uv sync --extra vision (ultralytics + torch CPU, ~1 GB)
+make foto IMG=choque.jpg                                       # sb foto … --interpretar --responder
+uv run sb foto choque.jpg --interpretar --api http://127.0.0.1:8000   # por HTTP (cliente httpx)
+curl -F "archivo=@choque.jpg" "localhost:8000/fotos?interpretar=true&responder=true"
+```
 
-Variables opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26n.pt`; se descarga si falta),
+| Foto | Respuesta |
+|---|---|
+| choque | qué hacer tras un accidente, SOAT y canales |
+| gotera, incendio, vidrios rotos | qué cubre el seguro de hogar y cómo reportarlo |
+| su carro, moto, bicicleta, mascota, hogar o equipos | el seguro que aplica y qué más contratan perfiles similares |
+
+Entender la situación usa Claude (`interpretar=true`); sin él, solo YOLO sugiere por objeto. Variables
+opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26n.pt`; se descarga si falta),
 `YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP). La foto se procesa en memoria y no se guarda;
-las personas no se reportan. No suba documentos. En Streamlit está la pestaña **📷 Foto → seguro**.
-Sin el extra `vision`, `POST /fotos` responde 503 con la instrucción de instalación y el resto del
-proyecto funciona igual.
+las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
+pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
 
 ## Chat orquestado
 

@@ -7,7 +7,7 @@ Cada función devuelve la dependencia real; las pruebas las reemplazan con
 from collections.abc import Callable
 from functools import lru_cache
 
-from sb_asistente.controller import agente, assistant, chat, vision
+from sb_asistente.controller import agente, assistant, chat, recomendador, vision
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 
@@ -70,3 +70,13 @@ def get_detector() -> Callable[[], vision.Detector]:
 def get_foto_qa() -> Callable[[str], assistant.QAAssistant]:
     """Fábrica (proveedor → asistente) para responder la sugerencia de una foto (modo reducido)."""
     return _lite
+
+
+def get_interprete() -> Callable[[str], vision.Interprete]:
+    """Fábrica (proveedor → intérprete de escenas con visión) para ``POST /fotos?interpretar=true``."""
+    return vision.interprete_por_defecto
+
+
+def get_recomendar() -> vision.Recomendar:
+    """Recomendador por perfil de Gestión (top-3) para las fotos de bienes asegurables."""
+    return lambda perfil: recomendador.recomendar_por_perfil(perfil, 3)[0]

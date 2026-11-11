@@ -57,8 +57,8 @@ api: ## Levanta la API FastAPI en http://127.0.0.1:8000/docs
 vision: ## Instala el extra de visión (ultralytics + torch CPU, ~1 GB) para POST /fotos y sb foto
 	uv sync --extra vision
 
-foto: ## Foto → seguro sugerido: make foto IMG=ruta.jpg
-	uv run --extra vision sb foto "$(IMG)" --responder
+foto: ## Foto → ¿qué hago? (YOLO + Claude + RAG): make foto IMG=ruta.jpg
+	uv run --extra vision sb foto "$(IMG)" --interpretar --responder
 
 reco: ## Recomendador: genera datos sintéticos, valida el contrato y mide las líneas base
 	uv run sb reco generar

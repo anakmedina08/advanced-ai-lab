@@ -10,7 +10,7 @@ import streamlit as st
 
 from sb_asistente.config import BASE_URL, GOLD_DIR, LLM_PROVIDER, PROVIDERS
 from sb_asistente.controller import assistant as ctrl
-from sb_asistente.controller import pipeline, vision
+from sb_asistente.controller import pipeline, recomendador, vision
 from sb_asistente.view.anotaciones import dibujar_detecciones
 
 st.set_page_config(page_title="Asistente Seguros Bolívar", page_icon="🛡️", layout="wide")
@@ -171,13 +171,27 @@ def get_detector() -> vision.Detector:
     return detector
 
 
+SITUACIONES = {
+    "accidente_transito": "🚗 Accidente de tránsito",
+    "dano_hogar": "🏠 Daño en la vivienda",
+    "robo": "🔓 Posible robo",
+    "asegurar_bien": "🛡️ Algo para asegurar",
+    "otro": "ℹ️ Otra situación",
+}
+
+
+def recomendar_por_perfil(perfil: dict[str, object]) -> list[dict[str, str]]:
+    """Top-3 del recomendador de Gestión para el perfil que muestra la foto."""
+    return recomendador.recomendar_por_perfil(perfil, 3)[0]
+
+
 def photo_tab(provider: str, mode: str) -> None:
-    """Pestaña 📷: la foto se analiza en memoria, no se guarda y las personas no se reportan."""
-    st.subheader("Foto → seguro sugerido")
+    """Pestaña 📷: foto → ¿qué hago? (personas difuminadas en local antes de enviar la foto)."""
+    st.subheader("Foto → ¿qué hago?")
     st.caption(
-        "Suba una foto de su carro, moto, bicicleta, mascota, hogar o equipos. YOLO detecta los "
-        "objetos y el asistente explica el seguro que aplica con su fuente. No suba documentos ni "
-        "fotos de personas: no se usan."
+        "Suba una foto de un choque, un daño en su casa, o de algo que quiera asegurar (carro, moto, "
+        "bicicleta, mascota, hogar, equipos). Las personas se difuminan en este equipo antes de enviar la "
+        "foto y nada se guarda. No suba documentos ni fotos con placas o datos personales."
     )
     archivo = st.file_uploader("Foto (JPG o PNG, máx. 8 MB)", type=["jpg", "jpeg", "png"])
     if archivo is None:
@@ -188,7 +202,11 @@ def photo_tab(provider: str, mode: str) -> None:
     except vision.ImagenInvalidaError as exc:
         st.error(str(exc))
         return
-    responder = st.toggle("Preguntar al asistente por el seguro sugerido", value=True)
+    izquierda, derecha = st.columns(2)
+    interpretar = izquierda.toggle(
+        "Entender la situación con Claude", value=provider == "anthropic", disabled=provider != "anthropic"
+    )
+    responder = derecha.toggle("Explicar qué hacer (con fuente)", value=True)
     if not st.button("Analizar foto", type="primary"):
         st.image(imagen, width="stretch")
         return
@@ -199,8 +217,14 @@ def photo_tab(provider: str, mode: str) -> None:
             asistente = (
                 get_assistant(provider) if mode == ctrl.DEFAULT_MODE else get_mode_assistant(provider, mode)
             )
-        with st.spinner("Detectando objetos y consultando al asistente…"):
-            analisis = vision.analizar_foto(datos, detector, asistente)
+        with st.spinner("Protegiendo la privacidad, entendiendo la foto y consultando la base…"):
+            analisis = vision.analizar_foto(
+                datos,
+                detector,
+                asistente,
+                vision.interprete_por_defecto(provider) if interpretar else None,
+                recomendar_por_perfil if responder else None,
+            )
     except vision.VisionNoDisponibleError as exc:
         st.warning(str(exc))
         return
@@ -208,27 +232,34 @@ def photo_tab(provider: str, mode: str) -> None:
         st.error(f"No se pudo analizar la foto: {exc}")
         return
     res = analisis.resultado
-    original, anotada = st.columns(2)
-    original.image(imagen, caption="Original", width="stretch")
-    anotada.image(
-        dibujar_detecciones(imagen, res.detecciones),
-        caption=f"{len(res.detecciones)} objetos · {res.tiempo_ms:.0f} ms",
+    privada, anotada = st.columns(2)
+    privada.image(
+        analisis.imagen_privada,
+        caption=f"Lo que se envió · {analisis.personas_difuminadas} personas difuminadas",
         width="stretch",
     )
-    if not analisis.sugerencias:
-        st.info(
-            "No identifiqué un objeto asegurable. Puede preguntar directamente en «Preguntas y respuestas»."
-        )
+    anotada.image(
+        dibujar_detecciones(imagen, res.detecciones),
+        caption=f"YOLO · {len(res.detecciones)} objetos · {res.tiempo_ms:.0f} ms",
+        width="stretch",
+    )
+    if analisis.aviso:
+        st.warning(analisis.aviso)
         return
-    for sug in analisis.sugerencias:
-        st.markdown(
-            f"**{sug.tema.nombre}** · {', '.join(sug.objetos)} ({sug.confianza:.0%})  \n"
-            + " · ".join(f"[{ruta}]({BASE_URL}{ruta})" for ruta in sug.tema.rutas)
-        )
+    if analisis.escena:
+        st.markdown(f"**{SITUACIONES[analisis.escena.situacion]}** · {analisis.escena.descripcion}")
+    plan = analisis.plan
+    if plan.tipo == "ninguno":
+        st.info("No identifiqué una situación de seguros. Pregunte directamente en «Preguntas y respuestas».")
+        return
+    st.markdown(f"**{plan.nombre}** · " + " · ".join(f"[{ruta}]({BASE_URL}{ruta})" for ruta in plan.rutas))
     if analisis.respuesta:
         st.divider()
-        st.markdown(f"_{analisis.sugerencias[0].tema.pregunta}_")
+        st.markdown(f"_{plan.pregunta}_")
         st.markdown(analisis.respuesta.text)
+    if analisis.recomendaciones:
+        st.markdown("**Otros seguros que contratan clientes con un perfil como el suyo** (recomendador):")
+        st.dataframe(pd.DataFrame(analisis.recomendaciones)[["nombre", "linea", "razon"]], hide_index=True)
 
 
 def main() -> None:
@@ -245,7 +276,7 @@ def main() -> None:
         [
             "🕸️ Pipeline de scraping",
             "💬 Preguntas y respuestas",
-            "📷 Foto → seguro",
+            "📷 Foto → ¿qué hago?",
             "📝 Resumen",
             "❓ FAQ",
             "📊 Evaluación",

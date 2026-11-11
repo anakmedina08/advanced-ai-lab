@@ -109,7 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
     api.add_argument("--port", type=int, default=8000)
     foto = sub.add_parser("foto", help="Foto → seguro sugerido (YOLO; requiere uv sync --extra vision)")
     foto.add_argument("ruta", type=Path, help="Imagen JPG o PNG")
-    foto.add_argument("--responder", action="store_true", help="Pregunta al asistente por el seguro sugerido")
+    foto.add_argument("--interpretar", action="store_true", help="Entiende la situación con Claude (visión)")
+    foto.add_argument("--responder", action="store_true", help="El asistente explica qué hacer, con fuente")
     foto.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     foto.add_argument(
         "--api", default=None, metavar="URL", help="Usa la API por HTTP (p. ej. http://127.0.0.1:8000)"
@@ -207,21 +208,34 @@ def _foto(args: argparse.Namespace) -> int:
     if args.api:
         from sb_asistente.view.api_client import ClienteAPI
 
-        out = ClienteAPI(args.api).analizar_foto(datos, args.ruta.name, args.responder, args.provider)
+        cliente = ClienteAPI(args.api)
+        out = cliente.analizar_foto(datos, args.ruta.name, args.responder, args.provider, args.interpretar)
         print(json.dumps(out.model_dump(), indent=2, ensure_ascii=False))
         return 0
-    asistente = assistant.LiteAssistant.build(args.provider) if args.responder else None
-    analisis = vision.analizar_foto(datos, asistente=asistente)
+    analisis = vision.analizar_foto(
+        datos,
+        asistente=assistant.LiteAssistant.build(args.provider) if args.responder else None,
+        interprete=vision.interprete_por_defecto(args.provider) if args.interpretar else None,
+        recomendar=(lambda perfil: recomendador.recomendar_por_perfil(perfil, 3)[0])
+        if args.responder
+        else None,
+    )
     res = analisis.resultado
     print(f"{res.ancho}x{res.alto} px · inferencia {res.tiempo_ms} ms · {len(res.detecciones)} objetos")
+    print(f"Privacidad: {analisis.personas_difuminadas} personas difuminadas antes de enviar la foto")
     for d in res.detecciones:
         print(f"  · {vision.etiqueta(d.clase):<12} {d.confianza:.0%}")
-    if not analisis.sugerencias:
-        print("\nNo se identificó un objeto asegurable; puede preguntar directamente con: sb ask")
-    for s in analisis.sugerencias:
-        print(f"\nSeguro sugerido: {s.tema.nombre} ({', '.join(s.objetos)}) → {s.tema.pregunta}")
+    if analisis.escena:
+        print(f"\nSituación: {analisis.escena.situacion} · {analisis.escena.descripcion}")
+    print(
+        f"\nPlan: {analisis.plan.nombre}" + (f" → {analisis.plan.pregunta}" if analisis.plan.pregunta else "")
+    )
+    if analisis.aviso:
+        print(analisis.aviso)
     if analisis.respuesta:
         print("\n" + analisis.respuesta.text)
+    for r in analisis.recomendaciones:
+        print(f"  ★ {r['nombre']} · {r['razon']}")
     return 0
 
 

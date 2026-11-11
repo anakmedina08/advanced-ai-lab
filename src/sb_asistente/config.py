@@ -123,6 +123,8 @@ YOLO_CONFIDENCE: Final[float] = float(os.getenv("YOLO_CONFIDENCE", "0.35"))  # d
 MAX_IMAGE_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por foto
 # Privacidad: las personas detectadas no se reportan ni se dibujan (Ley 1581 de 2012).
 VISION_IGNORED_CLASSES: Final[frozenset[str]] = frozenset({"person"})
+VISION_BLUR_CONFIDENCE: Final[float] = 0.15  # umbral bajo para difuminar personas (mejor de más que de menos)
+VISION_PROVIDERS: Final[tuple[str, ...]] = ("anthropic",)  # proveedores que entienden imágenes
 API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
 
 # --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------

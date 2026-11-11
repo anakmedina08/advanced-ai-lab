@@ -24,8 +24,9 @@ Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep
     `agent.py` (Deep Agent) y `assistants.py` (Q&A sobre contexto recuperado).
   - `evaluation.py` → banco de preguntas y métricas.
   - `recomendador/` → datos sintéticos, contrato de datos, líneas base y métricas (curso de Gestión).
-  - `vision/` → detección YOLO (`deteccion.py`) y tabla objeto → seguro (`seguros.py`); extra opcional
-    `uv sync --extra vision`. La foto no se guarda y las personas no se reportan (ADR-020).
+  - `vision/` → YOLO (`deteccion.py`), difuminado de personas (`privacidad.py`), escena con Claude
+    (`escena.py`) y plan objeto/situación → respuesta (`seguros.py`); extra opcional `uv sync --extra vision`.
+    La foto no se guarda y las personas se difuminan antes de salir del equipo (ADR-020).
 - **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (scraping), `assistant.py` (arma los modos de Q&A y orquesta la evaluación) y `recomendador.py`.
 - **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `api_client.py` (httpx),
   `anotaciones.py`, `streamlit_app.py` y `cli.py`;
