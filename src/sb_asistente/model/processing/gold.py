@@ -18,6 +18,7 @@ import yaml
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 from sb_asistente.config import (
+    BASE_URL,
     CHARS_PER_TOKEN_ES,
     CHUNK_MAX_CHARS,
     CHUNK_OVERLAP_CHARS,
@@ -154,7 +155,7 @@ def build_knowledge(docs: Iterable[GoldDoc], channels_text: str = "") -> str:
     if channels_text:
         parts.append(
             "## Canales de atención (pie de página del sitio oficial)\n"
-            f"Fuente: https://www.segurosbolivar.com/\n\n{channels_text}\n"
+            f"Fuente: {BASE_URL}/\n\n{channels_text}\n"
         )
     for section in SECTION_ORDER:
         if section not in by_section:

@@ -29,7 +29,7 @@ preguntas citando la página de origen.
   aparece UNA sola vez en el conocimiento consolidado.
 
 ### R3 · Q&A, Resumen y FAQ con LangChain
-- Usan TODO el conocimiento en el system prompt con Claude, temperatura 0 (ADR-001).
+- Usan TODO el conocimiento en el system prompt con Claude, esfuerzo `low` (ADR-001, ADR-010).
 - Las respuestas DEBEN citar la URL fuente y, si la información no está, usar la respuesta de
   no-información.
 - **Escenario:** dada la pregunta «¿Quién ganó el mundial?», entonces la respuesta es la de

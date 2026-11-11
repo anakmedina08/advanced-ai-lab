@@ -95,8 +95,21 @@ OLLAMA_MODEL: Final[str] = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 # hay que ampliarlo para que la base completa (~44K tokens) entre en el contexto.
 OLLAMA_NUM_CTX: Final[int] = int(os.getenv("OLLAMA_NUM_CTX", "65536"))
 CONTEXT_OUTPUT_RESERVE: Final[int] = 4096  # tokens reservados para instrucciones, pregunta y respuesta
-LLM_TEMPERATURE: Final[float] = 0.0  # tareas factuales: determinismo (Clase 4)
+# Temperatura 0 (determinismo, Clase 4) SOLO para Ollama: la API de Claude rechaza con 400
+# `temperature`/`top_p`/`top_k` en los modelos actuales (Haiku 5.5, Sonnet 5.5, Opus 5.5...).
+LLM_TEMPERATURE: Final[float] = 0.0
+# En Claude, el razonamiento interno se controla con el esfuerzo (low | medium | high | xhigh | max).
+# Para Q&A factual sobre un contexto dado basta "low": menos tokens de razonamiento, más rápido y barato.
+ANTHROPIC_EFFORT: Final[str] = os.getenv("ANTHROPIC_EFFORT", "low")
 MAX_CONTEXT_TOKENS: Final[int] = int(os.getenv("MAX_CONTEXT_TOKENS", "200000"))
+LITE_NUM_CTX: Final[int] = 8192  # ventana de Ollama en los modos de contexto reducido, RAG y agente
+LITE_MAX_TOKENS: Final[int] = 2500  # tope de tokens de fragmentos en el modo de contexto reducido
+
+# --- Fase 2 · RAG (embeddings locales con Ollama + Qdrant) -----------------------------------
+EMBEDDING_MODEL: Final[str] = os.getenv("EMBEDDING_MODEL", "embeddinggemma:latest")
+QDRANT_DIR: Final[Path] = GOLD_DIR / "qdrant"  # índice persistido en disco (ignorado por git)
+QDRANT_COLLECTION: Final[str] = "chunks_seguros_bolivar"
+RAG_TOP_K: Final[int] = int(os.getenv("RAG_TOP_K", "4"))  # fragmentos recuperados por búsqueda
 
 EVAL_QUESTIONS: Final[Path] = PROJECT_ROOT / "evaluacion" / "preguntas.yaml"
 EVAL_RESULTS: Final[Path] = PROJECT_ROOT / "evaluacion" / "resultados.csv"

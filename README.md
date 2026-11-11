@@ -79,7 +79,7 @@ flowchart LR
     subgraph M[Modelo]
         SC[scraping<br/>discover · fetch]
         PR[processing<br/>clean · gold]
-        LLM[llm<br/>prompts · service · retrieval]
+        LLM[llm<br/>prompts · service · knowledge<br/>keyword_search · vector_store<br/>assistants · agent]
         EV[evaluation]
     end
     W[(segurosbolivar.com<br/>robots.txt + sitemap)] --> SC
@@ -89,7 +89,9 @@ flowchart LR
     P --> SC & PR
     A --> LLM & EV
     G --> LLM
+    G --> Q[(Qdrant<br/>data/gold/qdrant)] --> LLM
     LLM --> CL[Claude API / Ollama local]
+    LLM --> OE[Ollama local<br/>embeddings]
 ```
 
 La vista **solo** habla con el controlador; el controlador orquesta el modelo. Detalle en
@@ -102,23 +104,25 @@ sequenceDiagram
     actor U as Usuario
     participant UI as Streamlit (vista)
     participant A as assistant.py (controlador)
-    participant R as retrieval (modelo)
+    participant R as keyword_search / vector_store (modelo)
     participant S as service + prompts (modelo)
     participant L as LLM (Claude u Ollama)
     U->>UI: «¿Cuál es el WhatsApp de atención?»
-    UI->>A: answer(pregunta, versión, modo)
-    alt Base completa (Claude, Fase 1)
+    UI->>A: build_assistant(proveedor, modo).answer(pregunta, versión)
+    alt completo (Fase 1)
         A->>S: conocimiento consolidado (~36 000 tokens)
-    else Contexto reducido (Ollama en CPU)
-        A->>R: select_context(pregunta, chunks)
+    else reducido (palabras) o rag (embeddings)
+        A->>R: select_context(pregunta) o search(pregunta, k=4)
         R-->>A: canales + fragmentos relevantes con su URL
-        A->>S: contexto reducido (~2 500 tokens)
+        A->>S: contexto recuperado (~2 000 tokens)
+    else agente (Deep Agents)
+        A->>L: el agente llama search_knowledge y delega cada fragmento a chunk-analyst
     end
     S->>L: system prompt (reglas, <conocimiento>, cita obligatoria) + pregunta
     L-->>S: respuesta
-    S-->>A: Answer(texto, latencia, cita_fuente)
+    S-->>A: Answer(texto, latencia, fuentes)
     A-->>UI: respuesta
-    UI-->>U: respuesta + «Fuentes citadas» (URLs)
+    UI-->>U: respuesta + «Fuentes citadas» (Answer.sources)
 ```
 
 ## Uso
@@ -132,6 +136,22 @@ uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"
 uv run sb faq --topic "Canales de atención y servicio al cliente" -n 5
 make eval PROVIDER=anthropic VERSION=v3   # banco de 24 preguntas
 ```
+
+### Fase 2 · RAG y agente
+
+Adapta el flujo RAG del ejercicio del curso [`ejercicio_langchain`](https://github.com/anakmedina08/ejercicio_langchain)
+a los chunks de Gold ([ADR-009](docs/decisiones/ADR-009-rag-qdrant-deep-agents.md)). Los embeddings
+se calculan en local con Ollama y el índice Qdrant se guarda en `data/gold/qdrant/`.
+
+```bash
+ollama pull embeddinggemma:latest
+make index                                         # ~1 min la primera vez; luego se reutiliza
+uv run sb ask "¿Qué cubre el SOAT?" --modo rag      # fragmentos por embeddings + prompts v1–v4
+uv run sb ask "¿Qué cubre el SOAT?" --modo agente   # Deep Agent + subagente chunk-analyst (mejor con Claude)
+make eval PROVIDER=anthropic MODO=rag VERSION=v3
+```
+
+En Streamlit, el selector **Modo de contexto** ofrece: toda la base, contexto reducido, RAG y agente.
 
 ## Docker
 
@@ -178,7 +198,7 @@ Docker en cada Pull Request.
 - **GGA** (Gentleman Guardian Angel): revisión con IA contra `AGENTS.md` en cada commit
   (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
 - **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
-  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-008).
+  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-010).
 - **Skill del estándar:** [`jan-project-standard`](.claude/skills/jan-project-standard/SKILL.md)
   (Jan Polanco Velasco, MIT), instalada en el repositorio para que el agente aplique y audite el
   estándar. Instalación oficial: `npx skills add https://github.com/hamsomp3/jan_skills_repository --skill jan-project-standard`.

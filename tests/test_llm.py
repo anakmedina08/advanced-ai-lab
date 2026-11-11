@@ -15,13 +15,12 @@ from sb_asistente.model.evaluation import (
     summarize_results,
 )
 from sb_asistente.model.llm import prompts
+from sb_asistente.model.llm.knowledge import KnowledgeTooLargeError, load_knowledge
 from sb_asistente.model.llm.service import (
     Answer,
     KnowledgeAssistant,
-    KnowledgeTooLargeError,
     build_llm,
     context_budget,
-    load_knowledge,
 )
 from sb_asistente.view import cli
 
@@ -100,7 +99,7 @@ def test_assistant_rejects_empty_knowledge():
 
 
 def test_load_knowledge_missing_file_explains_pipeline(tmp_path):
-    with pytest.raises(FileNotFoundError, match="sb discover"):
+    with pytest.raises(FileNotFoundError, match="scrape_empresa.py"):
         load_knowledge(tmp_path / "nada.md")
 
 
@@ -195,7 +194,7 @@ def test_cli_requires_command():
 
 
 def test_cli_ask_uses_assistant(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "_assistant", lambda provider: assistant("Respuesta X"))
+    monkeypatch.setattr(cli, "_assistant", lambda provider, mode="completo": assistant("Respuesta X"))
     assert cli.main(["ask", "¿SOAT?"]) == 0
     assert "Respuesta X" in capsys.readouterr().out
 
@@ -212,7 +211,19 @@ def test_build_llm_anthropic_uses_configured_model(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     llm = build_llm("anthropic")
     assert llm.__class__.__name__ == "ChatAnthropic"
-    assert llm.temperature == 0 and llm.max_tokens == 1024
+    assert llm.max_tokens == 1024
+
+
+def test_build_llm_anthropic_never_sends_temperature(monkeypatch):
+    # La API de Claude responde 400 «temperature is deprecated for this model».
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    payload = build_llm("anthropic")._get_request_payload([("human", "hola")])
+    assert "temperature" not in payload
+    assert payload["output_config"] == {"effort": "low"}
+
+
+def test_build_llm_ollama_keeps_temperature_zero():
+    assert build_llm("ollama").temperature == 0
 
 
 def test_prompt_cache_marks_system_block():
@@ -270,7 +281,7 @@ def test_run_eval_reports_progress(tmp_path):
 
 
 def test_cli_eval_limit_writes_sample_file(monkeypatch, capsys, tmp_path):
-    monkeypatch.setattr(cli, "_assistant", lambda provider: assistant())
+    monkeypatch.setattr(cli, "_assistant", lambda provider, mode="completo": assistant())
     monkeypatch.setattr("sb_asistente.controller.assistant.EVAL_RESULTS", tmp_path / "resultados.csv")
     assert cli.main(["eval", "--provider", "ollama", "--limit", "2"]) == 0
     out = capsys.readouterr().out
@@ -279,7 +290,7 @@ def test_cli_eval_limit_writes_sample_file(monkeypatch, capsys, tmp_path):
 
 
 # --- Contexto reducido para modelos locales -----------------------------------------
-from sb_asistente.model.llm.retrieval import normalize_words, select_context  # noqa: E402
+from sb_asistente.model.llm.keyword_search import normalize_words, select_context  # noqa: E402
 
 CHUNKS = [
     {
@@ -330,13 +341,34 @@ def test_build_llm_ollama_accepts_smaller_window():
 
 
 def test_channels_block_extracts_footer_section():
-    from sb_asistente.model.llm.retrieval import channels_block
+    from sb_asistente.model.llm.knowledge import channels_block
 
     base = "# Base\n\n## Canales de atención (pie)\nWhatsApp: 322\n\n## Salud\n### Plan\ntexto\n"
     assert channels_block(base) == "## Canales de atención (pie)\nWhatsApp: 322\n"
 
 
 def test_channels_block_empty_when_missing():
-    from sb_asistente.model.llm.retrieval import channels_block
+    from sb_asistente.model.llm.knowledge import channels_block
 
     assert channels_block("# Base\n\n## Salud\n") == ""
+
+
+def test_load_chunks_missing_file_explains_pipeline(tmp_path):
+    from sb_asistente.model.llm.knowledge import load_chunks
+
+    with pytest.raises(FileNotFoundError, match="scrape_empresa.py"):
+        load_chunks(tmp_path / "nada.jsonl")
+
+
+def test_answer_sources_are_unique_and_without_trailing_punctuation():
+    text = "Ver https://www.segurosbolivar.com/soat. Y https://www.segurosbolivar.com/soat, otra vez."
+    assert Answer(text, "qa", "v3", 0.1, 10).sources == ["https://www.segurosbolivar.com/soat"]
+
+
+def test_answer_without_url_does_not_cite_source():
+    assert not Answer("Escriba al 322.", "qa", "v3", 0.1, 10).cites_source
+
+
+def test_fallback_detection_uses_prompt_marker():
+    assert prompts.FALLBACK.startswith(prompts.FALLBACK_MARKER)
+    assert Answer(prompts.FALLBACK, "qa", "v3", 0.1, 10).is_fallback

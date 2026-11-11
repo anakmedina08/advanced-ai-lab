@@ -4,7 +4,6 @@ Ejecutar: ``uv run streamlit run src/sb_asistente/view/streamlit_app.py``
 """
 
 import json
-import re
 
 import pandas as pd
 import streamlit as st
@@ -22,35 +21,40 @@ def get_assistant(provider: str) -> ctrl.KnowledgeAssistant:
     return ctrl.full_assistant(provider)
 
 
-@st.cache_resource(show_spinner="Preparando el modo de contexto reducido…")
-def get_lite(provider: str) -> ctrl.LiteAssistant:
-    """Crea el asistente de contexto reducido una vez por proveedor."""
-    return ctrl.LiteAssistant.build(provider)
+@st.cache_resource(show_spinner="Preparando el modo elegido (el índice RAG se crea la primera vez)…")
+def get_mode_assistant(provider: str, mode: str) -> ctrl.QAAssistant:
+    """Crea el asistente de Q&A de un modo una vez por proveedor."""
+    return ctrl.build_assistant(provider, mode)
 
 
-def answer_question(provider: str, question: str, version: str, lite: bool) -> ctrl.Answer:
-    """Responde con toda la base o, en modo reducido, solo con los fragmentos más relevantes."""
-    chosen = get_lite(provider) if lite else get_assistant(provider)
+def answer_question(provider: str, question: str, version: str, mode: str) -> ctrl.Answer:
+    """Responde con el modo de contexto elegido (toda la base, reducido, RAG o agente)."""
+    chosen = get_assistant(provider) if mode == ctrl.DEFAULT_MODE else get_mode_assistant(provider, mode)
     return chosen.answer(question, version=version)
 
 
-def sidebar() -> tuple[str, str, bool]:
-    """Panel lateral: proveedor, versión de prompt y estadísticas del corpus."""
+def sidebar() -> tuple[str, str, str]:
+    """Panel lateral: proveedor, modo de contexto, versión de prompt y estadísticas del corpus."""
     st.sidebar.header("Configuración")
     provider = st.sidebar.selectbox(
         "Modelo", ["anthropic", "ollama"], index=0 if LLM_PROVIDER == "anthropic" else 1
+    )
+    modes = list(ctrl.MODES)
+    mode = st.sidebar.selectbox(
+        "Modo de contexto (Q&A)",
+        modes,
+        index=modes.index("reducido" if provider == "ollama" else ctrl.DEFAULT_MODE),
+        format_func=ctrl.MODES.get,
+        help="Toda la base: diseño de la Fase 1 (Claude). Reducido: fragmentos por palabras, rápido "
+        "en CPU. RAG: fragmentos por embeddings locales (Ollama + Qdrant). Agente: Deep Agent que "
+        "busca y delega el análisis de cada fragmento a un subagente.",
     )
     version = st.sidebar.selectbox(
         "Versión del prompt (Q&A)",
         list(ctrl.QA_VERSIONS),
         index=list(ctrl.QA_VERSIONS).index(ctrl.DEFAULT_QA_VERSION),
         help="v1: ingenuo · v2: grounding simple · v3: zero-shot estructurado · v4: few-shot",
-    )
-    lite = st.sidebar.toggle(
-        "Contexto reducido (rápido en CPU)",
-        value=provider == "ollama",
-        help="Envía solo los fragmentos más parecidos a la pregunta, con su URL. "
-        "Con Claude se recomienda apagarlo: va toda la base (diseño de la Fase 1).",
+        disabled=mode == "agente",
     )
     summary_path = GOLD_DIR / "resumen.json"
     if summary_path.is_file():
@@ -59,7 +63,7 @@ def sidebar() -> tuple[str, str, bool]:
         st.sidebar.metric("Chunks (Fase 2)", s["chunks"])
         st.sidebar.metric("Tokens de contexto (aprox.)", f"{s['tokens_conocimiento_est']:,}")
     st.sidebar.caption("Fuente: información pública de segurosbolivar.com · Proyecto académico UAO")
-    return provider, version, lite
+    return provider, version, mode
 
 
 METRIC_LABELS = {
@@ -105,14 +109,6 @@ def evaluation_tab() -> None:
         ]
     ]
     st.dataframe(detail, hide_index=True, width="stretch")
-
-
-URL_RE = re.compile(r"https?://(?:www\.)?segurosbolivar\.com[^\s)\]>\"']*")
-
-
-def cited_sources(text: str) -> list[str]:
-    """URLs de segurosbolivar.com citadas en una respuesta, sin repetir y en orden."""
-    return list(dict.fromkeys(u.rstrip(".,;:") for u in URL_RE.findall(text)))
 
 
 def render_stages() -> None:
@@ -167,9 +163,10 @@ def pipeline_tab() -> None:
 def main() -> None:
     """Compone la página. La pestaña de Evaluación funciona aunque el modelo no esté disponible."""
     st.title("🛡️ Asistente de Seguros Bolívar · Personas y canales")
-    provider, version, lite = sidebar()
+    provider, version, mode = sidebar()
     try:
-        assistant, error = (None if lite else get_assistant(provider)), None
+        full = mode == ctrl.DEFAULT_MODE
+        assistant, error = (get_assistant(provider) if full else None), None
     except Exception as exc:  # noqa: BLE001 - se muestra al usuario
         assistant, error = None, f"No se pudo iniciar el asistente ({provider}): {exc}"
 
@@ -184,10 +181,9 @@ def main() -> None:
         else:
             question = st.text_input("Escriba su pregunta", placeholder="¿Cuál es el WhatsApp de atención?")
             if st.button("Responder", type="primary", disabled=not question.strip()):
-                modo = "contexto reducido" if lite else "toda la base"
-                with st.spinner(f"Consultando con {provider} ({modo})…"):
+                with st.spinner(f"Consultando con {provider} ({ctrl.MODES[mode].lower()})…"):
                     try:
-                        st.session_state["qa"] = answer_question(provider, question, version, lite)
+                        st.session_state["qa"] = answer_question(provider, question, version, mode)
                     except Exception as exc:  # noqa: BLE001 - p. ej., Ollama apagado o sin clave
                         st.session_state.pop("qa", None)
                         st.error(f"No se pudo responder con {provider}: {exc}")
@@ -195,15 +191,15 @@ def main() -> None:
                 ans = st.session_state["qa"]
                 st.markdown(ans.text)
                 st.caption(
-                    f"{ans.latency_s:.1f} s · prompt {ans.prompt_version} · "
+                    f"{ans.latency_s:.1f} s · {ctrl.MODES[mode]} · prompt {ans.prompt_version} · "
                     f"{'✅ cita fuente' if ans.cites_source else '⚠️ sin fuente'}"
                 )
-                fuentes = cited_sources(ans.text)
+                fuentes = ans.sources
                 if fuentes:
                     st.markdown("**Fuentes citadas:**\n" + "\n".join(f"- [{u}]({u})" for u in fuentes))
     with summary:
         if assistant is None:
-            st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
+            st.error(error or "Resumen y FAQ usan toda la base: elija el modo «Toda la base».")
         else:
             topic = st.selectbox("Tema", ctrl.TOPICS, key="topic_summary")
             if st.button("Generar resumen"):
@@ -211,7 +207,7 @@ def main() -> None:
                     st.markdown(assistant.summarize(topic).text)
     with faq:
         if assistant is None:
-            st.error(error or "Resumen y FAQ usan toda la base: apague «Contexto reducido».")
+            st.error(error or "Resumen y FAQ usan toda la base: elija el modo «Toda la base».")
         else:
             topic = st.selectbox("Tema", ctrl.TOPICS, index=1, key="topic_faq")
             n = st.slider("Número de preguntas", 3, 10, 5)

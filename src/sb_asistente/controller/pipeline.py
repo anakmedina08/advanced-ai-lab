@@ -11,6 +11,7 @@ from sb_asistente.config import (
     CAPTURE_LOG,
     GOLD_DIR,
     MIN_PAGE_CHARS,
+    REQUEST_TIMEOUT_S,
     ROBOTS_URL,
     SILVER_DIR,
     SITEMAP_URL,
@@ -24,7 +25,13 @@ from sb_asistente.model.scraping.discover import (
     parse_sitemap,
     select_urls,
 )
-from sb_asistente.model.scraping.fetch import BronzeFetcher, HttpSession, load_captured, slugify_path
+from sb_asistente.model.scraping.fetch import (
+    BronzeFetcher,
+    CaptureRecord,
+    HttpSession,
+    load_captured,
+    slugify_path,
+)
 
 
 def new_session() -> requests.Session:
@@ -34,14 +41,18 @@ def new_session() -> requests.Session:
     return session
 
 
+def _fetch(session: HttpSession, url: str) -> bytes:
+    """Descarga un recurso con el User-Agent identificable y el timeout de ``config``."""
+    return session.get(url, timeout=REQUEST_TIMEOUT_S, headers={"User-Agent": USER_AGENT}).content
+
+
 def discover(session: HttpSession, out_dir: Path = BRONZE_DIR) -> dict[str, object]:
     """Lee robots.txt y el sitemap, filtra el alcance y guarda el plan de captura."""
-    headers = {"User-Agent": USER_AGENT}
-    robots_txt = session.get(ROBOTS_URL, timeout=15, headers=headers).content.decode("utf-8", "replace")
+    robots_txt = _fetch(session, ROBOTS_URL).decode("utf-8", "replace")
     robots = build_robots(robots_txt, ROBOTS_URL)
-    entries, subs = parse_sitemap(session.get(SITEMAP_URL, timeout=15, headers=headers).content)
+    entries, subs = parse_sitemap(_fetch(session, SITEMAP_URL))
     for sub in subs:  # si el sitemap principal fuera un índice
-        more, _ = parse_sitemap(session.get(sub, timeout=15, headers=headers).content)
+        more, _ = parse_sitemap(_fetch(session, sub))
         entries.extend(more)
     selected, rejected = select_urls(entries, robots, USER_AGENT)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -73,7 +84,7 @@ def process(
     captures = [
         r for r in load_captured(bronze_dir / CAPTURE_LOG.name).values() if r.status == 200 and r.file
     ]
-    pages: list[tuple[object, str]] = []
+    pages: list[tuple[CaptureRecord, str]] = []
     out_of_scope: list[str] = []
     footer = ""
     for rec in captures:
@@ -89,7 +100,7 @@ def process(
     # Deduplicar ANTES de detectar boilerplate: páginas idénticas (p. ej. "/" y
     # "/quienes-somos") harían que todo su contenido pareciera repetido.
     raw_texts: list[str] = []
-    unique_pages: list[tuple[object, str]] = []
+    unique_pages: list[tuple[CaptureRecord, str]] = []
     duplicated: list[str] = []
     seen: set[str] = set()
     for rec, html in pages:
@@ -127,7 +138,7 @@ def process(
                 text=text,
             )
         )
-    pdfs = {rec.url: clean.pdf_links(html) for rec, html in pages if clean.pdf_links(html)}
+    pdfs = {rec.url: links for rec, html in pages if (links := clean.pdf_links(html))}
     gold_dir.mkdir(parents=True, exist_ok=True)
     (gold_dir / "pdf_links.json").write_text(json.dumps(pdfs, ensure_ascii=False, indent=2), encoding="utf-8")
     docs, also_duplicated = gold.dedupe_docs(docs)

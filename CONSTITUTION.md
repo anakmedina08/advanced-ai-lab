@@ -21,7 +21,7 @@
 | **Autoría** | Daniel Silva y Katherine Medina (UAO) |
 | **Licencia** | MIT |
 | **Rama principal** | `main` |
-| **Estado** | Fase 1 entregada · Fase 2 en preparación |
+| **Estado** | Fase 1 entregada · Fase 2 (RAG) en desarrollo |
 
 ## 1. Propósito y no-propósito
 
@@ -44,12 +44,12 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Pipeline Medallion (Bronze → Silver → Gold) con metadatos: URL, título, sección, fecha y hash.
 - Q&A, Resumen y FAQ con LangChain (Claude por API u Ollama local), con cita de la fuente.
 - Interfaz Streamlit con el proceso de scraping visible y pestaña de evaluación.
+- Fase 2: RAG con embeddings locales (Ollama) en Qdrant y un Deep Agent con subagentes sobre `chunks.jsonl`.
 
 ### Fuera del alcance (por ahora)
 
 - Empresas, proveedores, reaseguradores, portales transaccionales y contenido tras login.
 - Blog y PDFs (reservados para el RAG de la Fase 2).
-- Base vectorial y embeddings (Fase 2).
 
 ## 3. Stack técnico
 
@@ -84,11 +84,11 @@ advanced-ai-lab/
 │   ├── model/                     # M · lógica de negocio
 │   │   ├── scraping/              #   discover (robots + sitemap) · fetch (Bronze)
 │   │   ├── processing/            #   clean (Silver) · gold (Markdown, corpus, chunks)
-│   │   ├── llm/                   #   prompts versionados · service (LangChain) · retrieval
+│   │   ├── llm/                   #   prompts · service · knowledge · keyword_search · vector_store · agent · assistants
 │   │   └── evaluation.py          #   banco de preguntas y métricas
 │   ├── controller/                # C · casos de uso
 │   │   ├── pipeline.py            #   descubrir → extraer → limpiar → deduplicar → enriquecer
-│   │   └── assistant.py           #   Q&A completo / contexto reducido, evaluación
+│   │   └── assistant.py           #   arma los modos completo/reducido/rag/agente, evaluación
 │   └── view/                      # V · presentación
 │       ├── streamlit_app.py       #   interfaz web
 │       └── cli.py                 #   comando `sb`
@@ -120,7 +120,7 @@ advanced-ai-lab/
 - **Idioma:** UI, comentarios y commits en español; identificadores en inglés o español consistente por módulo.
 - **Reglas propias:**
   - **MVC estricto:** las vistas solo hablan con `controller/`; nunca construyen modelos ni prompts.
-  - **Ningún prompt fuera de `model/llm/prompts.py`**; temperatura 0; delimitación XML; regla de no-información; cita de la URL.
+  - **Ningún prompt fuera de `model/llm/prompts.py`**; temperatura 0 en Ollama (Claude no la acepta: esfuerzo `low`, ADR-010); delimitación XML; regla de no-información; cita de la URL.
   - **Scraping ético:** respetar `robots.txt`, 1,5 s entre peticiones, User-Agent identificable, solo información pública.
   - **Datos:** `data/` y `.env` nunca se versionan (el hook `forbid-data-and-secrets` lo impide).
   - **Dependencias por constructor** (sesión HTTP, LLM, reloj, sleep) para probar sin red.
@@ -171,10 +171,13 @@ git push
 | 2026-10-30 | Contexto reducido para modelos locales ([ADR-006](docs/decisiones/ADR-006-contexto-reducido-ollama.md)) | En CPU, la base completa tardaba ~30 min por respuesta |
 | 2026-11-01 | Estructura MVC (`model/`, `controller/`, `view/`) como el proyecto de Gestión ([ADR-007](docs/decisiones/ADR-007-estructura-mvc.md)) | Bajo acoplamiento: la vista solo habla con el controlador |
 | 2026-11-01 | Imagen Docker multi-stage CPU y estándar `jan-project-standard` ([ADR-008](docs/decisiones/ADR-008-docker-multistage-y-estandar.md)) | Reproducibilidad y gobernanza del repositorio |
+| 2026-11-10 | Claude sin `temperature` (la API la rechaza con 400) y con esfuerzo `low` ([ADR-010](docs/decisiones/ADR-010-claude-sin-temperatura.md)) | Los modelos actuales de Claude eliminaron los parámetros de muestreo |
+| 2026-11-10 | Fase 2: RAG con Ollama + Qdrant y Deep Agent, adaptado de `ejercicio_langchain` ([ADR-009](docs/decisiones/ADR-009-rag-qdrant-deep-agents.md)) | Contexto ~2K tokens en vez de ~36K; embeddings locales |
 
 ## 10. Notas y tareas pendientes
 
-- [ ] Fase 2: RAG con embeddings sobre `data/gold/chunks.jsonl`.
+- [x] Fase 2: RAG con embeddings sobre `data/gold/chunks.jsonl` (modos `rag` y `agente`).
+- [ ] Evaluar `rag` y `agente` con Claude frente a la Fase 1 (`sb eval --modo rag`).
 - [ ] Ejecutar `make eval` con Claude y completar el análisis del informe.
 - [ ] Proteger `main` en GitHub (requerir PR y CI en verde).
 

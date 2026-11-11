@@ -121,7 +121,7 @@ def aggregate(rows: list[dict[str, object]]) -> dict[str, float]:
     }
 
 
-RESULT_FILE = re.compile(r"^resultados_(?P<modelo>[a-z0-9]+)_(?P<version>v\d+)\.csv$")
+RESULT_FILE = re.compile(r"^resultados_(?P<modelo>[a-z0-9-]+)_(?P<version>v\d+|agente)\.csv$")
 
 
 def read_results(path: Path) -> list[dict[str, object]]:

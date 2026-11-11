@@ -26,6 +26,8 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-006](ADR-006-contexto-reducido-ollama.md) | Contexto reducido para que Ollama responda en CPU | 2026-10-30 |
 | [ADR-007](ADR-007-estructura-mvc.md) | Estructura MVC igual a la del proyecto de Gestión | 2026-11-01 |
 | [ADR-008](ADR-008-docker-multistage-y-estandar.md) | Docker multi-stage y estándar jan-project-standard | 2026-11-01 |
+| [ADR-009](ADR-009-rag-qdrant-deep-agents.md) | Fase 2: RAG con Ollama + Qdrant y Deep Agent | 2026-11-10 |
+| [ADR-010](ADR-010-claude-sin-temperatura.md) | Claude sin `temperature` y con esfuerzo `low` | 2026-11-10 |
 
 ## Cómo registrar una decisión nueva en Engram
 

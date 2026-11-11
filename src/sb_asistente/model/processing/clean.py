@@ -11,11 +11,12 @@ import hashlib
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from urllib.parse import urljoin
 
 import trafilatura
 from bs4 import BeautifulSoup
 
-from sb_asistente.config import BOILERPLATE_MIN_SHARE
+from sb_asistente.config import BASE_URL, BOILERPLATE_MIN_SHARE
 
 NOISE_TAGS = ("script", "style", "noscript", "svg", "iframe", "form", "button", "img")
 
@@ -68,10 +69,8 @@ def join_label_values(lines: list[str]) -> str:
     return "\n".join(out)
 
 
-def pdf_links(html: str, base_url: str = "https://www.segurosbolivar.com") -> list[str]:
+def pdf_links(html: str, base_url: str = BASE_URL) -> list[str]:
     """Enlaces a PDF (clausulados, condiciones) de la página, absolutos y sin duplicados."""
-    from urllib.parse import urljoin
-
     soup = BeautifulSoup(html, "lxml")
     links = {
         urljoin(base_url, a["href"]) for a in soup.find_all("a", href=True) if ".pdf" in a["href"].lower()

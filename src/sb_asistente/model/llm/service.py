@@ -5,9 +5,9 @@ configuración (Claude por la API de Anthropic u Ollama local) sin cambiar la l�
 + Harness).
 """
 
+import re
 import time
 from dataclasses import dataclass
-from pathlib import Path
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, SystemMessage
@@ -15,9 +15,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from sb_asistente.config import (
+    ANTHROPIC_EFFORT,
     ANTHROPIC_MODEL,
     CONTEXT_OUTPUT_RESERVE,
-    KNOWLEDGE_MD,
     LLM_MAX_OUTPUT_TOKENS,
     LLM_PROVIDER,
     LLM_TEMPERATURE,
@@ -28,9 +28,7 @@ from sb_asistente.config import (
 from sb_asistente.model.llm import prompts
 from sb_asistente.model.processing.gold import estimate_tokens
 
-
-class KnowledgeTooLargeError(ValueError):
-    """El conocimiento consolidado no cabe en el presupuesto de contexto configurado."""
+SOURCE_URL = re.compile(r"https?://(?:www\.)?segurosbolivar\.com[^\s)\]>\"']*")
 
 
 @dataclass(slots=True)
@@ -44,14 +42,19 @@ class Answer:
     context_tokens_est: int
 
     @property
+    def sources(self) -> list[str]:
+        """URLs de segurosbolivar.com citadas, sin repetir y en orden de aparición."""
+        return list(dict.fromkeys(u.rstrip(".,;:") for u in SOURCE_URL.findall(self.text)))
+
+    @property
     def cites_source(self) -> bool:
-        """Indica si la respuesta incluye una URL de segurosbolivar.com."""
-        return "segurosbolivar.com" in self.text
+        """Indica si la respuesta cita al menos una URL de segurosbolivar.com."""
+        return bool(self.sources)
 
     @property
     def is_fallback(self) -> bool:
-        """Indica si el modelo declaró no tener la información."""
-        return "No encuentro esa información" in self.text
+        """Indica si el modelo usó la respuesta de no-información definida en ``prompts``."""
+        return prompts.FALLBACK_MARKER in self.text
 
 
 def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseChatModel:
@@ -63,10 +66,12 @@ def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseC
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
+        # Sin `temperature`: los modelos actuales de Claude la rechazan (400). El determinismo lo dan
+        # el prompt (reglas, formato fijo, ejemplos) y el esfuerzo de razonamiento bajo.
         return ChatAnthropic(
             model=ANTHROPIC_MODEL,
-            temperature=LLM_TEMPERATURE,
             max_tokens=LLM_MAX_OUTPUT_TOKENS,
+            output_config={"effort": ANTHROPIC_EFFORT},
             max_retries=2,
         )
     if provider == "ollama":
@@ -85,22 +90,6 @@ def context_budget(provider: str = LLM_PROVIDER) -> int:
     """Tokens disponibles para la base de conocimiento según el proveedor."""
     window = OLLAMA_NUM_CTX if provider == "ollama" else MAX_CONTEXT_TOKENS
     return window - CONTEXT_OUTPUT_RESERVE
-
-
-def load_knowledge(path: Path = KNOWLEDGE_MD, max_tokens: int = MAX_CONTEXT_TOKENS) -> str:
-    """Carga el conocimiento consolidado y valida que quepa en el presupuesto de contexto."""
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"No existe {path}. Ejecute primero: uv run sb discover && uv run sb scrape && uv run sb process"
-        )
-    text = path.read_text(encoding="utf-8")
-    tokens = estimate_tokens(text)
-    if tokens > max_tokens:
-        raise KnowledgeTooLargeError(
-            f"El conocimiento tiene ~{tokens:,} tokens y el límite es {max_tokens:,}. "
-            "Reduzca el alcance o aumente MAX_CONTEXT_TOKENS."
-        )
-    return text
 
 
 class KnowledgeAssistant:

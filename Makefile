@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 .PHONY: help install dev pre-commit-install pre-commit lint format format-check test check build clean \
-	data process app eval docker-build docker-run
+	data process index app eval docker-build docker-run
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -42,11 +42,14 @@ data: ## Scraping completo: descubrir → Bronze → Silver → Gold (~4 min, re
 process: ## Reprocesa Bronze → Silver → Gold sin volver a la web (segundos)
 	uv run python scripts/scrape_empresa.py --solo-proceso
 
+index: ## Fase 2: embeddings de los chunks en Qdrant (requiere: ollama pull embeddinggemma)
+	uv run sb index
+
 app: ## Abre la interfaz Streamlit en http://localhost:8501
 	uv run streamlit run app.py
 
-eval: ## Evalúa el banco de preguntas (PROVIDER=anthropic|ollama, VERSION=v1..v4)
-	uv run sb eval --provider $(or $(PROVIDER),anthropic) --version $(or $(VERSION),v3)
+eval: ## Evalúa el banco (PROVIDER=anthropic|ollama, VERSION=v1..v4, MODO=completo|reducido|rag|agente)
+	uv run sb eval --provider $(or $(PROVIDER),anthropic) --version $(or $(VERSION),v3) --modo $(or $(MODO),completo)
 
 docker-build: ## Construye la imagen Docker multi-stage (CPU)
 	docker build -t sb-asistente .
