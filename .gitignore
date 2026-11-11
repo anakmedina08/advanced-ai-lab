@@ -46,3 +46,6 @@ informe/*.blg
 
 # Agentes: índice de tgrep
 .tgrep/
+
+# Configuración local de Claude Code (skills, ajustes): no se versiona
+.claude/

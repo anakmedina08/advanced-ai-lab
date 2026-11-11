@@ -4,7 +4,7 @@
 > que un agente debe respetar; si algo cambia, se actualiza primero la constitución.
 > Spec del trabajo: [`openspec/specs/fase1-base-conocimiento/`](openspec/specs/fase1-base-conocimiento/)
 > (`spec.md`, `plan.md`, `tasks.md`). Estándar del repo: skill `jan-project-standard`
-> (`.claude/skills/jan-project-standard/`).
+> (se instala localmente en `.claude/skills/`; esa carpeta no se versiona).
 
 ## Contexto
 Asistente de conocimiento de **Seguros Bolívar** (información pública, alcance PERSONAS +

@@ -199,9 +199,8 @@ Docker en cada Pull Request.
   (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
 - **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
   [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-010).
-- **Skill del estándar:** [`jan-project-standard`](.claude/skills/jan-project-standard/SKILL.md)
-  (Jan Polanco Velasco, MIT), instalada en el repositorio para que el agente aplique y audite el
-  estándar. Instalación oficial: `npx skills add https://github.com/hamsomp3/jan_skills_repository --skill jan-project-standard`.
+- **Skill del estándar:** `jan-project-standard` (Jan Polanco Velasco, MIT), para que el agente
+  aplique y audite el estándar. Se instala en cada equipo (la carpeta `.claude/` no se versiona): `npx skills add https://github.com/hamsomp3/jan_skills_repository --skill jan-project-standard`.
 
 ## Estructura
 
