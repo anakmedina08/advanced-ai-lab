@@ -101,7 +101,9 @@ advanced-ai-lab/
 │   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
 │       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
-│       ├── streamlit_app.py       #   consola interna
+│       ├── streamlit_app.py       #   interfaz web: navegación en dos áreas (cliente / equipo)
+│       ├── app_pages/             #   una página por archivo (asistente, foto, guías, configuración…)
+│       ├── ui.py                  #   recursos cacheados y ajustes compartidos por las páginas
 │       └── cli.py                 #   comando `sb`
 ├── scripts/                       # scrape_empresa.py, crear_kanban.py, check_commit_msg.py
 ├── tests/                         # pytest por capa (AAA, fixtures HTML, LLM falso)
@@ -190,6 +192,7 @@ git push
 | 2026-11-10 | Claude sin `temperature` (la API la rechaza con 400) y con esfuerzo `low` ([ADR-019](docs/decisiones/ADR-019-claude-sin-temperatura.md)) | Los modelos actuales de Claude eliminaron los parámetros de muestreo |
 | 2026-11-10 | Fase 2: RAG con Ollama + Qdrant y Deep Agent, adaptado de `ejercicio_langchain` ([ADR-018](docs/decisiones/ADR-018-rag-qdrant-deep-agents.md)) | Contexto ~2K tokens en vez de ~36K; embeddings locales |
 | 2026-11-11 | Foto → «¿qué hago?» con YOLO local, Claude con visión y FastAPI, adaptado de `ejercicio_gestion_fastapi` ([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)) | YOLO solo daba una tabla obvia; la situación es lo que la persona necesita resolver |
+| 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
 
 ## 10. Notas y tareas pendientes
 

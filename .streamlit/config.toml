@@ -3,3 +3,53 @@ gatherUsageStats = false
 
 [server]
 headless = true
+maxUploadSize = 8  # MB; igual a MAX_IMAGE_BYTES de config.py
+
+[client]
+toolbarMode = "viewer"  # oculta «Deploy» y las opciones de desarrollador
+
+# Tema corporativo sobrio (azul marino y grises). A propósito NO usa los colores ni la marca de
+# Seguros Bolívar: es un proyecto académico y no debe confundirse con un canal oficial.
+[theme]
+base = "light"
+primaryColor = "#1F4E8C"              # azul corporativo (botones, enlaces, elementos activos)
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F5F9"  # fondos de widgets y tarjetas
+textColor = "#1E293B"
+linkColor = "#1F4E8C"
+borderColor = "#DCE2EA"
+codeBackgroundColor = "#F3F5F9"
+showWidgetBorder = true
+showSidebarBorder = false
+baseRadius = "8px"
+buttonRadius = "8px"
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@600;700&display=swap"
+baseFontSize = 15
+headingFontSizes = ["30px", "22px", "18px", "16px", "14px", "12px"]
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+linkUnderline = false
+metricValueFontSize = "28px"
+metricValueFontWeight = 600
+
+blueColor = "#1F4E8C"
+greenColor = "#15803D"
+redColor = "#B91C1C"
+orangeColor = "#C2410C"
+yellowColor = "#A16207"
+violetColor = "#6D28D9"
+grayColor = "#64748B"
+
+chartCategoricalColors = ["#1F4E8C", "#0E7490", "#6D28D9", "#C2410C", "#15803D", "#64748B"]
+dataframeHeaderBackgroundColor = "#EEF2F7"
+dataframeBorderColor = "#DCE2EA"
+
+# Barra lateral oscura: separa la navegación del contenido, como en las aplicaciones corporativas.
+[theme.sidebar]
+backgroundColor = "#0F2742"
+secondaryBackgroundColor = "#173556"
+textColor = "#E8EEF6"
+borderColor = "#24486F"
+primaryColor = "#7FB0F0"
+linkColor = "#A9C9F5"
+codeBackgroundColor = "#173556"

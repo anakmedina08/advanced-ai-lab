@@ -51,7 +51,7 @@ importa una superior.
 | Modelo | `model/evaluation.py` | Banco de preguntas y métricas | respuestas ➔ CSV y resumen |
 | Controlador | `controller/pipeline.py` | Etapas del scraping y su reporte | — ➔ métricas por etapa y tabla del corpus |
 | Controlador | `controller/assistant.py` | Arma cada modo (completo, reducido, rag, agente) con la configuración y orquesta la evaluación | proveedor + modo ➔ asistente; banco ➔ métricas |
-| Vista | `view/streamlit_app.py`, `app.py` | Interfaz web | clics ➔ llamadas al controlador |
+| Vista | `view/streamlit_app.py`, `view/app_pages/`, `view/ui.py`, `app.py` | Interfaz web en dos áreas: atención al cliente y panel del equipo (ADR-021) | clics ➔ llamadas al controlador |
 | Vista | `view/cli.py` | Comando `sb` | argumentos ➔ llamadas al controlador |
 
 ## Flujo de inferencia

@@ -70,9 +70,13 @@ local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 
 ## Capturas
 
-| Pipeline de scraping por etapas | Q&A con cita de la fuente |
-|---|---|
-| ![Pipeline](docs/capturas/pipeline.png) | ![Q&A](docs/capturas/qa.png) |
+La interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
+cliente** (asistente en chat, foto «¿qué hago?» y guías) y **panel del equipo** (configuración,
+pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de Seguros Bolívar.
+
+| Asistente (chat con fuentes) | Foto: ¿qué hago? | Pipeline de datos |
+|---|---|---|
+| ![Asistente](docs/capturas/qa.png) | ![Foto](docs/capturas/foto.png) | ![Pipeline](docs/capturas/pipeline.png) |
 
 ## Arquitectura MVC
 
@@ -339,7 +343,7 @@ Docker en cada Pull Request.
 - **GGA** (Gentleman Guardian Angel): revisión con IA contra `AGENTS.md` en cada commit
   (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
 - **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
-  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-020).
+  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-021).
 - **Subagentes:** [`.claude/agents/`](.claude/agents/) — arquitecto (opus, asesor de solo lectura),
   explorador, probador y guardián de datos (haiku), revisor, ml-recomendador y documentador (sonnet).
 - **Telemetría en vivo:** los hooks de [`.claude/settings.json`](.claude/settings.json) registran cada

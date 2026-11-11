@@ -16,6 +16,7 @@
 - [x] T-37 [ml] Agente con tools, salida estructurada, memoria SQLite y trazas LangSmith (Daniel)
 - [x] T-38 [ml] Modos rag (Ollama + Qdrant) y agente (Deep Agents) en sb ask, y Claude sin temperature (Katherine)
 - [x] T-40 [ml] Foto → ¿qué hago?: YOLO difumina personas, Claude entiende la situación, RAG y recomendador (Katherine)
+- [x] T-41 [ui] Interfaz en dos áreas (cliente / equipo), chat con fuentes y tema corporativo neutro (Katherine)
 
 ## Pendiente
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)

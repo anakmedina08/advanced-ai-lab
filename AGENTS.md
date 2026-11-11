@@ -29,7 +29,7 @@ Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep
     La foto no se guarda y las personas se difuminan antes de salir del equipo (ADR-020).
 - **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (scraping), `assistant.py` (arma los modos de Q&A y orquesta la evaluación) y `recomendador.py`.
 - **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `api_client.py` (httpx),
-  `anotaciones.py`, `streamlit_app.py` y `cli.py`;
+  `anotaciones.py`, `streamlit_app.py` (navegación) con `app_pages/` y `ui.py`, y `cli.py`;
   **solo llaman al controlador**, sin lógica de negocio. Toda entrada de la API es un modelo Pydantic.
 - `config.py` concentra rutas, alcance, umbrales y modelo (nada de números mágicos).
 - Dependencias por constructor (sesión HTTP, LLM, reloj, sleep) para poder probar sin red ni API.
