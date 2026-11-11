@@ -183,3 +183,44 @@ class SkillOut(BaseModel):
     nombre: str
     descripcion: str
     licencia: str | None = None
+
+
+# --- Foto → seguro sugerido (YOLO, ADR-020) ------------------------------------------------
+class CajaOut(BaseModel):
+    """Rectángulo de una detección en píxeles."""
+
+    x_min: float
+    y_min: float
+    x_max: float
+    y_max: float
+
+
+class DeteccionOut(BaseModel):
+    """Objeto detectado en la foto (las personas nunca se reportan)."""
+
+    clase: str = Field(description="Clase del modelo YOLO (COCO, en inglés)")
+    etiqueta: str = Field(description="Nombre en español")
+    confianza: Annotated[float, Field(ge=0.0, le=1.0)]
+    caja: CajaOut
+
+
+class SugerenciaOut(BaseModel):
+    """Seguro que aplica a lo que se ve en la foto."""
+
+    tema: str
+    nombre: str
+    objetos: list[str]
+    confianza: Annotated[float, Field(ge=0.0, le=1.0)]
+    pregunta: str = Field(description="Pregunta que se le hace al asistente para este tema")
+    paginas: list[str] = Field(description="Páginas de la base pública que respaldan la sugerencia")
+
+
+class FotoOut(BaseModel):
+    """Resultado de analizar una foto: detecciones, seguros sugeridos y respuesta opcional."""
+
+    tiempo_inferencia_ms: float
+    ancho: int
+    alto: int
+    detecciones: list[DeteccionOut]
+    sugerencias: list[SugerenciaOut]
+    respuesta: RespuestaOut | None = None

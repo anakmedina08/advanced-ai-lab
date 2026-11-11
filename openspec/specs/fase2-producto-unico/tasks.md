@@ -15,6 +15,7 @@
 - [x] T-36 [ml] Base vectorial Chroma y recuperación híbrida BM25 + vectores con evaluación hit@k (Daniel)
 - [x] T-37 [ml] Agente con tools, salida estructurada, memoria SQLite y trazas LangSmith (Daniel)
 - [x] T-38 [ml] Modos rag (Ollama + Qdrant) y agente (Deep Agents) en sb ask, y Claude sin temperature (Katherine)
+- [x] T-40 [ml] Foto → seguro sugerido con YOLO: POST /fotos, pestaña Streamlit, sb foto y cliente httpx (Katherine)
 
 ## Pendiente
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)

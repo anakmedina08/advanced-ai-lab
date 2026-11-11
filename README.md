@@ -162,6 +162,7 @@ make api        # o: uv run sb api  →  http://127.0.0.1:8000/docs
 | `GET /recomendaciones/{cliente_id}?k=5` | top-k de seguros que el cliente aún no tiene |
 | `POST /chat` | turno del chat: clasificador → herramienta, con traza |
 | `GET /skills` | skills que el chat puede aplicar |
+| `POST /fotos?responder=true` | foto → seguro sugerido con YOLO (extra `vision`, ver abajo) |
 
 Cada petición se valida con Pydantic (`view/schemas.py`): campos desconocidos, rangos y proveedor;
 las preguntas con correo, teléfono o número de documento se rechazan con 422 (Ley 1581).
@@ -220,6 +221,33 @@ make eval PROVIDER=anthropic MODO=rag VERSION=v3
 ```
 
 En Streamlit, el selector **Modo de contexto** ofrece: toda la base, contexto reducido, RAG y agente.
+
+## Foto → seguro sugerido (YOLO)
+
+Adapta el ejercicio [`ejercicio_gestion_fastapi`](https://github.com/anakmedina08/ejercicio_gestion_fastapi)
+([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)): el cliente sube una foto, YOLO detecta
+objetos asegurables y el asistente explica el seguro que aplica, con su fuente.
+
+```bash
+make vision                                              # uv sync --extra vision (ultralytics + torch CPU, ~1 GB)
+uv run sb foto mi_moto.jpg --responder                   # en local
+uv run sb foto mi_moto.jpg --api http://127.0.0.1:8000   # por HTTP con el cliente httpx (view/api_client.py)
+curl -F "archivo=@mi_moto.jpg" "localhost:8000/fotos?responder=true"
+```
+
+| Se ve en la foto | Seguro sugerido |
+|---|---|
+| carro, moto, camión, bus | SOAT y todo riesgo |
+| bicicleta | seguro de bicicletas |
+| perro, gato | seguro para mascotas |
+| sofá, cama, nevera, televisor… | seguro de hogar |
+| celular, portátil | Datecnologia |
+
+Variables opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26n.pt`; se descarga si falta),
+`YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP). La foto se procesa en memoria y no se guarda;
+las personas no se reportan. No suba documentos. En Streamlit está la pestaña **📷 Foto → seguro**.
+Sin el extra `vision`, `POST /fotos` responde 503 con la instrucción de instalación y el resto del
+proyecto funciona igual.
 
 ## Chat orquestado
 
@@ -306,7 +334,7 @@ Docker en cada Pull Request.
 - **GGA** (Gentleman Guardian Angel): revisión con IA contra `AGENTS.md` en cada commit
   (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
 - **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
-  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-019).
+  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-020).
 - **Subagentes:** [`.claude/agents/`](.claude/agents/) — arquitecto (opus, asesor de solo lectura),
   explorador, probador y guardián de datos (haiku), revisor, ml-recomendador y documentador (sonnet).
 - **Telemetría en vivo:** los hooks de [`.claude/settings.json`](.claude/settings.json) registran cada

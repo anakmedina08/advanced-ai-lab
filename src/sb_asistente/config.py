@@ -115,6 +115,16 @@ QDRANT_DIR: Final[Path] = GOLD_DIR / "qdrant"  # índice persistido en disco (ig
 QDRANT_COLLECTION: Final[str] = "chunks_seguros_bolivar"
 RAG_TOP_K: Final[int] = int(os.getenv("RAG_TOP_K", "4"))  # fragmentos recuperados por búsqueda
 
+# --- Visión: foto → seguro sugerido (YOLO; extra opcional `uv sync --extra vision`) ---------
+# Pesos fuera de git (*.pt): Ultralytics los descarga la primera vez si no existen.
+_yolo_env = Path(os.getenv("YOLO_MODEL_PATH", str(DATA_DIR / "modelos" / "yolo26n.pt")))
+YOLO_MODEL_PATH: Final[Path] = _yolo_env if _yolo_env.is_absolute() else PROJECT_ROOT / _yolo_env
+YOLO_CONFIDENCE: Final[float] = float(os.getenv("YOLO_CONFIDENCE", "0.35"))  # descarta detecciones dudosas
+MAX_IMAGE_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por foto
+# Privacidad: las personas detectadas no se reportan ni se dibujan (Ley 1581 de 2012).
+VISION_IGNORED_CLASSES: Final[frozenset[str]] = frozenset({"person"})
+API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
+
 # --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------
 VECTOR_DIR: Final[Path] = DATA_DIR / "vector"  # Chroma persistente (no versionado)
 VECTOR_COLLECTION: Final[str] = "sb_conocimiento"

@@ -10,7 +10,8 @@ import streamlit as st
 
 from sb_asistente.config import BASE_URL, GOLD_DIR, LLM_PROVIDER, PROVIDERS
 from sb_asistente.controller import assistant as ctrl
-from sb_asistente.controller import pipeline
+from sb_asistente.controller import pipeline, vision
+from sb_asistente.view.anotaciones import dibujar_detecciones
 
 st.set_page_config(page_title="Asistente Seguros Bolívar", page_icon="🛡️", layout="wide")
 
@@ -162,6 +163,74 @@ def pipeline_tab() -> None:
         st.info("Aún no hay corpus. Ejecute: uv run python scripts/scrape_empresa.py")
 
 
+@st.cache_resource(show_spinner="Cargando el modelo de visión (YOLO)…")
+def get_detector() -> vision.Detector:
+    """Detector YOLO cargado y calentado una sola vez por sesión del servidor."""
+    detector = vision.detector_por_defecto()
+    detector.cargar()
+    return detector
+
+
+def photo_tab(provider: str, mode: str) -> None:
+    """Pestaña 📷: la foto se analiza en memoria, no se guarda y las personas no se reportan."""
+    st.subheader("Foto → seguro sugerido")
+    st.caption(
+        "Suba una foto de su carro, moto, bicicleta, mascota, hogar o equipos. YOLO detecta los "
+        "objetos y el asistente explica el seguro que aplica con su fuente. No suba documentos ni "
+        "fotos de personas: no se usan."
+    )
+    archivo = st.file_uploader("Foto (JPG o PNG, máx. 8 MB)", type=["jpg", "jpeg", "png"])
+    if archivo is None:
+        return
+    datos = archivo.getvalue()
+    try:
+        imagen = vision.abrir_imagen(datos)
+    except vision.ImagenInvalidaError as exc:
+        st.error(str(exc))
+        return
+    responder = st.toggle("Preguntar al asistente por el seguro sugerido", value=True)
+    if not st.button("Analizar foto", type="primary"):
+        st.image(imagen, width="stretch")
+        return
+    try:
+        detector = get_detector()
+        asistente = None
+        if responder:
+            asistente = (
+                get_assistant(provider) if mode == ctrl.DEFAULT_MODE else get_mode_assistant(provider, mode)
+            )
+        with st.spinner("Detectando objetos y consultando al asistente…"):
+            analisis = vision.analizar_foto(datos, detector, asistente)
+    except vision.VisionNoDisponibleError as exc:
+        st.warning(str(exc))
+        return
+    except Exception as exc:  # noqa: BLE001 - p. ej., sin clave del proveedor
+        st.error(f"No se pudo analizar la foto: {exc}")
+        return
+    res = analisis.resultado
+    original, anotada = st.columns(2)
+    original.image(imagen, caption="Original", width="stretch")
+    anotada.image(
+        dibujar_detecciones(imagen, res.detecciones),
+        caption=f"{len(res.detecciones)} objetos · {res.tiempo_ms:.0f} ms",
+        width="stretch",
+    )
+    if not analisis.sugerencias:
+        st.info(
+            "No identifiqué un objeto asegurable. Puede preguntar directamente en «Preguntas y respuestas»."
+        )
+        return
+    for sug in analisis.sugerencias:
+        st.markdown(
+            f"**{sug.tema.nombre}** · {', '.join(sug.objetos)} ({sug.confianza:.0%})  \n"
+            + " · ".join(f"[{ruta}]({BASE_URL}{ruta})" for ruta in sug.tema.rutas)
+        )
+    if analisis.respuesta:
+        st.divider()
+        st.markdown(f"_{analisis.sugerencias[0].tema.pregunta}_")
+        st.markdown(analisis.respuesta.text)
+
+
 def main() -> None:
     """Compone la página. La pestaña de Evaluación funciona aunque el modelo no esté disponible."""
     st.title("🛡️ Asistente de Seguros Bolívar · Personas y canales")
@@ -172,8 +241,15 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001 - se muestra al usuario
         assistant, error = None, f"No se pudo iniciar el asistente ({provider}): {exc}"
 
-    scraping, qa, summary, faq, evaluation = st.tabs(
-        ["🕸️ Pipeline de scraping", "💬 Preguntas y respuestas", "📝 Resumen", "❓ FAQ", "📊 Evaluación"]
+    scraping, qa, photo, summary, faq, evaluation = st.tabs(
+        [
+            "🕸️ Pipeline de scraping",
+            "💬 Preguntas y respuestas",
+            "📷 Foto → seguro",
+            "📝 Resumen",
+            "❓ FAQ",
+            "📊 Evaluación",
+        ]
     )
     with scraping:
         pipeline_tab()
@@ -199,6 +275,8 @@ def main() -> None:
                 fuentes = ans.sources
                 if fuentes:
                     st.markdown("**Fuentes citadas:**\n" + "\n".join(f"- [{u}]({u})" for u in fuentes))
+    with photo:
+        photo_tab(provider, mode)
     with summary:
         if assistant is None:
             st.error(error or "Resumen y FAQ usan toda la base: elija el modo «Toda la base».")

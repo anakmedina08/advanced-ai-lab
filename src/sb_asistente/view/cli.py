@@ -22,7 +22,7 @@ from sb_asistente.config import (
     RECO_N_CLIENTES,
     RECO_SEMILLA,
 )
-from sb_asistente.controller import assistant, chat, pipeline, recomendador
+from sb_asistente.controller import assistant, chat, pipeline, recomendador, vision
 from sb_asistente.model import skills
 
 
@@ -107,6 +107,13 @@ def build_parser() -> argparse.ArgumentParser:
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
+    foto = sub.add_parser("foto", help="Foto → seguro sugerido (YOLO; requiere uv sync --extra vision)")
+    foto.add_argument("ruta", type=Path, help="Imagen JPG o PNG")
+    foto.add_argument("--responder", action="store_true", help="Pregunta al asistente por el seguro sugerido")
+    foto.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
+    foto.add_argument(
+        "--api", default=None, metavar="URL", help="Usa la API por HTTP (p. ej. http://127.0.0.1:8000)"
+    )
     return parser
 
 
@@ -194,6 +201,30 @@ def _rag(args: argparse.Namespace) -> int:
     return 0
 
 
+def _foto(args: argparse.Namespace) -> int:
+    """Analiza una foto en local (controlador) o a través de la API (cliente httpx)."""
+    datos = args.ruta.read_bytes()
+    if args.api:
+        from sb_asistente.view.api_client import ClienteAPI
+
+        out = ClienteAPI(args.api).analizar_foto(datos, args.ruta.name, args.responder, args.provider)
+        print(json.dumps(out.model_dump(), indent=2, ensure_ascii=False))
+        return 0
+    asistente = assistant.LiteAssistant.build(args.provider) if args.responder else None
+    analisis = vision.analizar_foto(datos, asistente=asistente)
+    res = analisis.resultado
+    print(f"{res.ancho}x{res.alto} px · inferencia {res.tiempo_ms} ms · {len(res.detecciones)} objetos")
+    for d in res.detecciones:
+        print(f"  · {vision.etiqueta(d.clase):<12} {d.confianza:.0%}")
+    if not analisis.sugerencias:
+        print("\nNo se identificó un objeto asegurable; puede preguntar directamente con: sb ask")
+    for s in analisis.sugerencias:
+        print(f"\nSeguro sugerido: {s.tema.nombre} ({', '.join(s.objetos)}) → {s.tema.pregunta}")
+    if analisis.respuesta:
+        print("\n" + analisis.respuesta.text)
+    return 0
+
+
 def _agente(args: argparse.Namespace) -> int:
     """Un turno del agente con su salida estructurada y la traza de tools."""
     from sb_asistente.controller.agente import agente_por_defecto
@@ -243,6 +274,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _rag(args)
     if args.command == "agente":
         return _agente(args)
+    if args.command == "foto":
+        return _foto(args)
     if args.command == "api":
         import uvicorn
 

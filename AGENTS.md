@@ -24,8 +24,11 @@ Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep
     `agent.py` (Deep Agent) y `assistants.py` (Q&A sobre contexto recuperado).
   - `evaluation.py` → banco de preguntas y métricas.
   - `recomendador/` → datos sintéticos, contrato de datos, líneas base y métricas (curso de Gestión).
+  - `vision/` → detección YOLO (`deteccion.py`) y tabla objeto → seguro (`seguros.py`); extra opcional
+    `uv sync --extra vision`. La foto no se guarda y las personas no se reportan (ADR-020).
 - **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (scraping), `assistant.py` (arma los modos de Q&A y orquesta la evaluación) y `recomendador.py`.
-- **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `streamlit_app.py` y `cli.py`;
+- **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `api_client.py` (httpx),
+  `anotaciones.py`, `streamlit_app.py` y `cli.py`;
   **solo llaman al controlador**, sin lógica de negocio. Toda entrada de la API es un modelo Pydantic.
 - `config.py` concentra rutas, alcance, umbrales y modelo (nada de números mágicos).
 - Dependencias por constructor (sesión HTTP, LLM, reloj, sleep) para poder probar sin red ni API.

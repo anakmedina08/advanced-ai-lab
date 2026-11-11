@@ -7,7 +7,7 @@ Cada función devuelve la dependencia real; las pruebas las reemplazan con
 from collections.abc import Callable
 from functools import lru_cache
 
-from sb_asistente.controller import agente, assistant, chat
+from sb_asistente.controller import agente, assistant, chat, vision
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 
@@ -60,3 +60,13 @@ def _recuperador() -> tuple[RecuperadorHibrido, str]:
 def get_recuperador() -> Callable[[], tuple[RecuperadorHibrido, str]]:
     """Recuperador híbrido (BM25 + Chroma) y su modo, para ``conocimiento.buscar``."""
     return _recuperador
+
+
+def get_detector() -> Callable[[], vision.Detector]:
+    """Fábrica del detector YOLO compartido (``POST /fotos``)."""
+    return vision.detector_por_defecto
+
+
+def get_foto_qa() -> Callable[[str], assistant.QAAssistant]:
+    """Fábrica (proveedor → asistente) para responder la sugerencia de una foto (modo reducido)."""
+    return _lite

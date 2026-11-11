@@ -6,30 +6,61 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
     uv run sb api            # http://127.0.0.1:8000/docs
 """
 
-from collections.abc import Callable
+import logging
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+from dataclasses import asdict
 from importlib.metadata import version
+from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
-from sb_asistente.config import CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
-from sb_asistente.controller import chat, pipeline, recomendador
+from sb_asistente.config import BASE_URL, CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
+from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
-from sb_asistente.view.dependencias import Responder, get_asistente, get_chat_qa, get_responder
+from sb_asistente.view.dependencias import (
+    Responder,
+    get_asistente,
+    get_chat_qa,
+    get_detector,
+    get_foto_qa,
+    get_responder,
+)
 from sb_asistente.view.schemas import (
+    CajaOut,
     ChatIn,
     ChatOut,
+    DeteccionOut,
     EtapaOut,
+    FotoOut,
     PreguntaIn,
     RecomendacionesOut,
     RespuestaOut,
     SaludOut,
     SkillOut,
+    SugerenciaOut,
     TemaIn,
     extraer_fuentes,
 )
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Precarga YOLO al arrancar (si está el extra ``vision``) para que la primera foto no espere."""
+    if find_spec("ultralytics") is not None:
+        try:
+            await run_in_threadpool(vision.detector_por_defecto().cargar)
+            logger.info("Modelo YOLO cargado para POST /fotos.")
+        except Exception as exc:  # noqa: BLE001 - la API sigue sirviendo el resto de endpoints
+            logger.warning("No se pudo precargar YOLO (%s); /fotos lo intentará al primer uso.", exc)
+    yield
+
 
 app = FastAPI(
     title="Asistente Seguros Bolívar · API",
@@ -38,6 +69,7 @@ app = FastAPI(
         "Proyecto académico (UAO) sobre información pública de segurosbolivar.com. "
         "No es un servicio oficial de la compañía."
     ),
+    lifespan=_lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -144,6 +176,60 @@ def listar_skills() -> list[SkillOut]:
         SkillOut(nombre=s.nombre, descripcion=s.descripcion, licencia=s.licencia)
         for s in skills.skills_asistente()
     ]
+
+
+@app.post("/fotos", response_model=FotoOut, tags=["vision"])
+async def analizar_foto(
+    archivo: Annotated[UploadFile, File(description="Foto JPG o PNG (máx. 8 MB); no se guarda")],
+    detector: Annotated[Callable, Depends(get_detector)],
+    fabrica_qa: Annotated[Callable, Depends(get_foto_qa)],
+    responder: Annotated[bool, Query(description="Preguntar al asistente por el seguro sugerido")] = False,
+    proveedor: Annotated[str | None, Query(description="Proveedor del LLM si responder=true")] = None,
+) -> FotoOut:
+    """Foto → seguro sugerido: YOLO detecta objetos asegurables y se sugiere el seguro que aplica.
+
+    Las personas no se reportan y la imagen se procesa en memoria. Con ``responder=true`` el
+    asistente explica el seguro sugerido citando la página oficial.
+    """
+    if not (archivo.content_type or "").startswith("image/"):
+        raise HTTPException(400, "El archivo debe ser una imagen (JPG o PNG).")
+    datos = await archivo.read()
+    try:
+        asistente = fabrica_qa(proveedor or LLM_PROVIDER) if responder else None
+        analisis = await run_in_threadpool(vision.analizar_foto, datos, detector(), asistente)
+    except vision.ImagenInvalidaError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except vision.VisionNoDisponibleError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"La base de conocimiento no está lista: {exc}") from exc
+    res = analisis.resultado
+    return FotoOut(
+        tiempo_inferencia_ms=res.tiempo_ms,
+        ancho=res.ancho,
+        alto=res.alto,
+        detecciones=[
+            DeteccionOut(
+                clase=d.clase,
+                etiqueta=vision.etiqueta(d.clase),
+                confianza=d.confianza,
+                caja=CajaOut(**asdict(d.caja)),
+            )
+            for d in res.detecciones
+        ],
+        sugerencias=[
+            SugerenciaOut(
+                tema=s.tema.clave,
+                nombre=s.tema.nombre,
+                objetos=list(s.objetos),
+                confianza=s.confianza,
+                pregunta=s.tema.pregunta,
+                paginas=[BASE_URL + ruta for ruta in s.tema.rutas],
+            )
+            for s in analisis.sugerencias
+        ],
+        respuesta=_salida(analisis.respuesta) if analisis.respuesta else None,
+    )
 
 
 # JSON-RPC 2.0 (recomendado en clase): mismo contrato Pydantic, un solo endpoint POST /rpc.

@@ -45,11 +45,15 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Q&A, Resumen y FAQ con LangChain (Claude por API u Ollama local), con cita de la fuente.
 - Interfaz Streamlit con el proceso de scraping visible y pestaña de evaluación.
 - Fase 2: RAG con embeddings locales (Ollama) en Qdrant y un Deep Agent con subagentes sobre `chunks.jsonl`.
+- Foto → seguro sugerido: YOLO preentrenado detecta objetos asegurables (vehículos, bicicletas, mascotas,
+  hogar, equipos) y el asistente explica el seguro con su fuente; la foto no se guarda (ADR-020).
 
 ### Fuera del alcance (por ahora)
 
 - Empresas, proveedores, reaseguradores, portales transaccionales y contenido tras login.
 - Blog y PDFs (reservados para el RAG de la Fase 2).
+- Fotos de documentos (cédula, pólizas, facturas) y reconocimiento de personas: datos personales (Ley 1581).
+- Detección de daños o avalúo a partir de fotos (requeriría entrenar un modelo propio).
 
 ## 3. Stack técnico
 
@@ -184,6 +188,7 @@ git push
 | 2026-11-06 | DeepSeek como proveedor alterno ([ADR-012](docs/decisiones/ADR-012-proveedor-deepseek.md)) | Controlar el costo de tokens |
 | 2026-11-10 | Claude sin `temperature` (la API la rechaza con 400) y con esfuerzo `low` ([ADR-019](docs/decisiones/ADR-019-claude-sin-temperatura.md)) | Los modelos actuales de Claude eliminaron los parámetros de muestreo |
 | 2026-11-10 | Fase 2: RAG con Ollama + Qdrant y Deep Agent, adaptado de `ejercicio_langchain` ([ADR-018](docs/decisiones/ADR-018-rag-qdrant-deep-agents.md)) | Contexto ~2K tokens en vez de ~36K; embeddings locales |
+| 2026-11-11 | Foto → seguro sugerido con YOLO y FastAPI, adaptado de `ejercicio_gestion_fastapi` ([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)) | Une visión y lenguaje dentro del alcance personas; foto en memoria y sin personas |
 
 ## 10. Notas y tareas pendientes
 
