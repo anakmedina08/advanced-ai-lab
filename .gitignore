@@ -7,6 +7,9 @@ __pycache__/
 data/raw/*
 data/silver/*
 data/gold/*
+data/recomendador/*
+data/vector/
+data/memoria/
 !data/*/.gitkeep
 
 # Resultados de evaluación generados (el banco de preguntas SÍ se versiona)
@@ -47,5 +50,5 @@ informe/*.blg
 # Agentes: índice de tgrep
 .tgrep/
 
-# Configuración local de Claude Code (skills, ajustes): no se versiona
-.claude/
+# Telemetría local de agentes (hooks de Claude Code)
+logs/

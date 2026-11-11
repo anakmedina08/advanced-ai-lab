@@ -29,8 +29,9 @@ Retriever = Callable[[str], str]
 class QAAssistant(Protocol):
     """Lo que las vistas y la evaluación necesitan de cualquier modo de Q&A."""
 
-    def answer(self, question: str, version: str = prompts.DEFAULT_QA_VERSION) -> Answer:  # noqa: D102
-        ...
+    def answer(  # noqa: D102
+        self, question: str, version: str = prompts.DEFAULT_QA_VERSION, skill: str | None = None
+    ) -> Answer: ...
 
 
 class AgentGraph(Protocol):
@@ -52,9 +53,13 @@ class RetrievalAssistant:
         """Bloque de canales + fragmentos recuperados (cada uno con su URL)."""
         return self.channels + "\n" + self.retrieve(question)
 
-    def answer(self, question: str, version: str = prompts.DEFAULT_QA_VERSION) -> Answer:
-        """Responde con los prompts v1–v4 sobre el contexto recuperado."""
-        return KnowledgeAssistant(self.llm, self.context_for(question)).answer(question, version=version)
+    def answer(
+        self, question: str, version: str = prompts.DEFAULT_QA_VERSION, skill: str | None = None
+    ) -> Answer:
+        """Responde con los prompts v1–v4 sobre el contexto recuperado (``skill``: formato opcional)."""
+        return KnowledgeAssistant(self.llm, self.context_for(question)).answer(
+            question, version=version, skill=skill
+        )
 
 
 class AgentAssistant:
@@ -65,12 +70,16 @@ class AgentAssistant:
         self.graph = graph
         self.context_tokens = estimate_tokens(channels)
 
-    def answer(self, question: str, version: str = AGENT_VERSION) -> Answer:
-        """Responde una pregunta; ``version`` se ignora (el agente tiene su propio prompt)."""
+    def answer(self, question: str, version: str = AGENT_VERSION, skill: str | None = None) -> Answer:
+        """Responde una pregunta; ``version`` se ignora (el agente tiene su propio prompt).
+
+        ``skill`` (instrucciones de formato o tono) se agrega a la pregunta del cliente.
+        """
         if not question.strip():
             raise ValueError("La pregunta está vacía.")
+        content = f"{question}\n\n<skill>\n{skill.strip()}\n</skill>" if skill else question
         start = time.perf_counter()
-        result = self.graph.invoke({"messages": [HumanMessage(question)]})
+        result = self.graph.invoke({"messages": [HumanMessage(content)]})
         return Answer(
             agent.final_text(result), "qa", AGENT_VERSION, time.perf_counter() - start, self.context_tokens
         )

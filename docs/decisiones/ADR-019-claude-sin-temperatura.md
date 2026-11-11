@@ -1,4 +1,4 @@
-# ADR-010 · Claude sin `temperature` y con esfuerzo de razonamiento bajo
+# ADR-019 · Claude sin `temperature` y con esfuerzo de razonamiento bajo
 
 - **Fecha:** 2026-11-10
 - **What:** `build_llm("anthropic")` ya no envía `temperature`. En su lugar envía

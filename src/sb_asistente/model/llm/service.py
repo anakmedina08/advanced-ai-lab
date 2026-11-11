@@ -1,8 +1,8 @@
 """Servicio LLM con LangChain: Resumen, FAQ y Q&A sobre el conocimiento consolidado.
 
 Fase 1: todo el texto limpio va en el *system prompt* (sin RAG). El proveedor se elige por
-configuración (Claude por la API de Anthropic u Ollama local) sin cambiar la lógica (Clase 5: Agent = Model
-+ Harness).
+configuración (Claude por la API de Anthropic, DeepSeek u Ollama local) sin cambiar la lógica
+(Clase 5: Agent = Model + Harness).
 """
 
 import re
@@ -18,6 +18,8 @@ from sb_asistente.config import (
     ANTHROPIC_EFFORT,
     ANTHROPIC_MODEL,
     CONTEXT_OUTPUT_RESERVE,
+    DEEPSEEK_CONTEXT_TOKENS,
+    DEEPSEEK_MODEL,
     LLM_MAX_OUTPUT_TOKENS,
     LLM_PROVIDER,
     LLM_TEMPERATURE,
@@ -26,6 +28,10 @@ from sb_asistente.config import (
     OLLAMA_NUM_CTX,
 )
 from sb_asistente.model.llm import prompts
+from sb_asistente.model.llm.knowledge import (  # noqa: F401 - compatibilidad: API, RPC y CLI
+    KnowledgeTooLargeError,
+    load_knowledge,
+)
 from sb_asistente.model.processing.gold import estimate_tokens
 
 SOURCE_URL = re.compile(r"https?://(?:www\.)?segurosbolivar\.com[^\s)\]>\"']*")
@@ -74,6 +80,15 @@ def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseC
             output_config={"effort": ANTHROPIC_EFFORT},
             max_retries=2,
         )
+    if provider == "deepseek":
+        from langchain_deepseek import ChatDeepSeek
+
+        return ChatDeepSeek(
+            model=DEEPSEEK_MODEL,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_OUTPUT_TOKENS,
+            max_retries=2,
+        )
     if provider == "ollama":
         from langchain_ollama import ChatOllama
 
@@ -83,12 +98,12 @@ def build_llm(provider: str = LLM_PROVIDER, num_ctx: int | None = None) -> BaseC
             num_ctx=num_ctx or OLLAMA_NUM_CTX,
             num_predict=LLM_MAX_OUTPUT_TOKENS,
         )
-    raise ValueError(f"Proveedor no soportado: {provider!r} (use 'anthropic' u 'ollama').")
+    raise ValueError(f"Proveedor no soportado: {provider!r} (use 'anthropic', 'deepseek' u 'ollama').")
 
 
 def context_budget(provider: str = LLM_PROVIDER) -> int:
     """Tokens disponibles para la base de conocimiento según el proveedor."""
-    window = OLLAMA_NUM_CTX if provider == "ollama" else MAX_CONTEXT_TOKENS
+    window = {"ollama": OLLAMA_NUM_CTX, "deepseek": DEEPSEEK_CONTEXT_TOKENS}.get(provider, MAX_CONTEXT_TOKENS)
     return window - CONTEXT_OUTPUT_RESERVE
 
 
@@ -124,13 +139,22 @@ class KnowledgeAssistant:
         text = (self.llm | StrOutputParser()).invoke(messages)
         return Answer(text.strip(), task, version, time.perf_counter() - start, self.context_tokens)
 
-    def answer(self, question: str, version: str = prompts.DEFAULT_QA_VERSION) -> Answer:
-        """Q&A: responde una pregunta del cliente."""
+    def answer(
+        self, question: str, version: str = prompts.DEFAULT_QA_VERSION, skill: str | None = None
+    ) -> Answer:
+        """Q&A: responde una pregunta del cliente.
+
+        ``skill`` son instrucciones de formato o tono (cuerpo de un SKILL.md del asistente); se
+        agregan después del prompt base y no reemplazan sus reglas.
+        """
         if not question.strip():
             raise ValueError("La pregunta está vacía.")
         if version not in prompts.QA_SYSTEM:
             raise ValueError(f"Versión de prompt desconocida: {version}")
-        return self._run(prompts.QA_SYSTEM[version], prompts.QA_HUMAN, "qa", version, question=question)
+        system = prompts.QA_SYSTEM[version]
+        if skill:
+            system += prompts.skill_block(skill)
+        return self._run(system, prompts.QA_HUMAN, "qa", version, question=question)
 
     def summarize(self, topic: str = prompts.TOPICS[0]) -> Answer:
         """Resumen: síntesis para un cliente nuevo sobre un tema."""

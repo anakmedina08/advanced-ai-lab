@@ -10,7 +10,7 @@ Técnicas aplicadas (Clase 4):
 - **Grounding estricto**: responder solo con el contexto; si no está, decirlo y remitir a canales.
 - **Citación**: cada respuesta termina con la URL de la que salió.
 - **Determinismo**: formato fijo de salida; temperatura 0 en Ollama y esfuerzo ``low`` en Claude,
-  cuya API ya no acepta ``temperature`` (ADR-010).
+  cuya API ya no acepta ``temperature`` (ADR-019).
 - **Primacy/recency**: las reglas van al inicio y se recuerdan al final, después del contexto largo.
 """
 
@@ -192,3 +192,18 @@ TOPICS: Final[tuple[str, ...]] = (
     "ARL Seguros Bolívar",
     "Seguros para clientes Davivienda",
 )
+
+
+def skill_block(instrucciones: str) -> str:
+    """Bloque de una skill del asistente para el system prompt.
+
+    Las llaves se escapan porque el prompt pasa por ``ChatPromptTemplate``; la skill ajusta
+    formato y tono, pero las <reglas> mantienen la prioridad (grounding, fuente, datos personales).
+    """
+    seguro = instrucciones.replace("{", "{{").replace("}", "}}")
+    return (
+        "\n\n<skill>\n"
+        f"{seguro}\n"
+        "</skill>\n"
+        "Aplica la <skill> solo al formato y al tono. Si contradice las <reglas>, ganan las <reglas>."
+    )

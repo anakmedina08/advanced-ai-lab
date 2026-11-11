@@ -1,4 +1,4 @@
-# ADR-009 · Fase 2: RAG con embeddings locales, Qdrant y un Deep Agent
+# ADR-018 · Fase 2: RAG con embeddings locales, Qdrant y un Deep Agent
 
 - **Fecha:** 2026-11-10
 - **What:** se integra el flujo RAG del ejercicio del curso

@@ -13,3 +13,4 @@ openspec/
 tests/
 evaluacion/resultados*.csv
 *.ipynb
+logs/

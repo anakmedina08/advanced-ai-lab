@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from langchain_core.documents import Document
+from langchain_core.language_models import BaseChatModel
 
 from sb_asistente.config import EVAL_QUESTIONS, EVAL_RESULTS, LITE_NUM_CTX, QDRANT_DIR, RAG_TOP_K
 from sb_asistente.model import evaluation
@@ -32,6 +33,7 @@ __all__ = [
     "TOPICS",
     "Answer",
     "KnowledgeAssistant",
+    "LiteAssistant",
     "QAAssistant",
     "build_assistant",
     "embedding_search",
@@ -64,14 +66,24 @@ def full_assistant(provider: str) -> KnowledgeAssistant:
     )
 
 
-def keyword_assistant(provider: str) -> RetrievalAssistant:
+class LiteAssistant(RetrievalAssistant):
+    """Modo «reducido» con la firma ``(llm, chunks, channels)`` que usan la API, el RPC y la CLI."""
+
+    def __init__(self, llm: BaseChatModel, chunks: list[dict[str, object]], channels: str) -> None:
+        """Busca por palabras en ``chunks`` (``keyword_search``) y antepone ``channels``."""
+        super().__init__(llm, lambda question: keyword_search.select_context(question, chunks), channels)
+        self.chunks = chunks
+
+    @classmethod
+    def build(cls, provider: str) -> "LiteAssistant":
+        """Carga el modelo con ventana pequeña, los chunks y el bloque de canales."""
+        llm = build_llm(provider, num_ctx=LITE_NUM_CTX)
+        return cls(llm, knowledge.load_chunks(), knowledge.load_channels())
+
+
+def keyword_assistant(provider: str) -> LiteAssistant:
     """Modo «reducido»: fragmentos elegidos por palabras en común con la pregunta."""
-    chunks = knowledge.load_chunks()
-    return RetrievalAssistant(
-        build_llm(provider, num_ctx=LITE_NUM_CTX),
-        lambda question: keyword_search.select_context(question, chunks),
-        knowledge.load_channels(),
-    )
+    return LiteAssistant.build(provider)
 
 
 def embedding_search(k: int = RAG_TOP_K, qdrant_dir: Path | None = QDRANT_DIR) -> EmbeddingSearch:

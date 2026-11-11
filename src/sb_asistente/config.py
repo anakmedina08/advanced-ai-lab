@@ -87,7 +87,11 @@ CHUNK_OVERLAP_CHARS: Final[int] = 150
 CHARS_PER_TOKEN_ES: Final[float] = 3.6  # estimación conservadora para español
 
 # --- LLM -----------------------------------------------------------------------------------
-LLM_PROVIDER: Final[str] = os.getenv("LLM_PROVIDER", "anthropic")  # anthropic | ollama
+PROVIDERS: Final[tuple[str, ...]] = ("anthropic", "deepseek", "ollama")
+LLM_PROVIDER: Final[str] = os.getenv("LLM_PROVIDER", "anthropic")  # anthropic | deepseek | ollama
+# DeepSeek cobra solo por tokens y es compatible con LangChain; ventana de 64K tokens (la base cabe).
+DEEPSEEK_MODEL: Final[str] = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_CONTEXT_TOKENS: Final[int] = 65_536
 ANTHROPIC_MODEL: Final[str] = os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
 LLM_MAX_OUTPUT_TOKENS: Final[int] = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "1024"))
 OLLAMA_MODEL: Final[str] = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
@@ -110,6 +114,32 @@ EMBEDDING_MODEL: Final[str] = os.getenv("EMBEDDING_MODEL", "embeddinggemma:lates
 QDRANT_DIR: Final[Path] = GOLD_DIR / "qdrant"  # índice persistido en disco (ignorado por git)
 QDRANT_COLLECTION: Final[str] = "chunks_seguros_bolivar"
 RAG_TOP_K: Final[int] = int(os.getenv("RAG_TOP_K", "4"))  # fragmentos recuperados por búsqueda
+
+# --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------
+VECTOR_DIR: Final[Path] = DATA_DIR / "vector"  # Chroma persistente (no versionado)
+VECTOR_COLLECTION: Final[str] = "sb_conocimiento"
+# ollama: nomic-embed-text local (como en clase) · voyage: API de Voyage AI (recomendada por
+# Anthropic, que no tiene embeddings propios) · fake: determinístico para pruebas sin red.
+EMBEDDINGS_PROVIDERS: Final[tuple[str, ...]] = ("ollama", "voyage", "fake")
+EMBEDDINGS_PROVIDER: Final[str] = os.getenv("EMBEDDINGS_PROVIDER", "ollama")
+EMBEDDINGS_MODEL: Final[str] = os.getenv("EMBEDDINGS_MODEL", "nomic-embed-text")
+VOYAGE_MODEL: Final[str] = os.getenv("VOYAGE_MODEL", "voyage-multilingual-2")
+RAG_K: Final[int] = int(os.getenv("RAG_K", "6"))
+RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2009)
+
+# --- Agente: memoria persistente y trazas -----------------------------------------------------
+MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
+MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
+LANGSMITH_PROJECT: Final[str] = os.getenv("LANGSMITH_PROJECT", "sb-asistente")
+
+# --- Recomendador (curso de Gestión) -------------------------------------------------------
+# Carpeta propia para no mezclar las tablas sintéticas con el HTML de Bronze (data/raw).
+RECO_DIR: Final[Path] = DATA_DIR / "recomendador"
+RECO_N_CLIENTES: Final[int] = 20_000
+RECO_SEMILLA: Final[int] = 42
+RECO_K: Final[int] = 5
+RECO_SEGMENTO: Final[tuple[str, ...]] = ("vehiculo", "vivienda", "tiene_mascota", "tiene_credito")
+RECO_MODELO_BASE: Final[str] = "intfloat/multilingual-e5-small"
 
 EVAL_QUESTIONS: Final[Path] = PROJECT_ROOT / "evaluacion" / "preguntas.yaml"
 EVAL_RESULTS: Final[Path] = PROJECT_ROOT / "evaluacion" / "resultados.csv"

@@ -1,0 +1,44 @@
+{
+  "clientes": 20000,
+  "productos": 19,
+  "polizas": 49498,
+  "siniestros": 39915,
+  "polizas_por_cliente_media": 2.47,
+  "clientes_con_2_o_mas": 15140,
+  "dist_polizas_por_cliente": {
+    "1": 4860,
+    "2": 6544,
+    "3": 4754,
+    "4": 2395,
+    "5": 974,
+    "6": 473
+  },
+  "pct_canceladas": 10.9,
+  "nulos_fecha_fin_pct": 89.1,
+  "nulos_otras_columnas": 0,
+  "penetracion_top3": {
+    "Seguro de Vida Individual": 21.8,
+    "Seguro de Salud Integral": 18.8,
+    "Seguro de Hogar Digital": 18.5
+  },
+  "penetracion_min": {
+    "Seguro para Carros Eléctricos e Híbridos": 0.9,
+    "Seguro de Arrendamiento": 1.7
+  },
+  "baselines": {
+    "popularidad": {
+      "clientes": 15140,
+      "recall@5": 0.426,
+      "ndcg@5": 0.2602
+    },
+    "segmento": {
+      "clientes": 15140,
+      "recall@5": 0.639,
+      "ndcg@5": 0.4351
+    }
+  },
+  "rango_fechas": [
+    "2014-01-05",
+    "2026-09-30"
+  ]
+}

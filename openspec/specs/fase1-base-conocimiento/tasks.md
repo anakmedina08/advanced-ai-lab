@@ -22,4 +22,3 @@
 ## Pendiente
 - [ ] T-14 [ml] Evaluar v1 vs v3 vs v4 con Claude y completar el informe (Daniel)
 - [ ] T-15 [infra] Proteger main en GitHub (PR + CI en verde) (Katherine)
-- [ ] T-17 [ml] Evaluar los modos rag y agente con Claude frente a la Fase 1 (Daniel y Katherine)

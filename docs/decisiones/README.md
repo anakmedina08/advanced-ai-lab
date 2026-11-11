@@ -26,8 +26,17 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-006](ADR-006-contexto-reducido-ollama.md) | Contexto reducido para que Ollama responda en CPU | 2026-10-30 |
 | [ADR-007](ADR-007-estructura-mvc.md) | Estructura MVC igual a la del proyecto de Gestión | 2026-11-01 |
 | [ADR-008](ADR-008-docker-multistage-y-estandar.md) | Docker multi-stage y estándar jan-project-standard | 2026-11-01 |
-| [ADR-009](ADR-009-rag-qdrant-deep-agents.md) | Fase 2: RAG con Ollama + Qdrant y Deep Agent | 2026-11-10 |
-| [ADR-010](ADR-010-claude-sin-temperatura.md) | Claude sin `temperature` y con esfuerzo `low` | 2026-11-10 |
+| [ADR-009](ADR-009-repositorio-unico.md) | Un solo repositorio público para los dos cursos | 2026-11-06 |
+| [ADR-010](ADR-010-api-fastapi-pydantic.md) | API REST con FastAPI, Pydantic y type hints | 2026-11-06 |
+| [ADR-011](ADR-011-subagentes-y-telemetria.md) | Subagentes de Claude Code y telemetría en vivo | 2026-11-06 |
+| [ADR-012](ADR-012-proveedor-deepseek.md) | DeepSeek como proveedor alterno del LLM | 2026-11-06 |
+| [ADR-013](ADR-013-chat-orquestado.md) | Chat orquestado: clasificador de intención antes del LLM | 2026-11-06 |
+| [ADR-014](ADR-014-skills.md) | Skills propias y de terceros (Claude Code, OpenCode, skills.sh) | 2026-11-06 |
+| [ADR-015](ADR-015-json-rpc.md) | JSON-RPC 2.0 sobre FastAPI | 2026-11-07 |
+| [ADR-016](ADR-016-rag-chroma-hibrido.md) | RAG con Chroma y recuperación híbrida | 2026-11-07 |
+| [ADR-017](ADR-017-agente-memoria-salida-estructurada.md) | Agente con tools, salida estructurada, memoria y LangSmith | 2026-11-07 |
+| [ADR-018](ADR-018-rag-qdrant-deep-agents.md) | Modos «rag» (Ollama + Qdrant) y «agente» (Deep Agents) | 2026-11-10 |
+| [ADR-019](ADR-019-claude-sin-temperatura.md) | Claude sin `temperature` y con esfuerzo `low` | 2026-11-10 |
 
 ## Cómo registrar una decisión nueva en Engram
 

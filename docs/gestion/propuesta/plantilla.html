@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Propuesta M2 · Recomendador de seguros para personas</title>
+<style>
+  @page { size: Letter; margin: 2.5cm; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.5; color: #111; margin: 0; }
+  h1 { font-size: 14pt; font-weight: bold; margin: 18pt 0 6pt; break-after: avoid; }
+  h2, h3 { font-size: 12pt; font-weight: bold; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 8pt; text-align: justify; }
+  ul, ol { margin: 0 0 8pt 18pt; padding: 0; }
+  li { margin-bottom: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 10pt; line-height: 1.3; }
+  th { background: #1f3a5f; color: #fff; text-align: left; padding: 4pt 5pt; font-weight: bold; }
+  td { border: 1px solid #c9d2dc; padding: 4pt 5pt; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .num { text-align: right; white-space: nowrap; }
+  .c { text-align: center; }
+  .crit td { background: #fdecea; }
+  code { font-family: "Courier New", monospace; font-size: 10.5pt; }
+  figure { margin: 6pt 0 10pt; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 10pt; color: #333; margin-top: 3pt; }
+  .tabcap { font-size: 10pt; font-weight: bold; margin: 8pt 0 2pt; break-after: avoid; }
+  .page { break-before: page; }
+  .cover { height: 22.5cm; display: flex; flex-direction: column; justify-content: space-between; text-align: center; }
+  .cover .u { font-size: 14pt; font-weight: bold; letter-spacing: .02em; }
+  .cover .t { font-size: 16pt; font-weight: bold; line-height: 1.35; margin: 0 1cm; }
+  .cover .m { font-size: 12pt; line-height: 1.7; }
+  .toc { list-style: none; margin: 0; padding: 0; }
+  .toc li { display: flex; justify-content: space-between; border-bottom: 1px dotted #999; margin: 0 0 6pt; }
+  .toc li.sub { margin-left: 18pt; font-size: 11pt; }
+  .bmc { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: auto auto auto; gap: 3pt; font-size: 9pt; line-height: 1.25; break-inside: avoid; margin: 4pt 0 10pt; }
+  .bmc div { border: 1px solid #1f3a5f; padding: 4pt; }
+  .bmc b { display: block; color: #1f3a5f; margin-bottom: 2pt; }
+  .story { border: 1px solid #c9d2dc; margin: 0 0 6pt; break-inside: avoid; font-size: 9.5pt; line-height: 1.25; }
+  .story .h { background: #eef2f7; padding: 3pt 6pt; display: flex; justify-content: space-between; font-weight: bold; }
+  .story .b { padding: 4pt 6pt; }
+  .story ul { margin: 2pt 0 0 14pt; }
+  .tag { font-weight: normal; }
+  .story ol.gwt { margin: 3pt 0 2pt 16pt; }
+  .story ol.gwt li { margin-bottom: 1.5pt; }
+  .just { margin-top: 3pt; padding-top: 3pt; border-top: 1px dashed #c9d2dc; color: #222; }
+  .nota { font-size: 10pt; }
+  pre.arbol { font-family: "Courier New", monospace; font-size: 9pt; line-height: 1.25; background: #f6f8fa; border: 1px solid #c9d2dc; padding: 6pt; margin: 4pt 0 6pt; break-inside: avoid; white-space: pre; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="u">UNIVERSIDAD AUTÓNOMA DE OCCIDENTE<br>Facultad de Ingeniería y Ciencias Básicas</div>
+  <div class="t">Recomendador de seguros para personas basado en embeddings multilingües y ranking supervisado: propuesta formal para Seguros Bolívar</div>
+  <div class="m">
+    Maestría en Inteligencia Artificial y Ciencia de Datos<br>
+    Asignatura: Gestión de Proyectos en IA y CD<br>
+    Módulo 2 · Propuesta del proyecto<br><br>
+    <b>Grupo 5</b><br>
+    Daniel Alejandro Silva Ramírez<br>
+    Ana Katherine Medina Zuleta (Code Reviewer)<br><br>
+    Docente: Jan Polanco Velasco<br>
+    Fecha de radicación: 31 de octubre de 2026<br>
+    Santiago de Cali
+  </div>
+</section>
+
+<section class="page">
+  <h1 style="margin-top:0">Tabla de contenido</h1>
+  {{TOC}}
+</section>
+
+<!-- ============================== CAPÍTULO 1 ============================== -->
+<h1 class="page" id="c1">1. Contexto, modelo base y restricciones</h1>
+
+<h2>1.1 Problema y usuarios (Data Thinking)</h2>
+<p>Una aseguradora de personas vende más de veinte líneas de producto por canales digitales, asesores y la red bancaria aliada. Hoy la oferta de un segundo o tercer seguro depende de campañas masivas y de la intuición del asesor: el cliente que tiene carro recibe la misma campaña que quien no lo tiene, y los productos de nicho (mascotas, arrendamiento, salud internacional) casi no se ofrecen. El resultado es una venta cruzada baja: en la cartera de referencia cada cliente tiene en promedio {{POL_MEDIA}} pólizas y el {{PCT_UNA}} % tiene una sola.</p>
+<p>Siguiendo el enfoque de Data Thinking se partió de la pregunta: <i>¿Cómo podríamos ayudar a los asesores a ofrecer a cada cliente el siguiente seguro que realmente necesita, sin depender de campañas masivas ni de la intuición?</i> Los actores son el <b>cliente persona</b> (recibe ofertas irrelevantes), el <b>asesor</b> (no sabe qué ofrecer y a quién), el <b>gerente de producto</b> (necesita aumentar pólizas por cliente), el <b>equipo de datos</b> (debe operar el modelo con trazabilidad) y <b>cumplimiento</b> (protección de datos y trato justo). Los datos disponibles son el perfil del cliente, su historial de pólizas y siniestros y el catálogo de productos.</p>
+
+<h2>1.2 Modelo de negocio (Business Model Canvas)</h2>
+<div class="bmc">
+  <div style="grid-row:span 2"><b>Socios clave</b>Red bancaria aliada; equipo de datos y gobierno de datos; proveedor del modelo abierto (Hugging Face).</div>
+  <div><b>Actividades clave</b>Mantener el contrato de datos, reentrenar el ranking, auditar sesgo y monitorear métricas.</div>
+  <div style="grid-row:span 2"><b>Propuesta de valor</b>Top-5 de seguros personalizado y explicado para cada cliente, también para clientes nuevos, sin enviar datos fuera de la compañía.</div>
+  <div><b>Relación con clientes</b>Asistida: el asesor decide y explica; autoservicio en el canal digital.</div>
+  <div style="grid-row:span 2"><b>Segmentos</b>Clientes personas con al menos una póliza; asesores y canal digital como usuarios internos.</div>
+  <div><b>Recursos clave</b>Historial de pólizas anonimizado, catálogo, modelo e5-small, infraestructura CPU y MLflow.</div>
+  <div><b>Canales</b>Consola de asesores (UI), API para app y web, campañas segmentadas.</div>
+  <div style="grid-column:span 2"><b>Estructura de costos</b>Horas de ingeniería (dos personas, {{SP_SPRINT}} SP por sprint), cómputo CPU (US$ 0 en local y en la capa gratuita de Cloud Run, sección 3.3), gobierno y auditoría de datos. Sin licencias: modelo MIT y librerías abiertas.</div>
+  <div style="grid-column:span 3"><b>Fuentes de ingreso / valor</b>Más pólizas por cliente, mayor conversión de ofertas, menor costo de campañas masivas y menor cancelación por productos mal ofrecidos.</div>
+</div>
+
+<h2>1.3 Ficha del modelo base (MaaS)</h2>
+<table>
+  <tr><th style="width:28%">Campo</th><th>Valor</th></tr>
+  <tr><td>Identificación</td><td><code>intfloat/multilingual-e5-small</code> · huggingface.co/intfloat/multilingual-e5-small</td></tr>
+  <tr><td>Autoría</td><td>Microsoft (L. Wang et al.), publicado como modelo abierto en Hugging Face [1]</td></tr>
+  <tr><td>Función matemática</td><td>Codificador de texto (transformer de 12 capas, 118 M parámetros) que produce <i>embeddings</i> de 384 dimensiones para recuperación semántica por similitud coseno; entrada de hasta 512 tokens en 94 idiomas</td></tr>
+  <tr><td>Uso en el proyecto</td><td>Codificar el catálogo (<code>passage: …</code>) y el perfil del cliente (<code>query: …</code>) para generar candidatos; resuelve el arranque en frío</td></tr>
+  <tr><td>Licencia</td><td>MIT: permite uso comercial, modificación y redistribución</td></tr>
+</table>
+
+<h2>1.4 Resumen de la Model Card y análisis ético [4]</h2>
+<p><b>Entrenamiento.</b> Preentrenamiento contrastivo débilmente supervisado sobre pares de texto multilingües a gran escala y ajuste fino con conjuntos etiquetados de recuperación [1]. <b>Métricas reportadas.</b> La Model Card publica resultados de recuperación multilingüe y de la suite MTEB; el proyecto no los toma como garantía y mide su propio desempeño con Recall@5 y NDCG@5. <b>Limitaciones.</b> Trunca textos de más de 512 tokens; exige los prefijos <code>query:</code> y <code>passage:</code>; su calidad baja en registros coloquiales poco representados en la web. <b>Sesgos.</b> Al aprender de textos de internet puede codificar estereotipos de género o región. Mitigación: el perfil textual excluye género, nombre e identificadores (HU-04) y el desempeño se audita por estrato, ciudad y género (HU-09). <b>Decisión humana.</b> La recomendación es un apoyo; el asesor decide y el cliente puede rechazarla.</p>
+
+<h2>1.5 Matriz de restricciones técnicas</h2>
+<table>
+  <tr><th style="width:22%">Dimensión</th><th>Restricción</th></tr>
+  <tr><td>Software</td><td>Python 3.13 con <code>uv</code>; PyTorch CPU y sentence-transformers; LightGBM; FastAPI; Streamlit; MLflow; pytest y ruff</td></tr>
+  <tr><td>Hardware</td><td>CPU de 4 núcleos, 8–16 GB de RAM; sin GPU. Pesos del modelo ≈ 470 MB; imagen Docker objetivo ≤ 2,5 GB</td></tr>
+  <tr><td>Datos</td><td>Sintéticos para desarrollo; reales solo anonimizados, con autorización escrita de la gerencia y dentro de la infraestructura de la compañía</td></tr>
+  <tr><td>Licencias</td><td>Modelo MIT; LightGBM MIT; FastAPI MIT; Streamlit Apache 2.0. Se descartó TabPFN porque sus versiones recientes tienen licencia no comercial [9]</td></tr>
+  <tr><td>Ejecución</td><td>Inferencia local y sin internet: ningún dato de cliente se envía a APIs externas</td></tr>
+</table>
+
+<!-- ============================== CAPÍTULO 2 ============================== -->
+<h1 id="c2">2. Objetivos y matriz de alcance</h1>
+<h2>2.1 Objetivo general</h2>
+<p>Construir un servicio desacoplado que recomiende a cada cliente persona los cinco seguros más relevantes que aún no tiene, combinando <i>embeddings</i> de <code>multilingual-e5-small</code> con un ranking LightGBM, expuesto mediante API FastAPI e interfaz para asesores y empaquetado en Docker CPU, listo para operar con datos reales anonimizados.</p>
+<h2>2.2 Objetivos específicos</h2>
+<ol>
+  <li>Generar candidatos por similitud semántica con latencia p95 &lt; 50 ms por cliente en CPU.</li>
+  <li>Superar la línea base de segmento en evaluación <i>leave-last-out</i>: Recall@5 ≥ 0,70 y NDCG@5 ≥ 0,48 (base: {{SEG_R}} y {{SEG_N}}).</li>
+  <li>Exponer una API con p95 &lt; 200 ms y validación que rechace datos personales.</li>
+  <li>Mantener una brecha de Recall@5 ≤ 10 puntos porcentuales entre estratos, ciudades y géneros.</li>
+  <li>Entregar una imagen Docker reproducible gobernada por CI con cobertura de pruebas ≥ 85 %.</li>
+</ol>
+
+<h2>2.3 OKR y KPI</h2>
+<table>
+  <tr><th style="width:36%">Objetivo (O)</th><th>Resultados clave (KR)</th></tr>
+  <tr><td><b>O1.</b> Que cada cliente reciba ofertas de seguros relevantes</td><td>KR1 Recall@5 ≥ 0,70 · KR2 cobertura del catálogo ≥ 80 % · KR3 brecha entre grupos ≤ 10 pp</td></tr>
+  <tr><td><b>O2.</b> Dejar un servicio confiable listo para datos reales</td><td>KR1 0 columnas PII aceptadas por el contrato · KR2 imagen Docker que corre sin internet · KR3 CI en verde con cobertura ≥ 85 %</td></tr>
+</table>
+<table>
+  <tr><th>KPI</th><th>Tipo</th><th>Línea base</th><th>Meta</th><th>Medición</th></tr>
+  <tr><td>Recall@5</td><td>Técnico</td><td class="num">{{SEG_R}}</td><td class="num">≥ 0,70</td><td>Evaluación offline por versión (MLflow)</td></tr>
+  <tr><td>NDCG@5</td><td>Técnico</td><td class="num">{{SEG_N}}</td><td class="num">≥ 0,48</td><td>Evaluación offline por versión</td></tr>
+  <tr><td>Latencia p95 de la API</td><td>Técnico</td><td class="num">—</td><td class="num">&lt; 200 ms</td><td>Prueba de carga en CPU</td></tr>
+  <tr><td>Cobertura del catálogo</td><td>Técnico</td><td class="num">{{COB_POP}} %</td><td class="num">≥ 80 %</td><td>Productos distintos en los top-5</td></tr>
+  <tr><td>Pólizas por cliente</td><td>Negocio</td><td class="num">{{POL_MEDIA}}</td><td class="num">+5 % en piloto</td><td>Cartera, 6 meses tras el piloto</td></tr>
+  <tr><td>Conversión de ofertas</td><td>Negocio</td><td class="num">Por medir</td><td class="num">Superior a campaña masiva</td><td>Prueba A/B en el piloto</td></tr>
+</table>
+
+<h2>2.4 Matriz de alcance</h2>
+<table>
+  <tr><th style="width:18%">Categoría</th><th>Elementos</th></tr>
+  <tr><td><b>In</b> (incluido)</td><td>Generador sintético y contrato de datos; modelo base e5-small; candidatos por similitud; ranking LightGBM; MLflow; API FastAPI con la razón de cada recomendación y medición de latencia; UI para asesores; Docker CPU; CI; auditoría de sesgo</td></tr>
+  <tr><td><b>Nice to have</b></td><td>Exportación ONNX para menor latencia; monitoreo de deriva de datos; especificación SDD y AGENTS.md; comparación académica con TabPFN; despliegue en Hugging Face Spaces o en la nube corporativa</td></tr>
+  <tr><td><b>Out</b> (excluido)</td><td>Tarificación, suscripción o decisiones de elegibilidad; envío automático de ofertas sin asesor; entrenamiento del modelo base desde cero; GPU dedicada; datos reales sin anonimizar</td></tr>
+</table>
+
+<!-- ============================== CAPÍTULO 3 ============================== -->
+<h1 id="c3">3. Cronograma y ruta crítica (CPM)</h1>
+<p>El sprint de construcción (M3) dura 15 días calendario con dos integrantes. Cada historia es una tarea atómica (1 SP = 1 día, regla 1:1 del curso). La preparación (entorno <code>uv</code>, datos sintéticos, contrato y líneas base: HU-01 y HU-02) ya se completó durante el M2 y es la base del sprint. El cronograma y la tabla CPM se calculan automáticamente desde <code>docs/backlog.json</code>, la misma fuente del Capítulo 5 y del tablero.</p>
+<h2>3.1 Diagrama de Gantt</h2>
+<figure><img src="gantt.png" alt="Diagrama de Gantt" style="width:100%"><figcaption>Figura 1. Gantt del sprint M3 (2 al 16 de noviembre de 2026), una fila por integrante. Las barras rojas forman la ruta crítica.</figcaption></figure>
+<h2>3.2 Ruta crítica (CPM)</h2>
+<div class="tabcap">Tabla 1. Cálculo CPM (días; ES/EF = inicio/fin temprano, LS/LF = inicio/fin tardío). En rojo, holgura cero</div>
+<table>
+  <tr><th>Tarea</th><th>Depende de</th><th class="c">Dur.</th><th class="c">ES</th><th class="c">EF</th><th class="c">LS</th><th class="c">LF</th><th class="c">Holgura</th></tr>
+  {{TABLA_CPM}}
+</table>
+<p class="nota">* Dependencia de recurso: la tarea la realiza la misma persona y no puede ejecutarse en paralelo.</p>
+<p><b>Ruta crítica:</b> {{RUTA}} = {{DURACION}} días, holgura cero. Incluye las tres tareas críticas del curso: <b>descarga y verificación de pesos</b> (HU-03), <b>contratos numéricos del preprocesamiento</b> (perfil y vectores, HU-04) y las <b>dependencias C++ en Docker</b> (LightGBM requiere <code>libgomp</code> en la imagen, HU-08). La API (HU-06) arranca el día 0 en paralelo con un recomendador simulado; también queda con holgura cero porque Katherine debe terminarla antes de empezar HU-04 (dependencia de recurso). La ruta deja {{HOLGURA_SPRINT}} día(s) de colchón frente a los 15 del sprint. Los días 3 a 6 Daniel no tiene tarea crítica asignada y apoya la revisión de PR y la preparación de variables para HU-05.</p>
+<div class="tabcap">Tabla 2. Carga por integrante (capacidad individual = 15 días × 75 % = {{SP_PERSONA}} SP)</div>
+<table>
+  <tr><th>Integrante</th><th>Historias</th><th class="c">SP</th><th class="c">Capacidad</th><th class="c">Uso</th></tr>
+  {{TABLA_CARGA}}
+</table>
+<p class="nota">HU-10 (1 SP) se reparte entre los dos integrantes (0,5 SP cada uno).</p>
+
+<h2>3.3 Presupuesto de inferencia</h2>
+<p>El servicio no usa GPU ni APIs externas: cada petición codifica un perfil corto (≈ 60 tokens) con e5-small en CPU, compara contra 19 vectores de producto precalculados y ordena hasta 17 candidatos con LightGBM. Las cifras de latencia son <b>estimaciones de diseño</b> para un núcleo de CPU moderno; HU-06 mide el p95 de la API y HU-08 verifica la imagen limitada a 1 vCPU y 2 GiB. Si la medición supera el presupuesto, la primera palanca es exportar a ONNX (Nice to have) y la segunda reducir a INT8.</p>
+<div class="tabcap">Tabla 3. Presupuesto por petición (CPU, 1 vCPU)</div>
+<table>
+  <tr><th>Etapa</th><th class="c">Estimado p95</th><th class="c">Presupuesto</th><th>Medición</th></tr>
+  <tr><td>Validación Pydantic y serialización FastAPI</td><td class="c">≈ 5 ms</td><td class="c">20 ms</td><td>HU-06</td></tr>
+  <tr><td>Codificación del perfil con e5-small (PyTorch CPU)</td><td class="c">≈ 30 ms</td><td class="c">100 ms</td><td>HU-03</td></tr>
+  <tr><td>Similitud coseno contra 19 vectores precalculados</td><td class="c">&lt; 1 ms</td><td class="c">10 ms</td><td>HU-04 (p95 &lt; 50 ms incl. codificación)</td></tr>
+  <tr><td>Ranking LightGBM de ≤ 17 candidatos</td><td class="c">≈ 2 ms</td><td class="c">30 ms</td><td>HU-05</td></tr>
+  <tr><td>Razón legible de cada producto del top-5</td><td class="c">≈ 5 ms</td><td class="c">40 ms</td><td>HU-06</td></tr>
+  <tr><td><b>Total de la petición</b></td><td class="c"><b>≈ 45 ms</b></td><td class="c"><b>&lt; 200 ms</b></td><td>HU-06 (1.000 peticiones) y HU-08</td></tr>
+</table>
+<p><b>Recursos.</b> Pesos fp32 de ≈ 470 MB; memoria residente esperada ≈ 1 GiB por proceso (meta &lt; 1,5 GiB); contenedor de 1 vCPU y 2 GiB; imagen ≤ 2,5 GB. El arranque en frío (carga del modelo) se estima en 5–10 s y no cuenta dentro del p95 de la API.</p>
+<div class="tabcap">Tabla 4. Costo mensual estimado de inferencia (precios Tier 1 de Google Cloud Run consultados el 29/10/2026 [11])</div>
+<table>
+  <tr><th>Escenario</th><th class="c">Peticiones/mes</th><th class="c">vCPU-s</th><th class="c">GiB-s</th><th class="c">Costo (USD)</th></tr>
+  <tr><td>Local o servidor propio de la compañía</td><td class="c">ilimitado</td><td class="c">—</td><td class="c">—</td><td class="c">≈ 0 (hardware existente)</td></tr>
+  <tr><td>Piloto: asesores de una regional</td><td class="c">100.000</td><td class="c">10.000</td><td class="c">20.000</td><td class="c">0 (capa gratuita)</td></tr>
+  <tr><td>Operación nacional: asesores + canal digital</td><td class="c">1.000.000</td><td class="c">100.000</td><td class="c">200.000</td><td class="c">0 (capa gratuita)</td></tr>
+  <tr><td>Campaña masiva</td><td class="c">5.000.000</td><td class="c">500.000</td><td class="c">1.000.000</td><td class="c">≈ 10,48</td></tr>
+  <tr><td>Instancia siempre activa (sin arranque en frío)</td><td class="c">cualquiera</td><td class="c">2.592.000</td><td class="c">5.184.000</td><td class="c">≈ 55,5</td></tr>
+</table>
+<p class="nota">Supuestos: facturación por petición con redondeo a 100 ms (0,1 vCPU-s y 0,2 GiB-s por petición); CPU US$ 0,000024 por vCPU-s, memoria US$ 0,0000025 por GiB-s, US$ 0,40 por millón de peticiones; capa gratuita mensual de 180.000 vCPU-s, 360.000 GiB-s y 2 millones de peticiones. Campaña: (500.000 − 180.000) × 0,000024 + (1.000.000 − 360.000) × 0,0000025 + 3 × 0,40 = 7,68 + 1,60 + 1,20. Instancia siempre activa: tarifa por instancia de US$ 0,000018 por vCPU-s durante 30 días, descontada la capa gratuita.</p>
+<p><b>Comparación con un LLM vía API.</b> Resolver la misma recomendación enviando el perfil y el catálogo a un modelo de lenguaje comercial (≈ 1.500 tokens de entrada y 150 de salida con Claude Haiku 5.5: US$ 0,10 y US$ 0,50 por millón de tokens) costaría ≈ US$ 0,000225 por petición, es decir ≈ US$ 225 al mes en el escenario nacional, con latencias de segundos y, sobre todo, enviando datos de clientes a un tercero, lo que viola la restricción de ejecución local de la sección 1.5. El modelo abierto en CPU es más barato, más rápido y cumple la Ley 1581.</p>
+
+<!-- ============================== CAPÍTULO 4 ============================== -->
+<h1 id="c4">4. Marco de investigación y CRISP-DM</h1>
+<h2>4.1 Tecnologías, formatos y datos</h2>
+<table>
+  <tr><th style="width:24%">Elemento</th><th>Opciones evaluadas</th><th style="width:26%">Decisión</th></tr>
+  <tr><td>Formato de pesos</td><td><code>.safetensors</code> (carga sin ejecutar código) · <code>.bin</code>/<code>.pt</code> (pickle: puede ejecutar código arbitrario) · <code>.onnx</code> (interoperable, inferencia rápida)</td><td><code>.safetensors</code> con revisión fijada; ONNX como Nice to have</td></tr>
+  <tr><td>Modelo de ranking</td><td>Popularidad, segmento, LightGBM LambdaRank [3][8], TabPFN [9]</td><td>LightGBM, guardado en texto (sin pickle)</td></tr>
+  <tr><td>Datos</td><td>Sintéticos propios · públicos (Insurance Company Benchmark COIL 2000, UCI) · reales anonimizados</td><td>Sintéticos con el mismo contrato que los reales</td></tr>
+  <tr><td>Técnicas</td><td><i>Embeddings</i> densos [1][2], filtrado colaborativo, ranking supervisado</td><td>Híbrido: candidatos semánticos + ranking</td></tr>
+</table>
+<p><b>Dataset sintético.</b> El generador produce, con semilla 42, {{N_CLI}} clientes, {{N_PROD}} productos, {{N_POL}} pólizas y {{N_SIN}} siniestros entre {{FECHA_INI}} y {{FECHA_FIN}}. No incluye nombres, documentos ni contactos; los nulos aparecen solo en <code>fecha_fin</code> (pólizas vigentes, {{NULOS_FIN}} %). La compra se simula con propensión por perfil (solo quien tiene carro compra Autos) y venta cruzada (Autos → Accidentes, Hogar → Mascotas, Salud → Renta por hospitalización), para que exista una señal aprendible. Los productos más frecuentes son {{TOP3}}.</p>
+<figure><img src="../figuras/eda.png" alt="EDA" style="max-height:7.2cm"><figcaption>Figura 2. Penetración por producto y distribución de pólizas por cliente en el dataset sintético.</figcaption></figure>
+<p><b>Línea base.</b> Con partición <i>leave-last-out</i> ({{N_EVAL}} clientes con dos o más pólizas), recomendar lo más popular logra Recall@5 = {{POP_R}} y NDCG@5 = {{POP_N}}; la popularidad por segmento (vehículo, vivienda, mascota y crédito) sube a {{SEG_R}} y {{SEG_N}}. La diferencia confirma que personalizar paga y fija el umbral del modelo propuesto.</p>
+
+<h2>4.2 Arquitectura propuesta</h2>
+<figure><img src="arquitectura.png" alt="Arquitectura" style="width:100%"><figcaption>Figura 3. Flujo de inferencia: contrato de datos → perfil textual → e5-small → candidatos → ranking → API (top-5 + razón) y UI, con trazabilidad en MLflow.</figcaption></figure>
+
+<h2>4.3 Mapeo a las seis fases de CRISP-DM [10]</h2>
+<table>
+  <tr><th style="width:24%">Fase</th><th>Entregable en este proyecto</th></tr>
+  <tr><td>1. Business Understanding</td><td>Pregunta HMW, Canvas, OKR y KPI (secciones 1.1, 1.2 y 2.3)</td></tr>
+  <tr><td>2. Data Understanding</td><td>EDA, reporte de nulos y penetración por producto (<code>scripts/eda.py</code>, Figura 2)</td></tr>
+  <tr><td>3. Data Preparation</td><td>Contrato de datos, perfil textual sin PII, partición <i>leave-last-out</i> (HU-01, HU-02, HU-04)</td></tr>
+  <tr><td>4. Modeling</td><td>Inferencia con el modelo MaaS e5-small, ranking LightGBM y trazabilidad en MLflow (HU-03, HU-05)</td></tr>
+  <tr><td>5. Evaluation</td><td>Recall@5, NDCG@5, cobertura de catálogo, auditoría de sesgo por grupo y latencia (HU-05, HU-06, HU-09)</td></tr>
+  <tr><td>6. Deployment</td><td>API FastAPI, UI y Docker CPU con CI (HU-06, HU-07, HU-08, HU-10)</td></tr>
+</table>
+
+<h2>4.4 Riesgos, regulación y gobernanza</h2>
+<p><b>Clasificación regulatoria.</b> El EU AI Act [5] considera de alto riesgo los sistemas que evalúan riesgo o fijan precios de seguros de vida y salud para personas naturales. Este proyecto <b>recomienda productos</b> y deja fuera de alcance la tarificación, la suscripción y la elegibilidad (sección 2.4), por lo que se ubica en riesgo limitado, con obligación de transparencia: la UI informa que la sugerencia proviene de un sistema de IA. En Colombia aplican la Ley 1581 de 2012 de protección de datos personales [7] y la Ley 1328 de 2009 de protección al consumidor financiero. Como referencia de gestión se declara la norma <b>ISO/IEC 42001:2023</b> [6]: roles definidos, trazabilidad de cada versión en MLflow, gestión de riesgos y mejora continua.</p>
+<table>
+  <tr><th style="width:30%">Riesgo</th><th class="c">P</th><th class="c">I</th><th>Mitigación</th></tr>
+  <tr><td>Exposición de datos reales de clientes</td><td class="c">Baja</td><td class="c">Alta</td><td>Anonimización previa, contrato que rechaza PII, ejecución local y autorización escrita</td></tr>
+  <tr><td>Los sintéticos no representan la realidad</td><td class="c">Alta</td><td class="c">Media</td><td>Mismo contrato para ambos; reentrenar y reportar métricas reales por separado</td></tr>
+  <tr><td>Sesgo por estrato, ciudad o género</td><td class="c">Media</td><td class="c">Alta</td><td>Perfil sin género; auditoría HU-09 con brecha ≤ 10 pp</td></tr>
+  <tr><td>Uso para tarificar (reclasificación a alto riesgo)</td><td class="c">Baja</td><td class="c">Alta</td><td>Alcance Out explícito; el asesor siempre decide</td></tr>
+  <tr><td>Sesgo de popularidad (siempre los mismos productos)</td><td class="c">Media</td><td class="c">Media</td><td>KPI de cobertura del catálogo ≥ 80 %</td></tr>
+  <tr><td>Peso de la imagen Docker</td><td class="c">Media</td><td class="c">Media</td><td>PyTorch CPU, build multi-stage, pesos descargados por script (no en Git)</td></tr>
+  <tr><td>Equipo de dos personas</td><td class="c">Media</td><td class="c">Media</td><td>WIP 1 por persona, ruta crítica vigilada, PR revisado por la Code Reviewer, CI obligatorio y alcance Nice to have recortable</td></tr>
+  <tr><td>Latencia o costo de inferencia mayores a lo estimado</td><td class="c">Baja</td><td class="c">Media</td><td>Medición del p95 en HU-06 antes del despliegue; ONNX e INT8 como palancas</td></tr>
+</table>
+
+<!-- ============================== CAPÍTULO 5 ============================== -->
+<h1 id="c5">5. Historias de usuario, criterios de aceptación y Kanban</h1>
+<p><b>Capacidad.</b> 2 integrantes × 15 días × 75 % de foco = <b>{{CAPACIDAD}} SP</b>. El sprint planifica <b>{{N_SPRINT}} historias y {{SP_SPRINT}} SP</b> ({{CARGA}} % de la capacidad): el margen restante absorbe revisiones de PR, reuniones y la incertidumbre de HU-05. HU-01 y HU-02 (4 SP) se completaron en el M2 y figuran en Done. La carga por persona está en la Tabla 2.</p>
+<p><b>Estimación Fibonacci 1:1.</b> Se estimó por comparación con una historia de referencia (HU-01, 2 SP: tarea conocida, sin incertidumbre técnica, un día y medio a dos de trabajo). Cada historia se ubica en 1, 2, 3, 5, 8 o 13 según tres factores: <i>esfuerzo</i> (cantidad de trabajo), <i>complejidad</i> (dificultad técnica) e <i>incertidumbre</i> (lo que aún no se sabe). Ninguna historia supera 5 SP; una de 8 o más se habría dividido. La justificación de cada número aparece al pie de cada tarjeta.</p>
+<p><b>Criterios de aceptación.</b> Cada historia tiene tres criterios verificables en formato <b>Given-When-Then</b> (<i>Dado</i> un contexto, <i>cuando</i> ocurre una acción, <i>entonces</i> se observa un resultado medible), que se traducen directamente en pruebas de pytest con patrón AAA.</p>
+<p><b>Tablero.</b> GitHub Projects con las columnas To Do, In Progress (máximo una tarea por integrante), Review / PR (aprobación de la Code Reviewer) y Done (fusionado en <code>develop</code> con pruebas en verde). Los issues se generan y actualizan con <code>scripts/crear_kanban.py</code> desde <code>docs/backlog.json</code>, la misma fuente de este capítulo, con las etiquetas ML, Backend, Frontend y Testing; así título, puntos, responsable y criterios del tablero coinciden con el documento.</p>
+{{RESUMEN_HU}}
+{{HISTORIAS}}
+
+
+<!-- ============================== CAPÍTULO 6 ============================== -->
+<h1 class="page" id="c6">6. Anexos y enlaces</h1>
+<h2>6.1 Repositorio y artefactos</h2>
+<table>
+  <tr><th style="width:30%">Artefacto</th><th>Ubicación</th></tr>
+  <tr><td>Repositorio (src layout, uv, pytest, ruff)</td><td>{{REPO}} · privado por contener el trabajo con la compañía; se muestra en vivo y se da acceso al docente si lo solicita. La evidencia necesaria está en este anexo (6.2)</td></tr>
+  <tr><td>Tablero Kanban</td><td>github.com/users/daalrasi/projects/1 (vinculado al repositorio; captura en la Figura 4)</td></tr>
+  <tr><td>Model Card del modelo base</td><td>huggingface.co/intfloat/multilingual-e5-small</td></tr>
+  <tr><td>Generador y contrato de datos</td><td><code>src/recomendador/data/sintetico.py</code>, <code>contrato.py</code></td></tr>
+  <tr><td>Líneas base y métricas</td><td><code>src/recomendador/baseline/</code>, <code>evaluacion/</code>; <code>uv run recomendador baseline</code></td></tr>
+  <tr><td>Backlog (fuente del Cap. 5 y del tablero)</td><td><code>docs/backlog.json</code>, <code>scripts/crear_kanban.py</code></td></tr>
+</table>
+<figure><img src="kanban.jpg" alt="Tablero Kanban" style="width:100%"><figcaption>Figura 4. Tablero Kanban en GitHub Projects sincronizado con el Capítulo 5: HU-01 y HU-02 en Done y las historias del sprint M3 en Todo, con sus Story Points en el título.</figcaption></figure>
+<h2>6.2 Evidencia del repositorio</h2>
+<pre class="arbol">{{ARBOL}}</pre>
+<p class="nota">{{PRUEBAS}}</p>
+<h2>6.3 Diccionario de datos</h2>
+<table>
+  <tr><th style="width:18%">Tabla</th><th>Columnas</th></tr>
+  <tr><td>clientes</td><td>cliente_id, edad, genero, ciudad, estrato, ocupacion, ingreso_smmlv, estado_civil, num_hijos, vehiculo, vivienda, arrienda_inmueble, tiene_mascota, tiene_credito, cliente_banco_aliado, canal_preferido, fecha_vinculacion</td></tr>
+  <tr><td>productos</td><td>product_id, nombre, linea, descripcion, prima_base_cop, edad_min, edad_max</td></tr>
+  <tr><td>polizas</td><td>poliza_id, cliente_id, product_id, fecha_inicio, estado, fecha_fin, canal_venta, prima_mensual_cop</td></tr>
+  <tr><td>siniestros</td><td>siniestro_id, poliza_id, fecha, monto_cop, estado</td></tr>
+</table>
+<h2>6.4 Licencias</h2>
+<p>Código del proyecto: MIT. multilingual-e5-small: MIT. LightGBM: MIT. FastAPI: MIT. Streamlit: Apache 2.0. MLflow: Apache 2.0. Datos sintéticos: generados por el equipo, sin restricción.</p>
+<h2>6.5 Referencias (IEEE)</h2>
+<ol style="font-size:10.5pt">
+  <li>L. Wang, N. Yang, X. Huang, L. Yang, R. Majumder y F. Wei, “Multilingual E5 Text Embeddings: A Technical Report,” arXiv:2402.05672, 2024.</li>
+  <li>N. Reimers e I. Gurevych, “Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks,” en <i>Proc. EMNLP-IJCNLP</i>, 2019.</li>
+  <li>G. Ke et al., “LightGBM: A Highly Efficient Gradient Boosting Decision Tree,” en <i>Advances in NeurIPS</i>, vol. 30, 2017.</li>
+  <li>M. Mitchell et al., “Model Cards for Model Reporting,” en <i>Proc. ACM FAT*</i>, 2019.</li>
+  <li>Parlamento Europeo y Consejo, Reglamento (UE) 2024/1689 (Ley de Inteligencia Artificial), 2024.</li>
+  <li>ISO/IEC 42001:2023, <i>Information technology — Artificial intelligence — Management system</i>, 2023.</li>
+  <li>Congreso de Colombia, Ley Estatutaria 1581 de 2012, protección de datos personales.</li>
+  <li>C. J. C. Burges, “From RankNet to LambdaRank to LambdaMART: An Overview,” Microsoft Research, MSR-TR-2010-82, 2010.</li>
+  <li>Prior Labs, “TabPFN models and licenses,” docs.priorlabs.ai, consultado el 28 de octubre de 2026.</li>
+  <li>C. Shearer, “The CRISP-DM Model: The New Blueprint for Data Mining,” <i>J. Data Warehousing</i>, vol. 5, n.º 4, 2000.</li>
+  <li>Google Cloud, “Cloud Run pricing,” cloud.google.com/run/pricing, consultado el 29 de octubre de 2026.</li>
+  <li>Anthropic, “Claude API pricing,” docs.claude.com, consultado el 29 de octubre de 2026.</li>
+</ol>
+
+</body>
+</html>

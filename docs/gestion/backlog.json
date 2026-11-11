@@ -1,0 +1,346 @@
+{
+  "sprint": {
+    "dias": 15,
+    "integrantes": 2,
+    "foco": 0.75,
+    "inicio": "2026-11-02"
+  },
+  "equipo": [
+    "Daniel Silva",
+    "Katherine Medina"
+  ],
+  "historias": [
+    {
+      "id": "HU-01",
+      "titulo": "Dataset sintético con contrato de datos",
+      "sp": 2,
+      "etiqueta": "Backend",
+      "responsable": "Katherine Medina",
+      "estado": "Done",
+      "depende": [],
+      "recurso": [],
+      "como": "analista de datos",
+      "quiero": "una cartera sintética reproducible con el mismo esquema que tendrán los datos reales",
+      "para": "desarrollar y probar el recomendador sin exponer información de clientes",
+      "justificacion": "Tarea conocida y acotada (generador con reglas de negocio + validador de esquema), sin incertidumbre técnica; equivale a la historia de referencia del equipo.",
+      "ac": [
+        {
+          "dado": "la semilla 42 y 20.000 clientes",
+          "cuando": "se ejecuta «recomendador generar» dos veces",
+          "entonces": "las cuatro tablas (clientes, productos, pólizas, siniestros) son idénticas byte a byte"
+        },
+        {
+          "dado": "una tabla con una columna «documento», un tipo incorrecto o un nulo no permitido",
+          "cuando": "se valida contra el contrato",
+          "entonces": "el contrato devuelve el error y la tabla se rechaza"
+        },
+        {
+          "dado": "el código en la rama de la historia",
+          "cuando": "se ejecuta pytest",
+          "entonces": "tests/test_sintetico.py y tests/test_contrato.py pasan en verde"
+        }
+      ]
+    },
+    {
+      "id": "HU-02",
+      "titulo": "Líneas base y partición temporal",
+      "sp": 2,
+      "etiqueta": "ML",
+      "responsable": "Daniel Silva",
+      "estado": "Done",
+      "depende": [
+        "HU-01"
+      ],
+      "recurso": [],
+      "como": "científico de datos",
+      "quiero": "una partición leave-last-out y dos líneas base (popularidad y segmento)",
+      "para": "tener un umbral objetivo que el modelo propuesto deba superar",
+      "justificacion": "Dos algoritmos simples y dos métricas estándar con fórmula cerrada; el esfuerzo está en las pruebas de no fuga temporal. Mismo tamaño que HU-01.",
+      "ac": [
+        {
+          "dado": "un cliente con dos o más pólizas",
+          "cuando": "se aplica la partición leave-last-out",
+          "entonces": "la póliza retenida es la más reciente y ninguna fecha de entrenamiento es posterior a ella"
+        },
+        {
+          "dado": "el dataset sintético generado",
+          "cuando": "se ejecuta «recomendador baseline»",
+          "entonces": "la CLI imprime Recall@5 y NDCG@5 de popularidad y de segmento"
+        },
+        {
+          "dado": "rankings construidos a mano con resultado conocido",
+          "cuando": "se calculan las métricas",
+          "entonces": "tests/test_evaluacion.py confirma los valores esperados"
+        }
+      ]
+    },
+    {
+      "id": "HU-03",
+      "titulo": "Carga segura del modelo base e5-small",
+      "sp": 3,
+      "etiqueta": "ML",
+      "responsable": "Daniel Silva",
+      "estado": "To Do",
+      "depende": [],
+      "recurso": [],
+      "como": "ingeniero de ML",
+      "quiero": "descargar multilingual-e5-small en formato safetensors con revisión fijada y cargarlo en CPU",
+      "para": "generar embeddings reproducibles sin depender de internet en ejecución",
+      "justificacion": "Integración con una librería externa conocida, pero con incertidumbre en la verificación de hash, el modo sin red y el doble de prueba del modelo; algo más que la referencia de 2 SP.",
+      "ac": [
+        {
+          "dado": "la revisión del modelo fijada en config.py",
+          "cuando": "se ejecuta el script de descarga",
+          "entonces": "se obtienen solo archivos .safetensors y su hash SHA-256 coincide con el registrado"
+        },
+        {
+          "dado": "una lista de n textos con prefijo «passage: »",
+          "cuando": "se llama a encode()",
+          "entonces": "devuelve un arreglo float32 de forma (n, 384) con norma L2 = 1 ± 1e-5 y sin NaN"
+        },
+        {
+          "dado": "HF_HUB_OFFLINE=1 y los pesos en caché",
+          "cuando": "se carga el modelo",
+          "entonces": "la carga termina sin ninguna conexión de red (tests/test_encoder.py con doble del modelo)"
+        }
+      ]
+    },
+    {
+      "id": "HU-04",
+      "titulo": "Perfil textual y candidatos por similitud",
+      "sp": 3,
+      "etiqueta": "ML",
+      "responsable": "Katherine Medina",
+      "estado": "To Do",
+      "depende": [
+        "HU-03"
+      ],
+      "recurso": [
+        "HU-06"
+      ],
+      "como": "asesor comercial",
+      "quiero": "que el sistema proponga los productos más afines al perfil del cliente",
+      "para": "atender también a clientes nuevos sin historial de compra",
+      "justificacion": "Plantilla de texto determinista y búsqueda coseno sobre 19 vectores: lógica sencilla, pero exige contratos numéricos y una meta de latencia; esfuerzo equivalente a HU-03.",
+      "ac": [
+        {
+          "dado": "un perfil de cliente",
+          "cuando": "se construye el texto «query: …»",
+          "entonces": "el resultado es siempre el mismo para el mismo perfil y no contiene género, nombre ni identificadores"
+        },
+        {
+          "dado": "un cliente que ya tiene Autos y Hogar",
+          "cuando": "se piden los candidatos",
+          "entonces": "la lista excluye esos dos productos y tiene a lo sumo 17 elementos ordenados por similitud"
+        },
+        {
+          "dado": "los vectores del catálogo precalculados y 1.000 perfiles",
+          "cuando": "se generan candidatos en CPU",
+          "entonces": "el percentil 95 de la latencia es menor de 50 ms por cliente (tests/test_candidatos.py)"
+        }
+      ]
+    },
+    {
+      "id": "HU-05",
+      "titulo": "Ranking LightGBM con trazabilidad en MLflow",
+      "sp": 5,
+      "etiqueta": "ML",
+      "responsable": "Daniel Silva",
+      "estado": "To Do",
+      "depende": [
+        "HU-04"
+      ],
+      "recurso": [],
+      "como": "gerente de producto",
+      "quiero": "un ranking que ordene los candidatos según la probabilidad de compra",
+      "para": "que las primeras recomendaciones sean las más relevantes",
+      "justificacion": "Historia más incierta del sprint: ingeniería de variables, ajuste de hiperparámetros, registro en MLflow y una meta de métricas que puede no alcanzarse al primer intento. Es la mayor; no llega a 8 porque el pipeline de evaluación ya existe (HU-02).",
+      "ac": [
+        {
+          "dado": "la partición leave-last-out del dataset sintético",
+          "cuando": "se evalúa el ranking",
+          "entonces": "Recall@5 ≥ 0,70 y NDCG@5 ≥ 0,48 (línea base de segmento: 0,639 y 0,435)"
+        },
+        {
+          "dado": "las recomendaciones top-5 de todos los clientes evaluados",
+          "cuando": "se cuentan los productos distintos",
+          "entonces": "la cobertura del catálogo es ≥ 80 %"
+        },
+        {
+          "dado": "un entrenamiento del ranking",
+          "cuando": "termina la ejecución",
+          "entonces": "MLflow registra parámetros, Recall@5, NDCG@5, cobertura y el modelo en formato de texto de LightGBM (sin pickle), y al recargarlo las predicciones son idénticas (tests/test_ranker.py)"
+        }
+      ]
+    },
+    {
+      "id": "HU-06",
+      "titulo": "API REST de recomendaciones",
+      "sp": 3,
+      "etiqueta": "Backend",
+      "responsable": "Katherine Medina",
+      "estado": "To Do",
+      "depende": [],
+      "recurso": [],
+      "como": "canal digital",
+      "quiero": "un endpoint POST /recomendaciones que reciba un perfil y devuelva el top-5",
+      "para": "integrar el recomendador en la app y en la consola de asesores",
+      "justificacion": "Patrón conocido (FastAPI + Pydantic) que arranca con un recomendador simulado; el esfuerzo está en la validación estricta y las pruebas de contrato. Igual a HU-03.",
+      "ac": [
+        {
+          "dado": "una petición que incluye un campo no definido como «email»",
+          "cuando": "se envía a POST /recomendaciones",
+          "entonces": "la API responde HTTP 422 y no procesa el perfil"
+        },
+        {
+          "dado": "un perfil válido",
+          "cuando": "se envía a POST /recomendaciones",
+          "entonces": "la respuesta trae cinco elementos con producto, puntaje y razón legible"
+        },
+        {
+          "dado": "el servicio en ejecución en CPU",
+          "cuando": "se consulta GET /salud y se envían 1.000 peticiones a POST /recomendaciones",
+          "entonces": "/salud responde HTTP 200 y la latencia p95 es menor de 200 ms (tests/test_api.py con TestClient)"
+        }
+      ]
+    },
+    {
+      "id": "HU-07",
+      "titulo": "Interfaz para asesores",
+      "sp": 2,
+      "etiqueta": "Frontend",
+      "responsable": "Katherine Medina",
+      "estado": "To Do",
+      "depende": [
+        "HU-06"
+      ],
+      "recurso": [
+        "HU-04"
+      ],
+      "como": "asesor",
+      "quiero": "una pantalla donde ingrese el perfil y vea las recomendaciones con su explicación",
+      "para": "usar la sugerencia en la conversación con el cliente",
+      "justificacion": "Vista delgada en Streamlit que solo consume la API ya definida; poca lógica y bajo riesgo. Igual a la referencia de 2 SP.",
+      "ac": [
+        {
+          "dado": "el código de la vista",
+          "cuando": "se revisa en el PR",
+          "entonces": "toda recomendación se obtiene llamando a la API, sin lógica de negocio en la UI"
+        },
+        {
+          "dado": "un perfil ingresado en el formulario",
+          "cuando": "el asesor pulsa «Recomendar»",
+          "entonces": "ve el top-5 con la razón de cada producto y el aviso de que la decisión final es suya"
+        },
+        {
+          "dado": "la API simulada",
+          "cuando": "se ejecuta tests/test_ui_smoke.py",
+          "entonces": "la aplicación carga y muestra cinco resultados sin errores"
+        }
+      ]
+    },
+    {
+      "id": "HU-08",
+      "titulo": "Docker CPU e integración continua",
+      "sp": 2,
+      "etiqueta": "Testing",
+      "responsable": "Daniel Silva",
+      "estado": "To Do",
+      "depende": [
+        "HU-05",
+        "HU-06"
+      ],
+      "recurso": [],
+      "como": "equipo de operaciones",
+      "quiero": "una imagen Docker reproducible y un pipeline de CI",
+      "para": "ejecutar el sistema igual en cualquier máquina y en la nube de la compañía",
+      "justificacion": "Dockerfile multi-stage y ajuste del workflow existente; el único riesgo conocido es libgomp para LightGBM. Igual a la referencia de 2 SP.",
+      "ac": [
+        {
+          "dado": "un equipo limpio sin GPU",
+          "cuando": "se ejecuta docker build y luego docker run sin red",
+          "entonces": "la API arranca con PyTorch CPU y los pesos precargados"
+        },
+        {
+          "dado": "la imagen construida",
+          "cuando": "se inspecciona su tamaño y sus capas",
+          "entonces": "pesa ≤ 2,5 GB y no contiene archivos de data/ (los datos reales se montan como volumen)"
+        },
+        {
+          "dado": "un PR hacia develop",
+          "cuando": "corre GitHub Actions",
+          "entonces": "se ejecutan ruff, pytest con cobertura ≥ 85 % y el build de la imagen, y el PR no se fusiona si alguno falla"
+        }
+      ]
+    },
+    {
+      "id": "HU-09",
+      "titulo": "Auditoría de sesgo por segmento",
+      "sp": 1,
+      "etiqueta": "Testing",
+      "responsable": "Katherine Medina",
+      "estado": "To Do",
+      "depende": [
+        "HU-05"
+      ],
+      "recurso": [
+        "HU-07"
+      ],
+      "como": "responsable de cumplimiento",
+      "quiero": "conocer el desempeño del recomendador por estrato, ciudad y género",
+      "para": "detectar tratos desiguales antes de usar datos reales",
+      "justificacion": "Reutiliza las métricas de HU-02 agrupadas por columna; un script y una prueba. Es la historia más pequeña.",
+      "ac": [
+        {
+          "dado": "el ranking entrenado",
+          "cuando": "se ejecuta el script de auditoría",
+          "entonces": "se genera un reporte con Recall@5 por estrato, ciudad y género"
+        },
+        {
+          "dado": "el reporte de auditoría",
+          "cuando": "la brecha máxima entre grupos supera 10 puntos porcentuales",
+          "entonces": "se abre automáticamente un issue de mitigación etiquetado Testing"
+        },
+        {
+          "dado": "datos controlados con brecha conocida",
+          "cuando": "se ejecuta tests/test_auditoria.py",
+          "entonces": "la brecha calculada coincide con la esperada"
+        }
+      ]
+    },
+    {
+      "id": "HU-10",
+      "titulo": "Integración, pruebas de humo y entrega",
+      "sp": 1,
+      "etiqueta": "Testing",
+      "responsable": "Equipo (Daniel y Katherine)",
+      "estado": "To Do",
+      "depende": [
+        "HU-08",
+        "HU-09"
+      ],
+      "recurso": [],
+      "como": "equipo del proyecto",
+      "quiero": "integrar todos los módulos y ensayar la demo",
+      "para": "entregar el M3 funcionando en vivo",
+      "justificacion": "Ensamble final de piezas ya probadas; un día del equipo completo para el ensayo y la release.",
+      "ac": [
+        {
+          "dado": "la imagen final",
+          "cuando": "se ejecuta docker run",
+          "entonces": "API y UI quedan arriba y el flujo perfil → top-5 con razón funciona en vivo"
+        },
+        {
+          "dado": "develop con todas las historias fusionadas",
+          "cuando": "se abre el PR develop → main",
+          "entonces": "el Code Reviewer lo aprueba con checks en verde y se etiqueta la release"
+        },
+        {
+          "dado": "una persona ajena al proyecto",
+          "cuando": "sigue el README",
+          "entonces": "instala con uv y reproduce los resultados sin ayuda"
+        }
+      ]
+    }
+  ]
+}
