@@ -546,3 +546,46 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Estado del servicio (SPEC-028) ---- */
+.aviso-conexion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: var(--error);
+  color: #ffffff;
+}
+
+.aviso-conexion button {
+  background: #ffffff;
+  color: var(--error);
+  border: none;
+}
+
+.componentes {
+  list-style: none;
+  padding: 0;
+}
+
+.componentes li {
+  padding: 4px 0;
+}
+
+.luz {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.luz.verde {
+  background: var(--ok);
+}
+
+.luz.roja {
+  background: var(--error);
+}

@@ -1,11 +1,15 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 
+import { useSalud } from "./chat/salud";
+import AvisoConexion from "./components/AvisoConexion";
+
 import Estado from "./pages/Estado";
 import Foto from "./pages/Foto";
 import Inicio from "./pages/Inicio";
 
 /** Layout común: encabezado con navegación, aviso de proyecto académico y la página activa. */
 export default function App() {
+  const { estado, reintentar } = useSalud();
   return (
     <div className="app">
       <header className="encabezado">
@@ -27,11 +31,12 @@ export default function App() {
       <p className="aviso" role="note">
         No es un canal oficial de la compañía. Las respuestas salen de información pública y citan su fuente.
       </p>
+      <AvisoConexion estado={estado} onReintentar={() => void reintentar()} />
       <main className="contenido">
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/foto" element={<Foto />} />
-          <Route path="/estado" element={<Estado />} />
+          <Route path="/estado" element={<Estado estado={estado} onReintentar={() => void reintentar()} />} />
           <Route path="*" element={<p>Página no encontrada.</p>} />
         </Routes>
       </main>
