@@ -20,6 +20,7 @@ import type {
   FotoOut,
   HealthOut,
   PerfilOut,
+  ProyectoOut,
   RespuestaOut,
 } from "./types";
 
@@ -152,3 +153,6 @@ export async function guia(tipo: "resumen" | "faq", tema: string, n: number, pro
   const respuesta = await pedir(ruta, json({ tema, n, proveedor }), { timeoutMs: 180_000 });
   return (await respuesta.json()) as RespuestaOut;
 }
+
+/** Entregables por curso (SPEC-045). */
+export const proyecto = () => obtener<ProyectoOut>("/proyecto");

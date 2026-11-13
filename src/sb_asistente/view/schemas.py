@@ -286,6 +286,23 @@ class ExperimentosOut(BaseModel):
     experimentos: dict[str, list[CorridaOut]]
 
 
+class RequisitoOut(BaseModel):
+    """Requisito de un curso con su estado y evidencia (``docs/requisitos.md``)."""
+
+    requisito: str
+    estado: Literal["cumplido", "en curso", "pendiente"]
+    evidencia: str
+
+
+class ProyectoOut(BaseModel):
+    """Entregables por curso y cifras del repositorio calculadas al momento."""
+
+    secciones: dict[str, list[RequisitoOut]]
+    contadores: dict[str, int]
+    corridas_mlflow: int | None
+    enlaces: dict[str, str]
+
+
 class ChatIn(_Entrada):
     """Mensaje del chat (estilo conversación)."""
 

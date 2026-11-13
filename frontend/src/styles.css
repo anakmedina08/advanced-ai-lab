@@ -892,3 +892,104 @@ input[type="range"] {
   border: 1px solid var(--borde);
   border-radius: var(--radio);
 }
+
+/* ---- Entregables por curso (SPEC-045) ---- */
+.enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.pestanas button {
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pestanas button.activo {
+  border-bottom-color: var(--primario);
+  color: var(--primario);
+  font-weight: 600;
+}
+
+.fila-progreso {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progreso {
+  flex: 1 1 200px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.progreso span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.pildoras {
+  display: flex;
+  gap: 6px;
+}
+
+.pildoras button {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.pildoras button.activo {
+  background: #eaf1fb;
+  border-color: var(--primario);
+  color: var(--primario);
+}
+
+.requisitos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.requisito {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+}
+
+.requisito-nombre {
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+
+.estado-ok {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: #f0fdf4;
+}
+
+.estado-curso {
+  color: var(--alerta);
+  border-color: var(--alerta);
+  background: #fff7ed;
+}
+
+.estado-pendiente {
+  color: var(--texto-suave);
+  background: var(--superficie-2);
+}

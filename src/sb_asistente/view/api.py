@@ -32,6 +32,7 @@ from sb_asistente.config import (
 from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import experimentos as experimentos_ctrl
+from sb_asistente.controller import proyecto as proyecto_ctrl
 from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
@@ -69,8 +70,10 @@ from sb_asistente.view.schemas import (
     PerfilOut,
     PlanOut,
     PreguntaIn,
+    ProyectoOut,
     RecomendacionesOut,
     RecomendacionOut,
+    RequisitoOut,
     RespuestaOut,
     SaludOut,
     SkillOut,
@@ -210,6 +213,21 @@ def experimentos_mlflow() -> ExperimentosOut:
             ]
             for nombre, corridas in datos.items()
         },
+    )
+
+
+@app.get("/proyecto", response_model=ProyectoOut, tags=["sustentacion"])
+def proyecto_entregables() -> ProyectoOut:
+    """Requisitos de cada curso (``docs/requisitos.md``) con su evidencia y las cifras del repositorio."""
+    secciones = {
+        seccion: [RequisitoOut(requisito=r.requisito, estado=r.estado, evidencia=r.evidencia) for r in filas]
+        for seccion, filas in proyecto_ctrl.requisitos_por_seccion().items()
+    }
+    return ProyectoOut(
+        secciones=secciones,
+        contadores=asdict(proyecto_ctrl.contadores()),
+        corridas_mlflow=proyecto_ctrl.corridas_mlflow(),
+        enlaces=proyecto_ctrl.ENLACES,
     )
 
 
