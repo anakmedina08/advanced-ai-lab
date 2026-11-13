@@ -272,7 +272,7 @@ Cada experimento queda registrado con sus parámetros, métricas, archivos y el 
 ```bash
 uv sync --extra mlflow          # extra opcional
 make mlflow-importar            # carga las evaluaciones ya hechas, sin volver a llamar al LLM
-make mlflow                     # http://127.0.0.1:5000 para comparar corridas
+make mlflow                     # http://127.0.0.1:5050 para comparar corridas
 ```
 
 `sb eval`, `sb reco baseline` y `scripts/comparar_recuperacion.py` registran solos cada corrida. La

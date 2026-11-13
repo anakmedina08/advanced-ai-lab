@@ -15,6 +15,7 @@ from sb_asistente.config import (
     EMBEDDINGS_PROVIDERS,
     GOLD_DIR,
     LLM_PROVIDER,
+    MLFLOW_PUERTO,
     PROVIDERS,
     RAG_K,
     RECO_DIR,
@@ -108,8 +109,10 @@ def build_parser() -> argparse.ArgumentParser:
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
-    ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5000)")
-    ui_ml.add_argument("--port", type=int, default=5000)
+    ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5050)")
+    ui_ml.add_argument("--port", type=int, default=MLFLOW_PUERTO)
+    srv = ml_sub.add_parser("servidor", help="Servidor de tracking en http://127.0.0.1:5050 (UI + API)")
+    srv.add_argument("--port", type=int, default=MLFLOW_PUERTO)
     tr = sub.add_parser("trazas", help="Últimos turnos del agente: ruta, tools y latencia (sin texto)")
     tr.add_argument("-n", type=int, default=10)
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
@@ -270,11 +273,24 @@ def _mlflow(args: argparse.Namespace) -> int:
         return 0
     import subprocess
 
-    from sb_asistente.config import MLFLOW_TRACKING_URI
-
     print(f"MLflow en http://127.0.0.1:{args.port} (Ctrl+C para salir)")
-    comando = [sys.executable, "-m", "mlflow", "ui", "--backend-store-uri", MLFLOW_TRACKING_URI]
-    return subprocess.call([*comando, "--port", str(args.port)])
+    return subprocess.call(comando_mlflow(args.mlflow_command, args.port))
+
+
+def comando_mlflow(subcomando: str, puerto: int) -> list[str]:
+    """Comando de ``mlflow ui`` o ``mlflow server`` sobre la base SQLite y los artefactos de ``data/``.
+
+    Con el servidor arriba, el resto del proyecto registra contra él definiendo
+    ``MLFLOW_TRACKING_URI=http://127.0.0.1:5050``.
+    """
+    from sb_asistente.config import MLFLOW_ARTIFACTS, MLFLOW_BACKEND_URI
+
+    base = [sys.executable, "-m", "mlflow", "server" if subcomando == "servidor" else "ui"]
+    base += ["--backend-store-uri", MLFLOW_BACKEND_URI, "--host", "127.0.0.1", "--port", str(puerto)]
+    if subcomando == "servidor":
+        MLFLOW_ARTIFACTS.mkdir(parents=True, exist_ok=True)
+        base += ["--default-artifact-root", MLFLOW_ARTIFACTS.as_uri()]
+    return base
 
 
 def _agente(args: argparse.Namespace) -> int:
