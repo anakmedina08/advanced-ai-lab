@@ -127,6 +127,11 @@ VISION_IGNORED_CLASSES: Final[frozenset[str]] = frozenset({"person"})
 VISION_BLUR_CONFIDENCE: Final[float] = 0.15  # umbral bajo para difuminar personas (mejor de más que de menos)
 VISION_PROVIDERS: Final[tuple[str, ...]] = ("anthropic",)  # proveedores que entienden imágenes
 API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
+# Orígenes del frontend desacoplado que pueden llamar a la API (lista blanca, nunca "*")
+_ORIGENES = "http://localhost:5173,http://127.0.0.1:5173,https://yellowdata.com.co"
+FRONTEND_ORIGINS: Final[tuple[str, ...]] = tuple(
+    o.strip() for o in os.getenv("FRONTEND_ORIGINS", _ORIGENES).split(",") if o.strip()
+)
 
 # --- Bitácora de experimentos (MLflow; extra opcional `uv sync --extra mlflow`, ADR-022) -------
 MLFLOW_DB: Final[Path] = DATA_DIR / "mlflow.db"  # base local, no versionada (data/)
