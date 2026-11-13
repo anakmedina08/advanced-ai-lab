@@ -15,7 +15,7 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Path, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -44,11 +44,14 @@ from sb_asistente.view.schemas import (
     CajaOut,
     ChatIn,
     ChatOut,
+    CheckpointOut,
+    ConversacionOut,
     DeteccionOut,
     EscenaOut,
     EtapaOut,
     FotoOut,
     HealthOut,
+    PerfilOut,
     PlanOut,
     PreguntaIn,
     RecomendacionesOut,
@@ -233,6 +236,45 @@ def agente_stream(
 
     cabeceras = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     return StreamingResponse(eventos(), media_type="text/event-stream", headers=cabeceras)
+
+
+IdSeguro = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{6,64}$")]
+Fabrica = Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+
+
+@app.get("/agente/conversaciones/{conversacion_id}", response_model=ConversacionOut, tags=["agente"])
+def conversacion(conversacion_id: IdSeguro, fabrica: Fabrica) -> ConversacionOut:
+    """Mensajes guardados del hilo (SQLite): permite retomarlo tras recargar o reiniciar el backend."""
+    mensajes = fabrica(LLM_PROVIDER).historial(conversacion_id)
+    return ConversacionOut(conversacion_id=conversacion_id, mensajes=mensajes)
+
+
+@app.get(
+    "/agente/conversaciones/{conversacion_id}/checkpoints",
+    response_model=list[CheckpointOut],
+    tags=["agente"],
+)
+def checkpoints(conversacion_id: IdSeguro, fabrica: Fabrica) -> list[dict[str, object]]:
+    """Checkpoints del hilo, del más reciente al más antiguo (time travel)."""
+    return fabrica(LLM_PROVIDER).checkpoints(conversacion_id)
+
+
+@app.delete("/agente/conversaciones/{conversacion_id}", status_code=204, tags=["agente"])
+def borrar_conversacion(conversacion_id: IdSeguro, fabrica: Fabrica) -> None:
+    """Borra la memoria del hilo."""
+    fabrica(LLM_PROVIDER).olvidar(conversacion_id)
+
+
+@app.get("/agente/usuarios/{usuario_id}/perfil", response_model=PerfilOut, tags=["agente"])
+def perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> PerfilOut:
+    """Lo que el asistente recuerda del usuario entre conversaciones (memoria de largo plazo)."""
+    return PerfilOut(usuario_id=usuario_id, hechos=fabrica(LLM_PROVIDER).perfil(usuario_id))
+
+
+@app.delete("/agente/usuarios/{usuario_id}/perfil", status_code=204, tags=["agente"])
+def borrar_perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> None:
+    """Borra la memoria de largo plazo del usuario (derecho a la supresión, Ley 1581)."""
+    fabrica(LLM_PROVIDER).olvidar_perfil(usuario_id)
 
 
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])
