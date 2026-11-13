@@ -1,0 +1,55 @@
+name: "📌 Historia de usuario (con spec SDD)"
+description: "Una tarjeta del Kanban = una historia + una spec en openspec/specs/NNN-nombre/ + una PR."
+title: "SPEC-NNN · "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Flujo:** historia con AC y puntos → spec SDD (`spec.md`, `plan.md`, `tasks.md`) **antes del
+        código** → rama `feature/NNN-nombre` → PR con `Closes #N` → revisión → merge a `develop` → Done.
+
+        **WIP:** In progress = 2 (una historia activa por integrante) · In review = 2.
+
+  - type: input
+    id: spec
+    attributes:
+      label: "Spec SDD"
+      description: "Ruta de la spec (se crea antes del código)."
+      placeholder: "openspec/specs/043-nombre/"
+    validations:
+      required: true
+
+  - type: textarea
+    id: historia
+    attributes:
+      label: "Historia"
+      value: "**Como** …, **quiero** …, **para** …."
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: "Criterios de aceptación (Dado / Cuando / Entonces)"
+      value: |
+        - **AC1** · **Dado** …, **cuando** …, **entonces** ….
+        - **AC2** · **Dado** …, **cuando** …, **entonces** ….
+    validations:
+      required: true
+
+  - type: dropdown
+    id: puntos
+    attributes:
+      label: "Story points (Fibonacci)"
+      options: ["1", "2", "3", "5", "8", "13"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: capa
+    attributes:
+      label: "Capa"
+      options: ["backend", "frontend", "ml", "mlflow", "qa", "docs", "infra"]
+    validations:
+      required: true
