@@ -161,6 +161,10 @@ RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
 MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
+# Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad
+MEMORY_SUMMARY_TOKENS: Final[int] = int(os.getenv("MEMORY_SUMMARY_TOKENS", "8000"))
+MEMORY_KEEP_MESSAGES: Final[int] = 12  # mensajes recientes que el resumen deja intactos
+MEMORY_MAX_TOKENS: Final[int] = 12_000  # tope de tokens del historial enviado al modelo
 LANGSMITH_PROJECT: Final[str] = os.getenv("LANGSMITH_PROJECT", "sb-asistente")
 
 # --- Recomendador (curso de Gestión) -------------------------------------------------------
