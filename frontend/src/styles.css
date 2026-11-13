@@ -1,0 +1,160 @@
+/* Tema corporativo neutro (sin colores ni logo de la compañía), claro y oscuro. */
+:root {
+  --fondo: #f5f6f8;
+  --superficie: #ffffff;
+  --borde: #dfe3e8;
+  --texto: #1d2733;
+  --texto-suave: #5b6878;
+  --primario: #1f3a5f;
+  --primario-texto: #ffffff;
+  --acento: #2f6fb0;
+  --ok: #1e7a46;
+  --alerta: #a15c00;
+  --error: #b42318;
+  --radio: 10px;
+  --sombra: 0 1px 3px rgba(16, 24, 40, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #11161d;
+    --superficie: #19212b;
+    --borde: #2c3846;
+    --texto: #e6ebf1;
+    --texto-suave: #9aa8b8;
+    --primario: #3a6aa3;
+    --acento: #6aa7e6;
+    --ok: #4cc286;
+    --alerta: #e0a243;
+    --error: #f07167;
+    --sombra: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+}
+
+a {
+  color: var(--acento);
+}
+
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--primario);
+  color: var(--primario-texto);
+}
+
+.marca {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.marca .sub {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.encabezado nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.encabezado nav a {
+  color: var(--primario-texto);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.encabezado nav a.active {
+  background: rgba(255, 255, 255, 0.18);
+  font-weight: 600;
+}
+
+.aviso {
+  margin: 0;
+  padding: 6px 20px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.contenido {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 12px;
+}
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 16px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto);
+  padding: 8px 14px;
+}
+
+button.primario {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--primario-texto);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .contenido {
+    padding: 12px;
+  }
+  .encabezado {
+    padding: 10px 12px;
+  }
+}
