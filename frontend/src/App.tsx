@@ -1,57 +1,64 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { useState } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
 
-import { PROVEEDORES, useProveedor } from "./chat/proveedor";
+import { useProveedor } from "./chat/proveedor";
 import { useSalud } from "./chat/salud";
 import AvisoConexion from "./components/AvisoConexion";
-
-import Estado from "./pages/Estado";
+import BarraLateral from "./components/BarraLateral";
+import Icono from "./components/Icono";
+import { paginaDe } from "./navegacion";
+import Configuracion from "./pages/Configuracion";
 import Foto from "./pages/Foto";
 import Inicio from "./pages/Inicio";
+import Pendiente from "./pages/Pendiente";
 
-/** Layout común: encabezado con navegación, aviso de proyecto académico y la página activa. */
+/** Layout de la versión Streamlit: barra lateral oscura con tres áreas y el contenido a la derecha. */
 export default function App() {
   const { estado, reintentar } = useSalud();
   const [proveedor, setProveedor] = useProveedor();
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const pagina = paginaDe(useLocation().pathname);
+  const reintentarSalud = () => void reintentar();
+  const configuracion = (
+    <Configuracion proveedor={proveedor} onProveedor={setProveedor} salud={estado} onReintentar={reintentarSalud} />
+  );
+
   return (
-    <div className="app">
-      <header className="encabezado">
-        <div className="marca">
-          <img src="/icono.svg" alt="" width={28} height={28} />
-          <div>
-            <strong>Asistente de seguros</strong>
-            <span className="sub">Información pública · proyecto académico UAO</span>
-          </div>
-        </div>
-        <nav aria-label="Secciones">
-          <NavLink to="/" end>
-            Chat
-          </NavLink>
-          <NavLink to="/foto">Foto: ¿qué hago?</NavLink>
-          <NavLink to="/estado">Estado</NavLink>
-        </nav>
-        <label className="proveedor">
-          <span>Modelo</span>
-          <select value={proveedor} onChange={(e) => setProveedor(e.target.value)} aria-label="Proveedor del modelo">
-            {PROVEEDORES.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-      </header>
-      <p className="aviso" role="note">
-        No es un canal oficial de la compañía. Las respuestas salen de información pública y citan su fuente.
-      </p>
-      <AvisoConexion estado={estado} onReintentar={() => void reintentar()} />
-      <main className="contenido">
-        <Routes>
-          <Route path="/" element={<Inicio proveedor={proveedor} />} />
-          <Route path="/foto" element={<Foto />} />
-          <Route path="/estado" element={<Estado estado={estado} onReintentar={() => void reintentar()} />} />
-          <Route path="*" element={<p>Página no encontrada.</p>} />
-        </Routes>
-      </main>
+    <div className={`app ${menuAbierto ? "menu-abierto" : ""}`}>
+      <aside className="barra-lateral" id="barra-lateral">
+        <BarraLateral onNavegar={() => setMenuAbierto(false)} />
+      </aside>
+      <div className="area-principal">
+        <button
+          type="button"
+          className="boton-barra"
+          aria-expanded={menuAbierto}
+          aria-controls="barra-lateral"
+          onClick={() => setMenuAbierto((v) => !v)}
+        >
+          <Icono nombre="menu" /> Menú
+        </button>
+        <AvisoConexion estado={estado} onReintentar={reintentarSalud} />
+        <main className="contenido">
+          {pagina && (
+            <h1 className="titulo-pagina">
+              <Icono nombre={pagina.icono} /> {pagina.titulo}
+            </h1>
+          )}
+          <Routes>
+            <Route path="/" element={<Inicio proveedor={proveedor} />} />
+            <Route path="/foto" element={<Foto />} />
+            <Route path="/configuracion" element={configuracion} />
+            <Route path="/estado" element={configuracion} />
+            <Route path="/guias" element={<Pendiente />} />
+            <Route path="/pipeline" element={<Pendiente />} />
+            <Route path="/evaluacion" element={<Pendiente />} />
+            <Route path="/experimentos" element={<Pendiente />} />
+            <Route path="/sustentacion" element={<Pendiente />} />
+            <Route path="*" element={<p>Página no encontrada.</p>} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

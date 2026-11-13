@@ -48,7 +48,6 @@ export default function Foto() {
 
   return (
     <section className="foto">
-      <h1>Foto: ¿qué hago?</h1>
       <p className="suave">
         Suba la foto de un choque, un daño en casa o un bien que quiera asegurar. Las personas se difuminan en el
         servidor antes de cualquier análisis y la foto no se guarda. No envíe fotos de documentos.

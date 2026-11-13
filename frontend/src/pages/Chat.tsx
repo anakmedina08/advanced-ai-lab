@@ -84,7 +84,7 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
       <div className="mensajes" aria-live="polite">
         {estado.mensajes.length === 0 && (
           <div className="vacio">
-            <h1>¿En qué le puedo ayudar?</h1>
+            <h2>¿En qué le puedo ayudar?</h2>
             <p>Respondo con información pública y cito la página de donde sale cada dato.</p>
             <div className="sugerencias">
               {SUGERENCIAS.map((s) => (
