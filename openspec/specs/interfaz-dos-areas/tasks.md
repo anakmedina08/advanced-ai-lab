@@ -10,3 +10,4 @@
 - [x] T-62 [bug] Botón Nueva conversación tras la primera respuesta y sin repetir la sugerencia (Katherine)
 - [x] T-63 [test] 17 pruebas de la interfaz con AppTest y un asistente falso (Katherine)
 - [x] T-64 [documentation] ADR-021 y capturas nuevas en el README (Katherine)
+- [x] T-73 [ui] Página Sustentación › Entregables por curso con cifras en vivo desde docs/requisitos.md (Katherine)

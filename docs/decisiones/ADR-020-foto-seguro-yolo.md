@@ -59,6 +59,10 @@
   - `ultralytics` (con `torch`, ~1 GB) es el extra opcional `vision`: `uv sync --extra vision`.
   - Sin el extra, la CI y Docker funcionan y `/fotos` responde 503.
   - `python-multipart`, `httpx` y `pillow` son dependencias normales.
+- **Modelo (actualización del 2026-11-13):** se compararon YOLO26 n, s, m y l en CPU. Se usa
+  **`yolo26l`**: detecta a las personas con la mayor confianza (media 0,90, mínima 0,81), lo que
+  hace más seguro el difuminado, a ~0,3 s por foto. La comparación está en
+  `docs/evaluacion-resultados.md` §4.
 - **Learned:**
   - La primera inferencia de `torch` en CPU tardaba ~40 s; ahora se paga al cargar el modelo (~8 s)
     y cada foto toma ~0,2 s.

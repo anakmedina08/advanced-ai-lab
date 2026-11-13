@@ -42,7 +42,10 @@ def app() -> AppTest:
     return AppTest.from_file(str(APP), default_timeout=120).run()
 
 
-@pytest.mark.parametrize("pagina", ["asistente", "foto", "guias", "configuracion", "pipeline", "evaluacion"])
+@pytest.mark.parametrize(
+    "pagina",
+    ["asistente", "foto", "guias", "configuracion", "pipeline", "evaluacion", "experimentos", "sustentacion"],
+)
 def test_cada_pagina_carga_sin_errores(pagina):
     at = app().switch_page(PAGINAS.format(pagina)).run()
     assert not at.exception and at.title

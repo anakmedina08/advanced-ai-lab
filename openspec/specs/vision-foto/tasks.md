@@ -12,3 +12,4 @@
 - [x] T-55 [ui] Página Foto: ¿qué hago? con imagen difuminada, detecciones y respuesta con fuente (Katherine)
 - [x] T-56 [test] 44 pruebas de visión sin red, sin API y sin ultralytics (Katherine)
 - [x] T-57 [documentation] ADR-020 y prueba con fotos reales de Wikimedia Commons (Katherine)
+- [x] T-74 [ml] Elegir YOLO por comparación (n, s, m, l): yolo26l por defecto (Katherine)

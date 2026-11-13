@@ -86,6 +86,26 @@ recuperados traen **todas** sus palabras clave. Se mide sobre las 21 preguntas e
   - subir k;
   - dar más peso al título y a la ruta en el componente denso.
 
+## 4. Elección del modelo YOLO para «Foto: ¿qué hago?»
+
+Se compararon los cuatro tamaños de YOLO26 en CPU, con 6 fotos: choque, gotera, niña con su perro,
+moto, bus con peatones y dos personas. Los tiempos son la mediana de 3 inferencias tras calentar el
+modelo. La confianza se midió con umbral 0,15, el mismo que se usa para difuminar personas.
+
+| Modelo | Tamaño | Mediana | Personas: confianza media / mínima | Objetos: confianza media |
+|---|---|---|---|---|
+| yolo26n | 5 MB | 57 ms | 0,83 / 0,66 | 0,56 |
+| yolo26s | 20 MB | 110 ms | 0,88 / 0,78 | 0,88 |
+| yolo26m | 44 MB | 271 ms | 0,83 / 0,15 | 0,65 |
+| **yolo26l** | **53 MB** | **335 ms** | **0,90 / 0,81** | **0,80** |
+
+**Lectura:**
+- Los cuatro detectan los mismos objetos y personas en estas fotos.
+- **yolo26l** detecta a las personas con la mayor confianza; su peor caso (0,81) es el más alto.
+  Por eso es el más seguro para difuminarlas antes de enviar la foto.
+- Su costo (~0,3 s) es pequeño frente a la llamada a Claude (~2 s), así que es el modelo por defecto.
+- yolo26s es la alternativa rápida, configurable con `YOLO_MODEL_PATH`.
+
 ## Pendiente
 
 - **T-66:** subir el banco de preguntas como dataset de LangSmith (`make langsmith-dataset`).

@@ -78,6 +78,10 @@ pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de 
 |---|---|---|
 | ![Asistente](docs/capturas/qa.png) | ![Foto](docs/capturas/foto.png) | ![Pipeline](docs/capturas/pipeline.png) |
 
+| Sustentación › Entregables por curso | Panel del equipo › Experimentos (MLflow) |
+|---|---|
+| ![Sustentación](docs/capturas/sustentacion.png) | ![Experimentos](docs/capturas/experimentos.png) |
+
 ## Arquitectura MVC
 
 ```mermaid
@@ -253,7 +257,7 @@ curl -F "archivo=@choque.jpg" "localhost:8000/fotos?interpretar=true&responder=t
 | su carro, moto, bicicleta, mascota, hogar o equipos | el seguro que aplica y qué más contratan perfiles similares |
 
 Entender la situación usa Claude (`interpretar=true`); sin él, solo YOLO sugiere por objeto. Variables
-opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26n.pt`; se descarga si falta),
+opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26l.pt`, elegido por comparación; se descarga si falta),
 `YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP). La foto se procesa en memoria y no se guarda;
 las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
 pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
@@ -349,7 +353,7 @@ Docker en cada Pull Request.
   [`spec.md`](openspec/specs/fase1-base-conocimiento/spec.md) (qué y cómo se verifica),
   [`plan.md`](openspec/specs/fase1-base-conocimiento/plan.md) (cómo se construye) y
   [`tasks.md`](openspec/specs/fase1-base-conocimiento/tasks.md) (trabajo hecho y pendiente).
-- **Specs por funcionalidad** (cada una con `spec.md`, `plan.md` y `tasks.md`; requisitos R16–R28 con
+- **Specs por funcionalidad** (cada una con `spec.md`, `plan.md` y `tasks.md`; requisitos R16–R32 con
   escenarios y las pruebas que los verifican):
   - [`rag-qdrant-agente/`](openspec/specs/rag-qdrant-agente/): modos «rag» (Qdrant) y «agente» (Deep
     Agents), Claude sin `temperature` (ADR-018 y ADR-019).

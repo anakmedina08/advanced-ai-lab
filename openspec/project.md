@@ -11,7 +11,7 @@
 | [`fase2-producto-unico`](specs/fase2-producto-unico/) | API, recomendador, proveedores, agentes, chat, skills, RPC, RAG Chroma | R7–R15 |
 | [`rag-qdrant-agente`](specs/rag-qdrant-agente/) | modos «rag» y «agente», Claude sin `temperature` | R16–R19 |
 | [`vision-foto`](specs/vision-foto/) | foto → «¿qué hago?» con YOLO, Claude con visión y FastAPI | R20–R24 |
-| [`interfaz-dos-areas`](specs/interfaz-dos-areas/) | interfaz cliente / equipo, chat y tema corporativo | R25–R28 |
+| [`interfaz-dos-areas`](specs/interfaz-dos-areas/) | interfaz cliente / equipo, chat, tema corporativo, sustentación y experimentos | R25–R28, R32 |
 | [`experimentos-mlflow`](specs/experimentos-mlflow/) | bitácora de experimentos con MLflow | R29–R31 |
 
 Las tareas de todas las specs alimentan el tablero con `scripts/crear_kanban.py` (IDs `T-NN` únicos).

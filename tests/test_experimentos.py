@@ -164,3 +164,12 @@ def test_mlflow_real_registra_y_encuentra_la_corrida(tmp_path):
         EXPERIMENTO_QA, "origen", "otro"
     )
     assert "commit" in run.data.tags
+
+
+def test_mlflow_real_lee_las_corridas_para_el_panel(tmp_path):
+    pytest.importorskip("mlflow")
+    real = experimentos.BitacoraMlflow(f"sqlite:///{(tmp_path / 'm.db').as_posix()}", tmp_path / "art")
+    real.registrar(Corrida(EXPERIMENTO_RECUPERACION, "BM25", {"metodo": "BM25"}, {"hit@10": 0.86}))
+    [corrida] = real.corridas(EXPERIMENTO_RECUPERACION)
+    assert corrida["nombre"] == "BM25" and corrida["metricas"] == {"hit_at_10": 0.86}
+    assert real.corridas("no-existe") == [] and BitacoraNula().corridas("x") == []

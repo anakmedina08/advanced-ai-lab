@@ -7,6 +7,7 @@
 - [x] T-68 [backend] Registro automático en sb eval, sb reco baseline y la comparación de recuperación (Katherine)
 - [x] T-69 [backend] Comandos sb mlflow importar (sin duplicar) y sb mlflow ui (Katherine)
 - [x] T-70 [test] 17 pruebas de la bitácora, con una de integración real sobre una base temporal (Katherine)
+- [x] T-72 [ui] Página Experimentos (MLflow) en el panel del equipo: gráfica y tabla por experimento (Katherine)
 
 ## Pendiente
 - [ ] T-71 [ml] Registrar el ranking LightGBM en el experimento recomendador con el modelo en formato texto (Daniel)

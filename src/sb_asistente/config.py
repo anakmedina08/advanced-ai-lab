@@ -117,7 +117,8 @@ RAG_TOP_K: Final[int] = int(os.getenv("RAG_TOP_K", "4"))  # fragmentos recuperad
 
 # --- Visión: foto → seguro sugerido (YOLO; extra opcional `uv sync --extra vision`) ---------
 # Pesos fuera de git (*.pt): Ultralytics los descarga la primera vez si no existen.
-_yolo_env = Path(os.getenv("YOLO_MODEL_PATH", str(DATA_DIR / "modelos" / "yolo26n.pt")))
+# yolo26l: personas detectadas con más confianza (difuminado más seguro) a ~0,3 s por foto en CPU
+_yolo_env = Path(os.getenv("YOLO_MODEL_PATH", str(DATA_DIR / "modelos" / "yolo26l.pt")))
 YOLO_MODEL_PATH: Final[Path] = _yolo_env if _yolo_env.is_absolute() else PROJECT_ROOT / _yolo_env
 YOLO_CONFIDENCE: Final[float] = float(os.getenv("YOLO_CONFIDENCE", "0.35"))  # descarta detecciones dudosas
 MAX_IMAGE_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por foto

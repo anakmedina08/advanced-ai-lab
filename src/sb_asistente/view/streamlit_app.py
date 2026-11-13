@@ -33,6 +33,10 @@ pagina = st.navigation(
             st.Page(PAGINAS / "configuracion.py", title="Configuración", icon=":material/tune:"),
             st.Page(PAGINAS / "pipeline.py", title="Pipeline de datos", icon=":material/account_tree:"),
             st.Page(PAGINAS / "evaluacion.py", title="Evaluación", icon=":material/analytics:"),
+            st.Page(PAGINAS / "experimentos.py", title="Experimentos (MLflow)", icon=":material/science:"),
+        ],
+        "Sustentación": [
+            st.Page(PAGINAS / "sustentacion.py", title="Entregables por curso", icon=":material/school:"),
         ],
     },
     position="sidebar",

@@ -43,6 +43,9 @@ class Bitacora(Protocol):
     def existe(self, experimento: str, etiqueta: str, valor: str) -> bool:  # noqa: D102
         ...
 
+    def corridas(self, experimento: str) -> list[dict[str, object]]:  # noqa: D102
+        ...
+
 
 def nombre_metrica(nombre: str) -> str:
     """Nombre válido para MLflow: ``recall@5`` → ``recall_at_5`` (MLflow rechaza la «@»)."""
@@ -70,6 +73,10 @@ class BitacoraNula:
     def existe(self, experimento: str, etiqueta: str, valor: str) -> bool:
         """Nunca hay corridas."""
         return False
+
+    def corridas(self, experimento: str) -> list[dict[str, object]]:
+        """Sin bitácora no hay corridas que mostrar."""
+        return []
 
 
 class BitacoraMlflow:
@@ -116,6 +123,30 @@ class BitacoraMlflow:
             return False
         filtro = f"tags.{etiqueta} = '{valor.replace(chr(39), '')}'"
         return not self.mlflow.search_runs([exp.experiment_id], filter_string=filtro, max_results=1).empty
+
+    def corridas(self, experimento: str) -> list[dict[str, object]]:
+        """Corridas de un experimento, de la más reciente a la más antigua.
+
+        Cada una trae ``nombre``, ``fecha``, ``commit``, ``parametros`` y ``metricas``.
+        """
+        self.mlflow.set_tracking_uri(self.uri)
+        exp = self.mlflow.get_experiment_by_name(experimento)
+        if exp is None:
+            return []
+        resultado = []
+        for run in self.mlflow.search_runs(
+            [exp.experiment_id], output_format="list", order_by=["start_time DESC"]
+        ):
+            resultado.append(
+                {
+                    "nombre": run.data.tags.get("mlflow.runName", run.info.run_id[:8]),
+                    "fecha": run.info.start_time,
+                    "commit": run.data.tags.get("commit", ""),
+                    "parametros": dict(run.data.params),
+                    "metricas": dict(run.data.metrics),
+                }
+            )
+        return resultado
 
 
 def disponible() -> bool:

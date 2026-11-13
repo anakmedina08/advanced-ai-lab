@@ -137,3 +137,23 @@ def importar_evaluaciones(directorio: Path = EVAL_RESULTS.parent) -> list[tuple[
         )
         estados.append((archivo.name, "importado" if run else "sin bitácora"))
     return estados
+
+
+EXPERIMENTOS: dict[str, str] = {
+    EXPERIMENTO_QA: "Asistente (prompts y modos de contexto)",
+    EXPERIMENTO_RECUPERACION: "Recuperación (hit@k)",
+    EXPERIMENTO_RECOMENDADOR: "Recomendador (Gestión)",
+}
+
+
+def resumen() -> dict[str, list[dict[str, object]]]:
+    """Corridas de cada experimento para mostrarlas en el panel (vacío si no hay bitácora)."""
+    b = bitacora()
+    return {nombre: b.corridas(nombre) for nombre in EXPERIMENTOS}
+
+
+def activa() -> bool:
+    """Indica si hay una bitácora real (MLflow instalado y activo)."""
+    from sb_asistente.model.experimentos import BitacoraNula
+
+    return not isinstance(bitacora(), BitacoraNula)

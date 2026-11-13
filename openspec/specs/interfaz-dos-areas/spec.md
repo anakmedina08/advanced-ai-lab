@@ -37,6 +37,13 @@ audiencias; el jurado sigue viendo lo técnico en su propia área.
   oficial de la compañía» DEBE verse siempre.
 - El límite de carga DEBE coincidir con el de la foto (8 MB).
 
+### R32 · Sustentación y experimentos
+- La sección «Sustentación» DEBE mostrar los requisitos de `docs/requisitos.md` por curso, con su
+  estado y evidencia, y cifras calculadas del repositorio (pruebas, specs, ADR, tareas, corridas).
+- «Panel del equipo › Experimentos» DEBE comparar las corridas de MLflow por experimento y, sin
+  MLflow, explicar cómo activarlo.
+- **Escenario:** dado el filtro «pendiente», entonces solo se ven los requisitos pendientes del curso.
+
 ### R28 · Configuración persistente entre páginas
 - Un ajuste hecho en «Configuración» (p. ej., versión del prompt v4) DEBE aplicarse en el chat
   aunque se cambie de página.
