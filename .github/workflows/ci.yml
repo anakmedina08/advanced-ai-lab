@@ -4,7 +4,8 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    # feature/** cubre las PR apiladas (una historia que depende de otra aún sin fusionar)
+    branches: [main, develop, "feature/**"]
 
 jobs:
   quality:
