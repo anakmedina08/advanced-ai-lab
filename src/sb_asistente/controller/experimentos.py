@@ -22,6 +22,7 @@ from sb_asistente.config import (
     EXPERIMENTO_QA,
     EXPERIMENTO_RECOMENDADOR,
     EXPERIMENTO_RECUPERACION,
+    EXPERIMENTO_VISION,
     OLLAMA_MODEL,
 )
 from sb_asistente.model import evaluation
@@ -143,8 +144,9 @@ def importar_evaluaciones(directorio: Path = EVAL_RESULTS.parent) -> list[tuple[
 
 EXPERIMENTOS: dict[str, str] = {
     EXPERIMENTO_QA: "Asistente (prompts y modos de contexto)",
-    EXPERIMENTO_RECUPERACION: "Recuperación (hit@k)",
+    EXPERIMENTO_RECUPERACION: "Recuperación (hit@k, recall@10, nDCG@10)",
     EXPERIMENTO_RECOMENDADOR: "Recomendador (Gestión)",
+    EXPERIMENTO_VISION: "YOLO de la API (calidad y latencia)",
 }
 
 

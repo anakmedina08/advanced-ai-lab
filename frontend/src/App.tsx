@@ -8,9 +8,13 @@ import BarraLateral from "./components/BarraLateral";
 import Icono from "./components/Icono";
 import { paginaDe } from "./navegacion";
 import Configuracion from "./pages/Configuracion";
+import Evaluacion from "./pages/Evaluacion";
+import Experimentos from "./pages/Experimentos";
 import Foto from "./pages/Foto";
+import Guias from "./pages/Guias";
 import Inicio from "./pages/Inicio";
 import Pendiente from "./pages/Pendiente";
+import Pipeline from "./pages/Pipeline";
 
 /** Layout de la versión Streamlit: barra lateral oscura con tres áreas y el contenido a la derecha. */
 export default function App() {
@@ -50,10 +54,10 @@ export default function App() {
             <Route path="/foto" element={<Foto />} />
             <Route path="/configuracion" element={configuracion} />
             <Route path="/estado" element={configuracion} />
-            <Route path="/guias" element={<Pendiente />} />
-            <Route path="/pipeline" element={<Pendiente />} />
-            <Route path="/evaluacion" element={<Pendiente />} />
-            <Route path="/experimentos" element={<Pendiente />} />
+            <Route path="/guias" element={<Guias proveedor={proveedor} />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/evaluacion" element={<Evaluacion />} />
+            <Route path="/experimentos" element={<Experimentos />} />
             <Route path="/sustentacion" element={<Pendiente />} />
             <Route path="*" element={<p>Página no encontrada.</p>} />
           </Routes>

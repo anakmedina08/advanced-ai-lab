@@ -20,8 +20,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from sb_asistente.config import BASE_URL, CHUNKS_JSONL, FRONTEND_ORIGINS, LLM_PROVIDER, RECO_DIR, RECO_K
+from sb_asistente.config import (
+    BASE_URL,
+    CHUNKS_JSONL,
+    FRONTEND_ORIGINS,
+    LLM_PROVIDER,
+    MLFLOW_PUERTO,
+    RECO_DIR,
+    RECO_K,
+)
+from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
+from sb_asistente.controller import experimentos as experimentos_ctrl
 from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
@@ -47,9 +57,13 @@ from sb_asistente.view.schemas import (
     ChatOut,
     CheckpointOut,
     ConversacionOut,
+    CorpusOut,
+    CorridaOut,
     DeteccionOut,
     EscenaOut,
     EtapaOut,
+    EvaluacionOut,
+    ExperimentosOut,
     FotoOut,
     HealthOut,
     PerfilOut,
@@ -142,6 +156,61 @@ def salud() -> SaludOut:
 def etapas_pipeline() -> list[dict[str, object]]:
     """Métricas de cada etapa del scraping Medallion (sin volver a la web)."""
     return pipeline.stage_report()
+
+
+@app.get("/pipeline/corpus", response_model=list[CorpusOut], tags=["conocimiento"])
+def corpus() -> list[dict[str, object]]:
+    """Documentos del corpus Gold con sus metadatos (URL, sección, fecha, hash y tokens)."""
+    return pipeline.corpus_table()
+
+
+@app.get("/temas", response_model=list[str], tags=["conocimiento"])
+def temas() -> list[str]:
+    """Temas disponibles para las guías (resumen y preguntas frecuentes)."""
+    return list(assistant_ctrl.TOPICS)
+
+
+@app.get("/evaluacion", response_model=list[EvaluacionOut], tags=["evaluacion"])
+def evaluacion() -> list[dict[str, object]]:
+    """Corridas guardadas de ``sb eval``: palabras clave, cita de fuente, rechazo correcto y latencia."""
+    return assistant_ctrl.evaluation_summary()
+
+
+@app.get("/evaluacion/{modelo}/{version}", response_model=list[dict[str, object]], tags=["evaluacion"])
+def evaluacion_detalle(
+    modelo: Annotated[str, Path(pattern=r"^[a-z0-9-]+$")],
+    version: Annotated[str, Path(pattern=r"^(v\d+|agente)$")],
+) -> list[dict[str, object]]:
+    """Detalle por pregunta de una corrida."""
+    try:
+        return assistant_ctrl.evaluation_detail(modelo, version)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"No hay resultados para {modelo} {version}") from exc
+
+
+@app.get("/experimentos", response_model=ExperimentosOut, tags=["evaluacion"])
+def experimentos_mlflow() -> ExperimentosOut:
+    """Corridas de MLflow por experimento (asistente, recuperación, recomendador y YOLO)."""
+    activa = experimentos_ctrl.activa()
+    datos = experimentos_ctrl.resumen() if activa else {}
+    return ExperimentosOut(
+        activa=activa,
+        url_ui=f"http://127.0.0.1:{MLFLOW_PUERTO}",
+        nombres=experimentos_ctrl.EXPERIMENTOS,
+        experimentos={
+            nombre: [
+                CorridaOut(
+                    nombre=str(c["nombre"]),
+                    fecha=int(c["fecha"] or 0),
+                    commit=str(c["commit"] or ""),
+                    parametros={k: str(v) for k, v in dict(c["parametros"]).items()},
+                    metricas={k: float(v) for k, v in dict(c["metricas"]).items()},
+                )
+                for c in corridas
+            ]
+            for nombre, corridas in datos.items()
+        },
+    )
 
 
 @app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"])
