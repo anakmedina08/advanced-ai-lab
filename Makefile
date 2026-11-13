@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 .PHONY: help api frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
-	data process index app eval docker-build docker-run
+	data process index app eval docker-build docker-run docker-up
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -124,8 +124,11 @@ agentes: ## Muestra los últimos eventos de agentes registrados por los hooks
 docker-build: ## Construye la imagen Docker multi-stage (CPU)
 	docker build -t sb-asistente .
 
-docker-run: ## Corre la imagen montando data/ (Ollama del host vía host.docker.internal)
-	docker run --rm -p 8501:8501 -v "$$(pwd)/data:/app/data" --env-file .env \
+docker-up: ## Levanta API (:8000), frontend (:5173) y MLflow (:5050) con Docker Compose
+	docker compose up --build
+
+docker-run: ## Corre solo la API en Docker montando data/ (Ollama del host vía host.docker.internal)
+	docker run --rm -p 8000:8000 -v "$$(pwd)/data:/app/data" --env-file .env \
 		-e OLLAMA_HOST=http://host.docker.internal:11434 sb-asistente
 
 build: ## Construye el paquete (sdist + wheel)
