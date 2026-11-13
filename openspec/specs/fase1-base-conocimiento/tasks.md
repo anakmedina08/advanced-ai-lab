@@ -18,7 +18,7 @@
 - [x] T-12 [infra] Docker multi-stage CPU y Makefile (Daniel)
 - [x] T-13 [documentation] CONSTITUTION, spec/plan/tasks, ADR en Engram (Katherine)
 - [x] T-16 [ml] Fase 2: embeddings y base vectorial sobre chunks.jsonl (Daniel y Katherine)
+- [x] T-14 [ml] Evaluar v1 vs v2 vs v3 vs v4 con Claude y completar el informe (Daniel y Katherine)
 
 ## Pendiente
-- [ ] T-14 [ml] Evaluar v1 vs v3 vs v4 con Claude y completar el informe (Daniel)
 - [ ] T-15 [infra] Proteger main en GitHub (PR + CI en verde) (Katherine)

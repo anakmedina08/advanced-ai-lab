@@ -17,6 +17,7 @@
 - [x] T-38 [ml] Modos rag (Ollama + Qdrant) y agente (Deep Agents) en sb ask, y Claude sin temperature (Katherine)
 - [x] T-40 [ml] Foto → ¿qué hago?: YOLO difumina personas, Claude entiende la situación, RAG y recomendador (Katherine)
 - [x] T-41 [ui] Interfaz en dos áreas (cliente / equipo), chat con fuentes y tema corporativo neutro (Katherine)
+- [x] T-39 [ml] Evaluar los modos reducido, rag y agente frente a la Fase 1 con Claude (Katherine)
 
 ## Pendiente
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)
@@ -29,4 +30,4 @@
 - [ ] T-29 [documentation] Registrar ADR-009 a ADR-014 en Engram (Katherine)
 - [ ] T-34 [ml] Indexar con nomic-embed-text, medir hit@k del híbrido y subir el dataset a LangSmith (Katherine)
 - [ ] T-33 [infra] Publicar la API en cPanel (Setup Python App + passenger_wsgi.py) y ASSISTANT_API_URL (Daniel)
-- [ ] T-39 [ml] Evaluar los modos rag (Qdrant) y agente (Deep Agents) frente a Chroma y la Fase 1 (Daniel y Katherine)
+- [ ] T-65 [ml] Comparar los modos rag y agente con el RAG híbrido de Chroma (hit@k con nomic-embed-text) (Daniel)

@@ -334,8 +334,17 @@ Docker en cada Pull Request.
   [`spec.md`](openspec/specs/fase1-base-conocimiento/spec.md) (qué y cómo se verifica),
   [`plan.md`](openspec/specs/fase1-base-conocimiento/plan.md) (cómo se construye) y
   [`tasks.md`](openspec/specs/fase1-base-conocimiento/tasks.md) (trabajo hecho y pendiente).
-- **Tablero Kanban público:** [GitHub Projects del repositorio](https://github.com/anakmedina08/advanced-ai-lab/projects),
-  generado desde los `tasks.md` de ambas fases con `uv run python scripts/crear_kanban.py --repo anakmedina08/advanced-ai-lab --project N`.
+- **Specs por funcionalidad** (cada una con `spec.md`, `plan.md` y `tasks.md`; requisitos R16–R28 con
+  escenarios y las pruebas que los verifican):
+  - [`rag-qdrant-agente/`](openspec/specs/rag-qdrant-agente/): modos «rag» (Qdrant) y «agente» (Deep
+    Agents), Claude sin `temperature` (ADR-018 y ADR-019).
+  - [`vision-foto/`](openspec/specs/vision-foto/): foto → «¿qué hago?» con YOLO local, Claude con
+    visión y FastAPI (ADR-020).
+  - [`interfaz-dos-areas/`](openspec/specs/interfaz-dos-areas/): interfaz para el cliente y para el
+    equipo, chat y tema corporativo neutro (ADR-021).
+- **Tablero Kanban:** GitHub Projects, generado desde todos los `tasks.md` con
+  `uv run python scripts/crear_kanban.py --repo anakmedina08/advanced-ai-lab --project N`.
+- **Pruebas:** 470 pruebas sin red ni API (`uv run pytest --collect-only -q`), 93 % de cobertura.
 
 ## Agentes de IA
 

@@ -18,7 +18,7 @@ Maestría en Inteligencia Artificial y Ciencia de Datos, Universidad Autónoma d
 \maketitle
 
 \begin{abstract}
-This paper presents the knowledge core of a virtual assistant for Seguros Bolívar, a Colombian insurance company. Public web content was collected with an ethical, reproducible scraping pipeline (robots.txt, sitemap, polite delays) organized in a Medallion architecture (Bronze, Silver, Gold). The cleaned corpus is consolidated in the system prompt of a large language model orchestrated with LangChain to solve three tasks: question answering, summarization and FAQ generation. Prompt engineering techniques (XML delimitation, strict grounding, source citation, refusal policy) were compared across three prompt versions on a 24-question test set. % TODO: completar con resultados
+This paper presents the knowledge core of a virtual assistant for Seguros Bolívar, a Colombian insurance company. Public web content was collected with an ethical, reproducible scraping pipeline (robots.txt, sitemap, polite delays) organized in a Medallion architecture (Bronze, Silver, Gold). The cleaned corpus is consolidated in the system prompt of a large language model orchestrated with LangChain to solve three tasks: question answering, summarization and FAQ generation. Prompt engineering techniques (XML delimitation, strict grounding, source citation, refusal policy) were compared across four prompt versions on a 25-question test set. With Claude Haiku, the structured prompt (v3) raised source citation from 20\% (v1) to 100\% and correct refusals from 84\% to 96\%, while keyword accuracy stayed between 0.98 and 1.00. Context strategies were also compared: keyword retrieval matched the full context, whereas dense retrieval with four chunks lost recall on broad product questions (keyword accuracy 0.66), which supports hybrid retrieval.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -67,34 +67,54 @@ Por sección temática, el corpus se distribuye así: seguros para clientes Davi
 
 \section{Modelado}
 \subsection{Modelo y framework}
-Se usa LangChain con un modelo propietario, Claude (Anthropic) vía API, y uno abierto ejecutado localmente con Ollama, Ollama a temperatura 0 y Claude con esfuerzo de razonamiento bajo, porque la API de los modelos actuales de Claude rechaza el parámetro 	exttt{temperature}. El proveedor se elige por configuración sin alterar la lógica, lo que permite comparar modelo cerrado frente a abierto con el mismo prompt y las mismas preguntas. Como modelo abierto se usó Llama~3.2 de 3 mil millones de parámetros. Ollama recorta en silencio lo que excede su ventana por defecto, por lo que se amplió \texttt{num\_ctx} a 65.536 tokens. Aun así, en un portátil sin GPU dedicada una sola pregunta con el contexto completo tardó 2.028~s y la respuesta fue incompleta (``322'' en lugar de ``322 332 2322'') y sin fuente, lo que hace inviable el enfoque de contexto completo con modelos pequeños en hardware de oficina y motiva el RAG del Módulo 2.
+Se usa LangChain con un modelo propietario, Claude (Anthropic) vía API, y uno abierto ejecutado localmente con Ollama, Ollama a temperatura 0 y Claude con esfuerzo de razonamiento bajo, porque la API de los modelos actuales de Claude rechaza el parámetro \texttt{temperature}. El proveedor se elige por configuración sin alterar la lógica, lo que permite comparar modelo cerrado frente a abierto con el mismo prompt y las mismas preguntas. Como modelo abierto se usó Llama~3.2 de 3 mil millones de parámetros. Ollama recorta en silencio lo que excede su ventana por defecto, por lo que se amplió \texttt{num\_ctx} a 65.536 tokens. Aun así, en un portátil sin GPU dedicada una sola pregunta con el contexto completo tardó 2.028~s y la respuesta fue incompleta (``322'' en lugar de ``322 332 2322'') y sin fuente, lo que hace inviable el enfoque de contexto completo con modelos pequeños en hardware de oficina y motiva el RAG del Módulo 2.
 
 \subsection{Diseño del prompt}
 Siguiendo la estructura Persona--Instrucción--Contexto--Datos de entrada--Formato--Tono, el prompt v3 (\textit{zero-shot}) combina: (i) rol y registro (``usted''), (ii) reglas al inicio y recordatorio al final para mitigar el efecto \textit{lost in the middle} \cite{liu2024lost}, (iii) delimitación con etiquetas XML que tratan conocimiento y pregunta como datos (defensa contra \textit{prompt injection}), (iv) respuesta fija de no-información y (v) citación obligatoria de la fuente. Se comparó con v1 (sin reglas) y v2 (instrucción de \textit{grounding} simple), y con v4 (\textit{few-shot}), que agrega tres ejemplos: una respuesta con canales, una negativa por falta de información y un intento de inyección. Los ejemplos solo usan datos del pie de página del sitio para no introducir hechos ajenos a la base.
 
 \subsection{Propuesta para el Módulo 2}
-Modelo de \textit{embeddings} multilingüe, base vectorial (Chroma o Qdrant) sobre \texttt{chunks.jsonl} y búsqueda híbrida (densa + léxica). % TODO: confirmar elección
+Se implementaron dos variantes sobre \texttt{chunks.jsonl}: Chroma con búsqueda híbrida (BM25 + vectores, combinadas con RRF) y Qdrant con \textit{embeddings} locales de Ollama, este último también como herramienta de un agente con un subagente que analiza cada fragmento. Ambas conviven para compararlas.
 
 \section{Resultados}
-% TODO: completar con evaluacion/resultados_*.csv
+Se evaluó con Claude Haiku sobre un banco de 25 preguntas (productos, canales, preguntas fuera de alcance y un intento de inyección). Las métricas son automáticas: proporción de palabras clave esperadas en la respuesta, proporción de respuestas que citan una URL del sitio y proporción de rechazos correctos (negarse solo cuando la pregunta está fuera de alcance).
+
 \begin{table}[H]
 \centering
-\caption{Comparación de versiones del prompt (24 preguntas)}
+\caption{Comparación de versiones del prompt con la base completa (25 preguntas)}
+\label{tab:prompts}
 \begin{tabular}{lcccc}
 \hline
 Métrica & v1 & v2 & v3 & v4 \\ \hline
-Palabras clave & -- & -- & -- & -- \\
-Cita la fuente & -- & -- & -- & -- \\
-Rechazo correcto & -- & -- & -- & -- \\
-Latencia (s) & -- & -- & -- & -- \\ \hline
+Palabras clave & 1,00 & 0,98 & 0,98 & 0,98 \\
+Cita la fuente & 0,20 & 0,16 & 1,00 & 1,00 \\
+Rechazo correcto & 0,84 & 0,84 & 0,96 & 0,96 \\
+Latencia (s) & 2,45 & 2,27 & 1,63 & 1,50 \\ \hline
 \end{tabular}
 \end{table}
+
+La Tabla~\ref{tab:prompts} muestra que el contenido de las respuestas es similar en las cuatro versiones, pero solo las versiones estructuradas (v3 y v4) citan siempre la fuente y rechazan correctamente casi todas las preguntas fuera de alcance. Los ejemplos \textit{few-shot} de v4 no mejoraron las métricas frente a v3, por lo que v3 se mantiene como versión por defecto.
+
+\begin{table}[H]
+\centering
+\caption{Estrategias de contexto con el prompt v3 (25 preguntas)}
+\label{tab:modos}
+\begin{tabular}{lcccc}
+\hline
+Métrica & Completo & Palabras & RAG & Agente \\ \hline
+Palabras clave & 0,98 & 0,98 & 0,66 & 0,71 \\
+Cita la fuente & 1,00 & 1,00 & 1,00 & 1,00 \\
+Rechazo correcto & 0,96 & 0,96 & 0,88 & 0,88 \\
+Latencia (s) & 1,63 & 1,44 & 1,35 & 10,81 \\ \hline
+\end{tabular}
+\end{table}
+
+En la Tabla~\ref{tab:modos}, la recuperación por palabras igualó a la base completa enviando solo unos 2.500 \textit{tokens} de contexto. La recuperación densa con cuatro fragmentos (Qdrant, \textit{embeddings} de Ollama) perdió exhaustividad en preguntas amplias de producto (seguro de vida, todo riesgo, carros eléctricos, seguros para clientes Davivienda): las muchas páginas casi idénticas de Davivienda desplazan a la página correcta entre los cuatro fragmentos más parecidos. El agente recuperó parte de esa pérdida con búsquedas adicionales, a cambio de una latencia siete veces mayor. Estos resultados respaldan la búsqueda híbrida (léxica + densa) del Módulo 2.
 
 \subsection{Limitaciones}
 Solo la primera pestaña de coberturas se renderiza en el HTML; el detalle completo está en clausulados PDF (Fase 2). El contexto completo aumenta la latencia y el costo frente a RAG. La información puede cambiar después de la fecha de captura. Un ejemplo real: el sitio informa que la compañía dejó de vender SOAT el 3 de octubre de 2025, algo que un modelo sin \textit{grounding} contestaría mal desde su conocimiento previo; por eso se incluyó como pregunta trampa (P01). Además, los datos de contacto del Defensor del Consumidor Financiero (teléfonos y correos) están en enlaces o íconos que la extracción no conserva, por lo que esa respuesta queda incompleta.
 
 \section{Conclusiones}
-% TODO
+El diseño del \textit{prompt} pesa más que el modelo en la confiabilidad: con el mismo modelo y el mismo conocimiento, las reglas explícitas, la delimitación XML y la citación obligatoria llevaron la citación de la fuente del 20\,\% al 100\,\% y los rechazos correctos del 84\,\% al 96\,\%. Con un corpus de unos 36 mil \textit{tokens}, enviar todo el conocimiento al modelo es viable con un modelo en la nube, pero no con un modelo pequeño en CPU. La recuperación por palabras ofrece la misma calidad con una fracción del contexto, mientras que la recuperación densa pura requiere más fragmentos o una combinación híbrida para no perder páginas relevantes en un corpus con contenidos muy parecidos.
 
 \section*{Consideraciones éticas}
 Solo se usó información pública, respetando \texttt{robots.txt}, sin contenido tras autenticación ni datos personales \cite{ley1581}.
