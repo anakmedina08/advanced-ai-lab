@@ -3,7 +3,7 @@
 Orden de ejecución; cada tarea se marca al cerrar. Terminado = spec + código + pruebas +
 documentación + PR aprobada + demo local.
 
-- [ ] T037.1 Spec, plan y tareas (Katherine)
-- [ ] T037.2 Redacción (Katherine)
-- [ ] T037.3 Cifras de MLflow (Katherine)
-- [ ] T037.4 Enlace desde el README (Katherine)
+- [x] T037.1 Spec, plan y tareas (Katherine)
+- [x] T037.2 Redacción (Katherine)
+- [x] T037.3 Cifras de MLflow (Katherine)
+- [x] T037.4 Enlace desde el README (Katherine)
