@@ -118,7 +118,13 @@ def health() -> HealthOut:
     detector = vision.detector_por_defecto() if find_spec("ultralytics") is not None else None
     estado = estado_servicio.componentes(yolo_cargado=detector.cargado if detector is not None else None)
     r = estado_servicio.reporte(app.version, estado)
-    return HealthOut(status=r.status, version=r.version, llm=r.llm, componentes=r.componentes)
+    return HealthOut(
+        status=r.status,
+        version=r.version,
+        llm=r.llm,
+        componentes=r.componentes,
+        modelo_yolo_sha256=estado_servicio.huella_yolo(),
+    )
 
 
 @app.get("/salud", response_model=SaludOut, tags=["servicio"])

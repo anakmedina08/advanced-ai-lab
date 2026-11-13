@@ -5,10 +5,12 @@ así responde en milisegundos y sirve como *readiness probe* en Docker.
 """
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from importlib.util import find_spec
 from pathlib import Path
 
 from sb_asistente.config import CHUNKS_JSONL, LLM_PROVIDER, MEMORY_DB, QDRANT_DIR, RECO_DIR, YOLO_MODEL_PATH
+from sb_asistente.model.vision.evaluacion import sha256_archivo
 
 OBLIGATORIOS = ("corpus", "recomendador")
 """Sin estos componentes el asistente no responde; los demás degradan funciones opcionales."""
@@ -41,6 +43,16 @@ def componentes(
         "vision_instalada": find_spec("ultralytics") is not None,
         "modelo_yolo": bool(yolo_cargado) if yolo_cargado is not None else yolo.is_file(),
     }
+
+
+@lru_cache(maxsize=4)
+def _huella(ruta: str, modificado: float) -> str:  # noqa: ARG001 - la fecha invalida la caché
+    return sha256_archivo(Path(ruta))[:16]
+
+
+def huella_yolo(yolo: Path = YOLO_MODEL_PATH) -> str | None:
+    """sha256 corto de los pesos de YOLO (el mismo tag de la versión en el Model Registry)."""
+    return _huella(str(yolo), yolo.stat().st_mtime) if yolo.is_file() else None
 
 
 def reporte(version: str, estado: dict[str, bool], llm: str = LLM_PROVIDER) -> Salud:
