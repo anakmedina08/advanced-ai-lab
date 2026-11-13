@@ -82,6 +82,11 @@ pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de 
 |---|---|
 | ![Sustentación](docs/capturas/sustentacion.png) | ![Experimentos](docs/capturas/experimentos.png) |
 
+## Arquitectura
+
+- Diagrama interactivo de runtime: [`docs/arquitectura.html`](docs/arquitectura.html) (fuente [`docs/arquitectura.json`](docs/arquitectura.json), formato Archify).
+- Grafo del agente, checkpointer vs. Store, streaming y trazas: [`docs/arquitectura.md`](docs/arquitectura.md#módulo-2--agente-conversacional-spec-007-a-spec-036).
+
 ## Arquitectura MVC
 
 ```mermaid
