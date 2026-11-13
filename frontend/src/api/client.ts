@@ -12,6 +12,7 @@ import type {
   CheckpointOut,
   ConversacionOut,
   CorpusOut,
+  DescubrimientoOut,
   ErrorOut,
   EtapaOut,
   EvaluacionOut,
@@ -20,8 +21,10 @@ import type {
   FotoOut,
   HealthOut,
   PerfilOut,
+  ProcesoOut,
   ProyectoOut,
   RespuestaOut,
+  SistemaOut,
 } from "./types";
 
 export const API_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://127.0.0.1:8000";
@@ -128,10 +131,11 @@ export const borrarPerfil = async (usuario: string) => {
 export const salud = () => obtener<HealthOut>("/health", 0);
 
 /** Foto → «¿qué hago?»: multipart con la imagen; la API difumina personas antes de usarla. */
-export async function analizarFoto(archivo: File, señal?: AbortSignal): Promise<FotoOut> {
+export async function analizarFoto(archivo: File, señal?: AbortSignal, proveedor?: string): Promise<FotoOut> {
   const datos = new FormData();
   datos.append("archivo", archivo);
-  const query = "interpretar=true&responder=true&devolver_imagen=true";
+  const extra = proveedor ? `&proveedor=${encodeURIComponent(proveedor)}` : "";
+  const query = `interpretar=true&responder=true&devolver_imagen=true${extra}`;
   const respuesta = await pedir(`/fotos?${query}`, { method: "POST", body: datos }, { timeoutMs: 120_000, señal });
   return (await respuesta.json()) as FotoOut;
 }
@@ -156,3 +160,16 @@ export async function guia(tipo: "resumen" | "faq", tema: string, n: number, pro
 
 /** Entregables por curso (SPEC-045). */
 export const proyecto = () => obtener<ProyectoOut>("/proyecto");
+
+// ---- Paridad con Streamlit (SPEC-046) ----
+export const sistema = () => obtener<SistemaOut>("/sistema");
+export const reprocesar = async () =>
+  (await (await pedir("/pipeline/procesar", { method: "POST" }, { timeoutMs: 300_000 })).json()) as ProcesoOut;
+export const descubrir = async () =>
+  (await (await pedir("/pipeline/descubrir", { method: "POST" }, { timeoutMs: 120_000 })).json()) as DescubrimientoOut;
+
+/** Q&A con un modo de contexto de las fases 1 y 2 (completo, reducido, rag o agente Deep Agents). */
+export async function preguntar(pregunta: string, modo: string, version: string, proveedor?: string): Promise<RespuestaOut> {
+  const respuesta = await pedir("/preguntas", json({ pregunta, modo, version, proveedor }), { timeoutMs: 300_000 });
+  return (await respuesta.json()) as RespuestaOut;
+}

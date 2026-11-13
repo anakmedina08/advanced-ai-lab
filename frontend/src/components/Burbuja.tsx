@@ -11,7 +11,7 @@ interface Props {
 
 /** Una burbuja del chat: texto en Markdown (sin HTML crudo), fuentes, paso actual y errores. */
 export default function Burbuja({ mensaje, transmitiendo, onReintentar, children }: Props) {
-  const fuentes = mensaje.turno?.salida.fuentes ?? [];
+  const fuentes = mensaje.turno?.salida.fuentes ?? mensaje.fuentes ?? [];
   return (
     <article className={`burbuja ${mensaje.rol}`} aria-busy={transmitiendo}>
       {mensaje.texto && (
@@ -35,6 +35,7 @@ export default function Burbuja({ mensaje, transmitiendo, onReintentar, children
           ))}
         </ul>
       )}
+      {mensaje.nota && <p className="leyenda mini">{mensaje.nota}</p>}
       {mensaje.error && (
         <div className="error" role="alert">
           <p>{mensaje.error.detalle}</p>

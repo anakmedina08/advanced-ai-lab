@@ -188,3 +188,24 @@ export interface ProyectoOut {
   corridas_mlflow: number | null;
   enlaces: Record<string, string>;
 }
+
+export interface SistemaOut {
+  base_lista: boolean;
+  vision_instalada: boolean;
+  clave_anthropic: boolean;
+  paginas: number | null;
+  fragmentos: number | null;
+  tokens_contexto: number | null;
+}
+
+export interface ProcesoOut {
+  documentos: number;
+  chunks: number;
+  duplicadas_descartadas: number;
+}
+
+export interface DescubrimientoOut {
+  total_sitemap: number;
+  seleccionadas: number;
+  descartadas: number;
+}

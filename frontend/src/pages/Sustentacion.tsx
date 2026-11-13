@@ -18,11 +18,40 @@ const PESTANAS: Record<string, [string, string]> = {
 
 const PRUEBAS_MINIMAS = 120;
 
-/** Muestra como código lo que va entre comillas invertidas en `docs/requisitos.md`. */
-function ConCodigo({ texto }: { texto: string }) {
+const DOCS = "https://github.com/anakmedina08/advanced-ai-lab/blob/develop/docs/";
+
+/** Enlaces Markdown `[texto](ruta)` de `docs/requisitos.md` → enlaces al archivo en GitHub. */
+function ConEnlaces({ texto }: { texto: string }) {
+  const partes = texto.split(/(\[[^\]]+\]\([^)]+\))/g);
   return (
     <>
-      {texto.split("`").map((parte, i) => (i % 2 ? <code key={i}>{parte}</code> : <span key={i}>{parte}</span>))}
+      {partes.map((parte, i) => {
+        const enlace = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(parte);
+        if (!enlace) return <span key={i}>{parte}</span>;
+        const [, etiqueta, ruta] = enlace;
+        const url = /^https?:/.test(ruta) ? ruta : new URL(ruta, DOCS).href;
+        return (
+          <a key={i} href={url} target="_blank" rel="noreferrer">
+            {etiqueta.replace(/`/g, "")}
+          </a>
+        );
+      })}
+    </>
+  );
+}
+
+/** Muestra como código lo que va entre comillas invertidas y como enlace los enlaces Markdown. */
+function ConCodigo({ texto }: { texto: string }) {
+  const segmentos = texto.split(/(\[[^\]]+\]\([^)]+\))/g);
+  return (
+    <>
+      {segmentos.map((segmento, j) =>
+        j % 2 ? (
+          <ConEnlaces key={j} texto={segmento} />
+        ) : (
+          segmento.split("`").map((parte, i) => (i % 2 ? <code key={`${j}-${i}`}>{parte}</code> : <span key={`${j}-${i}`}>{parte}</span>))
+        ),
+      )}
     </>
   );
 }

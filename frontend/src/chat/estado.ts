@@ -17,6 +17,9 @@ export interface Mensaje {
   pasoActual?: string;
   toolsUsadas?: string[];
   error?: { detalle: string; requestId: string | null };
+  /** Respuestas de los modos de Q&A (sin agente): fuentes y nota del modo. */
+  fuentes?: string[];
+  nota?: string;
 }
 
 export interface EstadoChat {
@@ -29,6 +32,7 @@ export type Accion =
   | { tipo: "enviar"; texto: string; id: string }
   | { tipo: "evento"; evento: EventoAgente }
   | { tipo: "fallo"; detalle: string; requestId: string | null }
+  | { tipo: "respuesta"; texto: string; fuentes: string[]; nota: string }
   | { tipo: "detener" }
   | { tipo: "cargar"; mensajes: MensajeHistorial[] }
   | { tipo: "reiniciar" };
@@ -114,6 +118,18 @@ export function reducir(estado: EstadoChat, accion: Accion): EstadoChat {
           ...m,
           pasoActual: undefined,
           error: { detalle: accion.detalle, requestId: accion.requestId },
+        })),
+      };
+    case "respuesta":
+      return {
+        ...estado,
+        fase: "listo",
+        mensajes: actualizarUltimo(estado, (m) => ({
+          ...m,
+          texto: accion.texto,
+          fuentes: accion.fuentes,
+          nota: accion.nota,
+          pasoActual: undefined,
         })),
       };
     case "detener":
