@@ -129,6 +129,9 @@ VISION_PROVIDERS: Final[tuple[str, ...]] = ("anthropic",)  # proveedores que ent
 API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
 # Orígenes del frontend desacoplado que pueden llamar a la API (lista blanca, nunca "*")
 _ORIGENES = "http://localhost:5173,http://127.0.0.1:5173,https://yellowdata.com.co"
+# Documento de prueba con una instrucción escondida (demostración del blindaje del RAG, SPEC-014)
+CORPUS_DEMO_DIR: Final[Path] = PROJECT_ROOT / "evaluacion" / "corpus_demo"
+CORPUS_DEMO: Final[bool] = os.getenv("SB_CORPUS_DEMO", "1") == "1"
 FRONTEND_ORIGINS: Final[tuple[str, ...]] = tuple(
     o.strip() for o in os.getenv("FRONTEND_ORIGINS", _ORIGENES).split(",") if o.strip()
 )

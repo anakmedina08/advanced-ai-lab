@@ -20,11 +20,20 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-from sb_asistente.config import CHUNKS_JSONL, LANGSMITH_PROJECT, LLM_PROVIDER, MEMORY_DB, QDRANT_DIR
+from sb_asistente.config import (
+    CHUNKS_JSONL,
+    CORPUS_DEMO,
+    CORPUS_DEMO_DIR,
+    LANGSMITH_PROJECT,
+    LLM_PROVIDER,
+    MEMORY_DB,
+    QDRANT_DIR,
+)
 from sb_asistente.controller import recomendador
 from sb_asistente.model.agente import RespuestaAgente, construir_agente, crear_tools
 from sb_asistente.model.llm.service import build_llm
 from sb_asistente.model.rag import indice
+from sb_asistente.model.rag.blindaje import cargar_corpus_demo
 from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 from sb_asistente.model.rag.qdrant import BuscadorQdrant
@@ -84,10 +93,12 @@ def _qdrant(chunks_path: Path, qdrant_dir: Path) -> BuscadorQdrant:
 
 
 def recuperador_por_defecto(
-    chunks_path: Path = CHUNKS_JSONL, qdrant_dir: Path = QDRANT_DIR
+    chunks_path: Path = CHUNKS_JSONL, qdrant_dir: Path = QDRANT_DIR, incluir_demo: bool = CORPUS_DEMO
 ) -> tuple[RecuperadorHibrido, str]:
     """BM25 + Qdrant (ANN con filtro de payload); si no hay Qdrant, BM25 + Chroma; si no, solo BM25."""
     chunks = fragmentos_rag(chunks_path)
+    if incluir_demo:
+        chunks = chunks + cargar_corpus_demo(CORPUS_DEMO_DIR)
     try:
         return RecuperadorHibrido(chunks, _qdrant(chunks_path, qdrant_dir)), "híbrido (BM25 + Qdrant)"
     except Exception:  # noqa: BLE001 - sin Ollama o sin índice: se prueba el siguiente
