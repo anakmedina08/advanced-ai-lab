@@ -158,3 +158,137 @@ button:disabled {
     padding: 10px 12px;
   }
 }
+
+/* ---- Chat (SPEC-024) ---- */
+.oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: calc(100vh - 170px);
+}
+
+.mensajes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vacio {
+  margin: auto;
+  text-align: center;
+  max-width: 640px;
+}
+
+.sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.sugerencias button {
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.burbuja {
+  max-width: min(760px, 92%);
+  padding: 10px 14px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  overflow-wrap: anywhere;
+}
+
+.burbuja.usuario {
+  align-self: flex-end;
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--primario-texto);
+}
+
+.burbuja.asistente {
+  align-self: flex-start;
+}
+
+.burbuja .texto p {
+  margin: 0.3em 0;
+}
+
+.burbuja .crudo {
+  white-space: pre-wrap;
+}
+
+.paso {
+  margin: 4px 0;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.punto {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--acento);
+  animation: latido 1s infinite ease-in-out;
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.fuentes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.error {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.error p {
+  margin: 0 0 4px;
+}
+
+.entrada {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.entrada textarea {
+  flex: 1;
+  resize: vertical;
+  font: inherit;
+  border: none;
+  background: transparent;
+  color: var(--texto);
+}
+
+.entrada textarea:focus {
+  outline: none;
+}
