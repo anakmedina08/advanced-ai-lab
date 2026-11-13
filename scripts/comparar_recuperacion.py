@@ -11,7 +11,8 @@ Métodos:
 - **Por palabras**: la búsqueda del modo «reducido» (ADR-006).
 
 hit@k (``model/rag/evaluacion.hit_at_k``): una pregunta acierta si los k fragmentos traen TODAS sus
-palabras clave. Las preguntas fuera de alcance no cuentan.
+palabras clave. recall@10 y nDCG@10 (``evaluar_ranking``) usan el mismo etiquetado: un fragmento es
+relevante si trae todas las palabras clave. Las preguntas fuera de alcance no cuentan.
 """
 
 import argparse
@@ -24,7 +25,8 @@ from sb_asistente.controller import assistant, experimentos
 from sb_asistente.controller.agente import recuperador_por_defecto
 from sb_asistente.model.evaluation import load_questions
 from sb_asistente.model.llm import keyword_search, knowledge
-from sb_asistente.model.rag.evaluacion import ResultadoHit, hit_at_k
+from sb_asistente.model.rag import indice
+from sb_asistente.model.rag.evaluacion import ResultadoHit, evaluar_ranking, hit_at_k
 from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import Fragmento, RecuperadorHibrido
 
@@ -77,27 +79,40 @@ def main() -> None:
     parser.add_argument("-k", type=int, nargs="+", default=[4, 6, 10])
     args = parser.parse_args()
     preguntas = load_questions(EVAL_QUESTIONS)
-    hibrido, modo = recuperador_por_defecto()
+    hibrido, modo = recuperador_por_defecto(incluir_demo=False)
+    corpus = fragmentos_rag()
     metodos = {
-        "BM25 (léxico)": RecuperadorHibrido(fragmentos_rag()),
-        f"Híbrido Chroma ({modo})": hibrido,
+        "BM25 (léxico)": RecuperadorHibrido(corpus),
+        f"Agente: {modo}": hibrido,
         "Qdrant denso (modo rag)": RecuperadorQdrant(),
         "Por palabras (modo reducido)": RecuperadorPalabras(),
     }
+    try:
+        metodos["Híbrido BM25 + Chroma"] = RecuperadorHibrido(corpus, indice.abrir())
+    except indice.IndiceError:
+        print("(sin índice Chroma: uv run sb rag indexar)")
     resultados: dict[str, list[ResultadoHit]] = {
         nombre: [hit_at_k(r, preguntas, k) for k in args.k] for nombre, r in metodos.items()
     }
+    rankings = {nombre: evaluar_ranking(r, preguntas, corpus, k=10) for nombre, r in metodos.items()}
     total = next(iter(resultados.values()))[0].total
     print(f"Preguntas en alcance: {total}\n")
-    print("| Método | " + " | ".join(f"hit@{k}" for k in args.k) + " |")
-    print("|---|" + "---|" * len(args.k))
+    print("| Método | " + " | ".join(f"hit@{k}" for k in args.k) + " | recall@10 | nDCG@10 |")
+    print("|---|" + "---|" * (len(args.k) + 2))
     for nombre, filas in resultados.items():
-        print(f"| {nombre} | " + " | ".join(f"{r.tasa:.0%} ({r.aciertos}/{r.total})" for r in filas) + " |")
+        celdas = " | ".join(f"{r.tasa:.0%} ({r.aciertos}/{r.total})" for r in filas)
+        print(f"| {nombre} | {celdas} | {rankings[nombre].recall:.3f} | {rankings[nombre].ndcg:.3f} |")
     print()
     for nombre, filas in resultados.items():
         print(f"- {nombre} · falla en hit@{filas[-1].k}: {', '.join(filas[-1].fallos) or 'ninguna'}")
     runs = [
-        experimentos.registrar_recuperacion(n, {r.k: r.tasa for r in f}, total) for n, f in resultados.items()
+        experimentos.registrar_recuperacion(
+            n,
+            {r.k: r.tasa for r in f},
+            total,
+            {"recall@10": rankings[n].recall, "ndcg@10": rankings[n].ndcg},
+        )
+        for n, f in resultados.items()
     ]
     if any(runs):
         print(f"\nRegistrado en MLflow: {len(runs)} corridas (experimento «recuperacion»)")
