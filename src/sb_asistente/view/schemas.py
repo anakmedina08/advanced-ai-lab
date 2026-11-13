@@ -128,6 +128,15 @@ class SaludOut(BaseModel):
     recomendador_listo: bool
 
 
+class ErrorOut(BaseModel):
+    """Esquema único de los errores de la API."""
+
+    error: str = Field(description="Código corto: validacion, no_encontrado, interno, no_disponible…")
+    detalle: str | list[dict[str, str]] | dict | None = None
+    ruta: str
+    request_id: str
+
+
 class HealthOut(BaseModel):
     """Estado del servicio y de cada dependencia (``GET /health``)."""
 
