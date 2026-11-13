@@ -5,6 +5,9 @@
 ![LangChain](https://img.shields.io/badge/LLM-LangChain-1c3c3c) ![Ruff](https://img.shields.io/badge/lint-ruff-orange)
 ![pytest](https://img.shields.io/badge/tests-pytest-green) ![Docker](https://img.shields.io/badge/docker-multi--stage%20CPU-2496ED)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/frontend-React%2018%20%2B%20Vite-61DAFB) ![FastAPI](https://img.shields.io/badge/API-FastAPI%20%2B%20SSE-009688)
+![LangGraph](https://img.shields.io/badge/agente-LangGraph-1c3c3c) ![Qdrant](https://img.shields.io/badge/RAG-Qdrant-DC244C)
+![MLflow](https://img.shields.io/badge/MLflow-5050-0194E2)
 
 Producto único de dos cursos de la Maestría en IA de la UAO (Daniel Silva y Katherine Medina):
 **Técnicas Avanzadas de IA en Modelos de Lenguaje** aporta el módulo de conocimiento (scraping
@@ -12,6 +15,15 @@ Medallion + Q&A con fuentes sobre la información **pública** de Seguros Bolív
 Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen con una API FastAPI.
 
 > ✅ Qué pide cada curso y dónde está la evidencia: [`docs/requisitos.md`](docs/requisitos.md).
+
+| Recurso | Enlace |
+|---|---|
+| Tablero Kanban (GitHub Projects) | https://github.com/users/anakmedina08/projects/2 |
+| Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
+| Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
+| Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
+| Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
+| Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 
 > 📘 La fuente única de verdad del proyecto es [`CONSTITUTION.md`](CONSTITUTION.md).
 
@@ -50,19 +62,35 @@ preguntas, resume y genera FAQ **citando la URL de origen**.
 
 ## Inicio rápido
 
-```bash
-make dev        # uv sync + hooks de pre-commit
-make data       # descubrir → extraer → limpiar → deduplicar → enriquecer (~4 min)
-make app        # interfaz en http://localhost:8501
-```
-
-Sin `make` (por ejemplo, en Windows):
+El producto son **tres procesos separados**: el frontend no llama a ningún modelo, solo a la API.
 
 ```bash
-uv sync
-uv run python scripts/scrape_empresa.py
-uv run streamlit run app.py
+uv sync --extra vision --extra mlflow     # Python 3.13 con uv (sin pip)
+make dev                                  # + hooks de pre-commit (ruff, GGA, bloqueo de datos)
+make data && make index                   # corpus Gold (~4 min) e índice Qdrant (Ollama + embeddinggemma)
+uv run sb reco generar                    # datos sintéticos (CSV) para la tool de datos
+
+# Terminal 1 · backend del agente (API FastAPI)  →  http://127.0.0.1:8000/docs
+make api                                  # o: uv run sb api
+# Terminal 2 · frontend propio (React + Vite)    →  http://localhost:5173
+make frontend                             # o: cd frontend && npm install && npm run dev
+# Terminal 3 · servidor de tracking MLflow       →  http://127.0.0.1:5050
+make mlflow-server
 ```
+
+En el frontend, el selector **Modelo** elige Claude (por defecto), Ollama o DeepSeek. Los cuatro
+casos de la demo están como sugerencias en el chat.
+
+| Caso | Pregunta | Qué se ve |
+|---|---|---|
+| Memoria | «Me llamo Ana y trabajo en Carvajal» → «¿Dónde trabajo?» → nueva conversación | hilo persistente (SQLite) y perfil recuperado del Store |
+| RAG | «¿Qué cubre el SOAT?» | ruta `rag`, búsqueda híbrida en Qdrant y fuentes citadas |
+| Datos | «¿Cuántas pólizas se vendieron en el tercer trimestre de 2025?» | ruta `datos`, `consultar_datos` con la cifra exacta |
+| Mixto | «¿Qué cubre el seguro de hogar y cuántas pólizas de hogar se vendieron en 2025?» | ruta `mixto`, ambas tools |
+| Blindaje | «¿Qué dice la política de calidad del servicio?» | el documento de prueba con instrucción escondida se ignora |
+
+> Streamlit (`make app`) queda solo como herramienta interna del equipo; **no** es la interfaz del
+> producto desde el Módulo 2.
 
 Para usar Claude, copie `.env.example` a `.env` y escriba su `ANTHROPIC_API_KEY` (o `LLM_PROVIDER=deepseek`
 y `DEEPSEEK_API_KEY`). Para usar el modelo
@@ -70,7 +98,16 @@ local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 
 ## Capturas
 
-La interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
+**Frontend propio (Módulos 2 y 3):** React + Vite, desacoplado de la API.
+- El chat transmite la respuesta por SSE y muestra la decisión del router.
+- La barra lateral guarda los hilos y la memoria del usuario.
+- La página de estado consulta `/health`.
+
+| Chat con el agente | Estado del servicio | Arquitectura |
+|---|---|---|
+| ![Chat](docs/capturas/frontend-chat.png) | ![Estado](docs/capturas/frontend-estado.png) | ![Arquitectura](docs/capturas/arquitectura.png) |
+
+**Herramienta interna del equipo (Streamlit, Fase 1):** la interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
 cliente** (asistente en chat, foto «¿qué hago?» y guías) y **panel del equipo** (configuración,
 pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de Seguros Bolívar.
 
