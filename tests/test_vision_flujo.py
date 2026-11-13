@@ -225,7 +225,7 @@ def test_api_interpretar_con_proveedor_sin_vision_responde_503():
         )
     finally:
         app.dependency_overrides.clear()
-    assert r.status_code == 503 and "solo procesa texto" in r.json()["detail"]
+    assert r.status_code == 503 and "solo procesa texto" in r.json()["detalle"]
 
 
 def test_cli_foto_con_interpretacion(monkeypatch, capsys, tmp_path):

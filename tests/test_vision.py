@@ -214,7 +214,7 @@ def test_api_foto_sin_extra_vision_responde_503():
         r = TestClient(app).post("/fotos", files={"archivo": ("a.png", foto(), "image/png")})
     finally:
         app.dependency_overrides.clear()
-    assert r.status_code == 503 and "extra vision" in r.json()["detail"]
+    assert r.status_code == 503 and "extra vision" in r.json()["detalle"]
 
 
 # --- Cliente httpx -----------------------------------------------------------------------------
