@@ -69,7 +69,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Líneas base y métricas (Recall@5, NDCG@5) | ✅ | `popularidad.py`, `metricas.py`, `particion.py`, `sb reco baseline` |
 | Servicio de recomendación por API | ✅ | `/recomendaciones/{cliente_id}` (línea base por segmento) |
 | Modelo e5-small + LightGBM (Recall@5 ≥ 0,70) | ⏳ | T-23 |
-| MLflow | ⏳ | T-24 |
+| MLflow | 🟡 | bitácora de experimentos lista (`sb mlflow ui`, ADR-022): asistente, recuperación y líneas base; falta registrar el LightGBM (T-71) |
 | Auditoría de sesgo | ⏳ | T-25 |
 | Front web | 🟡 | chat público listo (yellowdata.com.co/casos/asistente-seguros/chat); consola del asesor: T-26 |
 | Recomendación por perfil descrito (sin identificación) | ✅ | `recomendar_por_perfil`, `POST /chat` |

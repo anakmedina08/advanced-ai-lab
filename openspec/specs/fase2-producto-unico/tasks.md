@@ -20,12 +20,12 @@
 - [x] T-39 [ml] Evaluar los modos reducido, rag y agente frente a la Fase 1 con Claude (Katherine)
 - [x] T-34 [ml] Indexar Chroma con nomic-embed-text y medir hit@k del recuperador híbrido (Katherine)
 - [x] T-65 [ml] Comparar hit@k de BM25, híbrido Chroma, Qdrant denso y búsqueda por palabras (Katherine)
+- [x] T-24 [ml] Seguimiento de experimentos con MLflow: asistente, recomendador y recuperación (Katherine)
 
 ## Pendiente
 - [ ] T-66 [ml] Subir el banco de preguntas como dataset de LangSmith (requiere LANGSMITH_API_KEY) (Katherine)
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)
 - [ ] T-23 [ml] Candidatos con multilingual-e5-small y ranking LightGBM (Recall@5 ≥ 0,70) (Daniel)
-- [ ] T-24 [ml] Seguimiento de experimentos con MLflow (Katherine)
 - [ ] T-25 [ml] Auditoría de sesgo por segmento del recomendador (Katherine)
 - [ ] T-26 [ui] Consola del asesor en el front web (historial, recomendaciones por cliente) (Katherine)
 - [ ] T-27 [ml] Clasificador de intención entrenado que supere la línea base por reglas (Katherine)

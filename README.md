@@ -258,6 +258,21 @@ opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26n.pt`; se descarg
 las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
 pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
 
+## Bitácora de experimentos (MLflow)
+
+Cada experimento queda registrado con sus parámetros, métricas, archivos y el commit de git
+([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)). Hay tres experimentos: `asistente-qa`
+(prompts y modos), `recomendador` (líneas base; aquí irá el LightGBM) y `recuperacion` (hit@k).
+
+```bash
+uv sync --extra mlflow          # extra opcional
+make mlflow-importar            # carga las evaluaciones ya hechas, sin volver a llamar al LLM
+make mlflow                     # http://127.0.0.1:5000 para comparar corridas
+```
+
+`sb eval`, `sb reco baseline` y `scripts/comparar_recuperacion.py` registran solos cada corrida. La
+base vive en `data/mlflow.db` (no se versiona); `SB_MLFLOW=0` apaga el registro.
+
 ## Chat orquestado
 
 `POST /chat` (o `make chat MSG="..."`) clasifica cada mensaje **sin LLM** y lo envía a la
@@ -342,6 +357,7 @@ Docker en cada Pull Request.
     visión y FastAPI (ADR-020).
   - [`interfaz-dos-areas/`](openspec/specs/interfaz-dos-areas/): interfaz para el cliente y para el
     equipo, chat y tema corporativo neutro (ADR-021).
+  - [`experimentos-mlflow/`](openspec/specs/experimentos-mlflow/): bitácora de experimentos con MLflow (ADR-022).
 - **Tablero Kanban:** GitHub Projects, generado desde todos los `tasks.md` con
   `uv run python scripts/crear_kanban.py --repo anakmedina08/advanced-ai-lab --project N`.
 - **Pruebas:** 470 pruebas sin red ni API (`uv run pytest --collect-only -q`), 93 % de cobertura.
@@ -352,7 +368,7 @@ Docker en cada Pull Request.
 - **GGA** (Gentleman Guardian Angel): revisión con IA contra `AGENTS.md` en cada commit
   (`.gga` + hook `gga` en `.pre-commit-config.yaml`).
 - **Engram:** memoria persistente del agente; cada decisión se registra allí y se copia en
-  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-021).
+  [`docs/decisiones/`](docs/decisiones/) (ADR-001 a ADR-022).
 - **Subagentes:** [`.claude/agents/`](.claude/agents/) — arquitecto (opus, asesor de solo lectura),
   explorador, probador y guardián de datos (haiku), revisor, ml-recomendador y documentador (sonnet).
 - **Telemetría en vivo:** los hooks de [`.claude/settings.json`](.claude/settings.json) registran cada

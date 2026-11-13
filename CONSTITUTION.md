@@ -193,6 +193,7 @@ git push
 | 2026-11-10 | Fase 2: RAG con Ollama + Qdrant y Deep Agent, adaptado de `ejercicio_langchain` ([ADR-018](docs/decisiones/ADR-018-rag-qdrant-deep-agents.md)) | Contexto ~2K tokens en vez de ~36K; embeddings locales |
 | 2026-11-11 | Foto → «¿qué hago?» con YOLO local, Claude con visión y FastAPI, adaptado de `ejercicio_gestion_fastapi` ([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)) | YOLO solo daba una tabla obvia; la situación es lo que la persona necesita resolver |
 | 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
+| 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 
 ## 10. Notas y tareas pendientes
 

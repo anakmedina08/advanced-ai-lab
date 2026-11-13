@@ -22,7 +22,7 @@ from sb_asistente.config import (
     RECO_N_CLIENTES,
     RECO_SEMILLA,
 )
-from sb_asistente.controller import assistant, chat, pipeline, recomendador, vision
+from sb_asistente.controller import assistant, chat, experimentos, pipeline, recomendador, vision
 from sb_asistente.model import skills
 
 
@@ -104,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--conversacion", default="cli-local", help="Id de la conversación (memoria)")
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
+    ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
+    ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
+    ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
+    ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5000)")
+    ui_ml.add_argument("--port", type=int, default=5000)
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
@@ -155,6 +160,8 @@ def _reco(args: argparse.Namespace) -> int:
     if args.reco_command == "baseline":
         resultado = recomendador.comparar_baselines(recomendador.leer_tablas(args.entrada), args.k)
         print(json.dumps(resultado, indent=2, ensure_ascii=False))
+        runs = experimentos.registrar_baselines(resultado, args.k, {"entrada": args.entrada.name})
+        _avisar_mlflow(runs)
         return 0
     recomendaciones = recomendador.recomendar(args.cliente_id, args.k, args.entrada)
     print(json.dumps(recomendaciones, indent=2, ensure_ascii=False))
@@ -239,6 +246,34 @@ def _foto(args: argparse.Namespace) -> int:
     return 0
 
 
+def _avisar_mlflow(runs: list[str | None]) -> None:
+    """Dice si la corrida quedó en la bitácora (o cómo activarla)."""
+    if any(runs):
+        print(f"Registrado en MLflow ({len([r for r in runs if r])} corrida/s) · ver: uv run sb mlflow ui")
+    else:
+        print("MLflow no registró: instálelo con uv sync --extra mlflow (o quite SB_MLFLOW=0).")
+
+
+def _mlflow(args: argparse.Namespace) -> int:
+    """Subcomandos de la bitácora de experimentos."""
+    from sb_asistente.model.experimentos import disponible
+
+    if not disponible():
+        print("MLflow no está instalado: uv sync --extra mlflow")
+        return 1
+    if args.mlflow_command == "importar":
+        for archivo, estado in experimentos.importar_evaluaciones():
+            print(f"  {estado:<12} {archivo}")
+        return 0
+    import subprocess
+
+    from sb_asistente.config import MLFLOW_TRACKING_URI
+
+    print(f"MLflow en http://127.0.0.1:{args.port} (Ctrl+C para salir)")
+    comando = [sys.executable, "-m", "mlflow", "ui", "--backend-store-uri", MLFLOW_TRACKING_URI]
+    return subprocess.call([*comando, "--port", str(args.port)])
+
+
 def _agente(args: argparse.Namespace) -> int:
     """Un turno del agente con su salida estructurada y la traza de tools."""
     from sb_asistente.controller.agente import agente_por_defecto
@@ -290,6 +325,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _agente(args)
     if args.command == "foto":
         return _foto(args)
+    if args.command == "mlflow":
+        return _mlflow(args)
     if args.command == "api":
         import uvicorn
 
@@ -333,6 +370,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             mode=args.modo,
         )
         print(json.dumps(metrics, ensure_ascii=False, indent=2), f"\n→ {out}")
+        version = assistant.AGENT_VERSION if args.modo == "agente" else args.version
+        _avisar_mlflow([experimentos.registrar_eval(args.provider, args.modo, version, metrics, out)])
     return 0
 
 

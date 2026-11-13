@@ -1,5 +1,10 @@
 """Fixtures compartidas: sitio falso de Seguros Bolívar servido desde archivos locales (sin red)."""
 
+import os
+
+# Las pruebas nunca escriben en la bitácora real de MLflow (data/mlflow.db).
+os.environ["SB_MLFLOW"] = "0"
+
 from dataclasses import dataclass
 from pathlib import Path
 

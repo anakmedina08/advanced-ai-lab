@@ -127,6 +127,15 @@ VISION_BLUR_CONFIDENCE: Final[float] = 0.15  # umbral bajo para difuminar person
 VISION_PROVIDERS: Final[tuple[str, ...]] = ("anthropic",)  # proveedores que entienden imágenes
 API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
 
+# --- Bitácora de experimentos (MLflow; extra opcional `uv sync --extra mlflow`, ADR-022) -------
+MLFLOW_DB: Final[Path] = DATA_DIR / "mlflow.db"  # base local, no versionada (data/)
+MLFLOW_ARTIFACTS: Final[Path] = DATA_DIR / "mlflow-artefactos"
+MLFLOW_TRACKING_URI: Final[str] = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{MLFLOW_DB.as_posix()}")
+MLFLOW_ACTIVO: Final[bool] = os.getenv("SB_MLFLOW", "1") != "0"  # SB_MLFLOW=0 apaga el registro
+EXPERIMENTO_QA: Final[str] = "asistente-qa"
+EXPERIMENTO_RECOMENDADOR: Final[str] = "recomendador"
+EXPERIMENTO_RECUPERACION: Final[str] = "recuperacion"
+
 # --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------
 VECTOR_DIR: Final[Path] = DATA_DIR / "vector"  # Chroma persistente (no versionado)
 VECTOR_COLLECTION: Final[str] = "sb_conocimiento"

@@ -20,7 +20,7 @@ from collections.abc import Callable
 from langchain_core.documents import Document
 
 from sb_asistente.config import EVAL_QUESTIONS
-from sb_asistente.controller import assistant
+from sb_asistente.controller import assistant, experimentos
 from sb_asistente.controller.agente import recuperador_por_defecto
 from sb_asistente.model.evaluation import load_questions
 from sb_asistente.model.llm import keyword_search, knowledge
@@ -96,6 +96,11 @@ def main() -> None:
     print()
     for nombre, filas in resultados.items():
         print(f"- {nombre} · falla en hit@{filas[-1].k}: {', '.join(filas[-1].fallos) or 'ninguna'}")
+    runs = [
+        experimentos.registrar_recuperacion(n, {r.k: r.tasa for r in f}, total) for n, f in resultados.items()
+    ]
+    if any(runs):
+        print(f"\nRegistrado en MLflow: {len(runs)} corridas (experimento «recuperacion»)")
 
 
 if __name__ == "__main__":

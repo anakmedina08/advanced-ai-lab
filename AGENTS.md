@@ -24,6 +24,7 @@ Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep
     `agent.py` (Deep Agent) y `assistants.py` (Q&A sobre contexto recuperado).
   - `evaluation.py` → banco de preguntas y métricas.
   - `recomendador/` → datos sintéticos, contrato de datos, líneas base y métricas (curso de Gestión).
+  - `experimentos.py` → bitácora de experimentos (MLflow opcional, `uv sync --extra mlflow`; ADR-022).
   - `vision/` → YOLO (`deteccion.py`), difuminado de personas (`privacidad.py`), escena con Claude
     (`escena.py`) y plan objeto/situación → respuesta (`seguros.py`); extra opcional `uv sync --extra vision`.
     La foto no se guarda y las personas se difuminan antes de salir del equipo (ADR-020).

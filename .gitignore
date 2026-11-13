@@ -10,6 +10,9 @@ data/gold/*
 data/recomendador/*
 data/vector/
 data/memoria/
+data/modelos/
+data/mlflow.db
+data/mlflow-artefactos/
 !data/*/.gitkeep
 
 # Resultados de evaluación generados (el banco de preguntas SÍ se versiona)

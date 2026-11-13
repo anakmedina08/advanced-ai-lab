@@ -39,6 +39,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-019](ADR-019-claude-sin-temperatura.md) | Claude sin `temperature` y con esfuerzo `low` | 2026-11-10 |
 | [ADR-020](ADR-020-foto-seguro-yolo.md) | Foto → «¿qué hago?»: YOLO local + Claude con visión (FastAPI, `httpx`) | 2026-11-11 |
 | [ADR-021](ADR-021-interfaz-empresarial.md) | Interfaz en dos áreas, chat y tema corporativo neutro | 2026-11-11 |
+| [ADR-022](ADR-022-mlflow-bitacora.md) | MLflow como bitácora de experimentos | 2026-11-13 |
 
 ## Cómo registrar una decisión nueva en Engram
 
