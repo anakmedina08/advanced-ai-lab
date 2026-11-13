@@ -159,6 +159,7 @@ RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2
 
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
+MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 LANGSMITH_PROJECT: Final[str] = os.getenv("LANGSMITH_PROJECT", "sb-asistente")
 
