@@ -3,7 +3,9 @@
 Cada requisito de los dos cursos con su evidencia en este repositorio. Estados:
 **✅ cumplido** · **🟡 en curso** · **⏳ pendiente** (con su tarea en `openspec/specs/*/tasks.md`).
 La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia, el subagente
-`documentador` actualiza esta tabla en el mismo Pull Request. La interfaz la muestra en
+`documentador` actualiza esta tabla en el mismo Pull Request. Actualizada para los anuncios 006
+(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026; guion en
+[`sustentacion.md`](sustentacion.md). La interfaz la muestra en
 **Sustentación › Entregables por curso** (`view/app_pages/sustentacion.py`).
 
 ## Gestión de Proyectos en IA y CD
@@ -13,7 +15,11 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | M1 · Taller de código heredado (AI Doctors) | ✅ | repositorio aparte `daalrasi/gpia-m1-ai-doctors` (otro caso) |
 | M2 · Propuesta con backlog, criterios Dado/Cuando/Entonces, CPM y Gantt | ✅ | `docs/gestion/propuesta-m2.pdf`, `docs/gestion/backlog.json`, `docs/gestion/propuesta/build.py` |
 | Módulo 3 · Git: Gitflow con `main`, `develop` y ramas `feature/*` | ✅ | ramas del repositorio, Conventional Commits con hook `commit-msg` (`scripts/check_commit_msg.py`) |
-| Módulo 3 · Pull Requests con revisor (Reviewers) y responsable (Assignees) | ✅ | 20 PR con revisión cruzada (Katherine ↔ Daniel), `.github/pull_request_template.md` |
+| Módulo 3 · Pull Requests con revisor (Reviewers) y responsable (Assignees) | 🟡 | 7 PR fusionadas; las historias SPEC-007 a SPEC-042 tienen PR abierta con revisor (Daniel) y `Closes #N`, a la espera de aprobación · `.github/pull_request_template.md` |
+| Mínimo 40 PR fusionadas con revisión (piso de 8 por integrante) | ⏳ | se alcanza al aprobar y fusionar las PR de las historias; el piso individual de Daniel (8) no se cumple con su trabajo actual |
+| Mínimo 40 especificaciones SDD (spec, plan y tasks) | ✅ | 42 en `openspec/specs/` (`find openspec -name spec.md`), una por historia, escritas antes del código y vinculadas a su issue y PR |
+| Frontend desacoplado (sin Streamlit) | ✅ | React + Vite + TypeScript en `frontend/` (SPEC-022 a 032): estados, Network visible, foto con confianza, CI propia |
+| Backend en 3 capas con /health y errores HTTP | ✅ | `model/vision` → `controller/vision` → `view/api.py`; `GET /health`, `ErrorOut` 400/404/422/500/503 (SPEC-007, 008) |
 | Módulo 3 · Proteger `main` (PR + CI en verde) | ⏳ | Settings › Branches: T-15 |
 | Spec-Driven Development (SDD) | ✅ | `openspec/specs/` (spec, plan y tasks por funcionalidad, requisitos R1–R32 con escenarios y pruebas) |
 | GitHub Projects (tablero Kanban) | ✅ | proyecto «Gestion» generado desde los `tasks.md` con `scripts/crear_kanban.py`; issues con responsable |
@@ -21,15 +27,18 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Pruebas unitarias (mínimo 120), AAA sin red ni API | ✅ | `tests/` (cerca de 490 casos), `uv run pytest --collect-only -q`, cobertura ≥ 85 % en la CI |
 | FastAPI con contratos Pydantic | ✅ | `view/api.py`, `view/schemas.py`, `uv run sb api` → `/docs` · ADR-010 |
 | API con visión: `POST /fotos` con YOLO L | ✅ | `yolo26l` elegido por comparación (`docs/evaluacion-resultados.md` §4), `lifespan`, cliente `httpx` · ADR-020 |
-| MLflow (bitácora de experimentos) | 🟡 | `sb mlflow ui`, página Panel del equipo › Experimentos (asistente, recuperación y líneas base) · ADR-022; falta el LightGBM (T-71) |
+| MLflow: servidor en 5050, 3 corridas comparables y Model Registry | ✅ | `make mlflow-server`; experimento `vision-yolo` (3 corridas con P, R, F1, mAP, latencia p95 y throughput, artefactos y tags); `sb-yolo-difuminado@produccion` (SPEC-033 a 035) · ADR-022 |
+| Model Card | ✅ | [`model-card.md`](model-card.md) (SPEC-037) |
+| Diagrama de arquitectura (Archify) | 🟡 | [`arquitectura.html`](arquitectura.html) en formato Archify (JSON + HTML); falta instalar la skill externa para entregarlo con `archify deliver` (SPEC-038) |
+| Kanban con WIP, AC, Fibonacci y métricas | 🟡 | plantilla de historia, puntos en «Estimate», milestone M3, [`kanban.md`](kanban.md) con WIP, throughput, edad y cycle time (SPEC-040); falta fijar el límite de columna en la UI del tablero |
 | Datos sintéticos con contrato de datos (sin PII) | ✅ | `model/recomendador/sintetico.py`, `contrato.py`, `sb reco generar/validar` |
 | Líneas base y métricas (Recall@5, NDCG@5) | ✅ | `popularidad.py`, `metricas.py`, `particion.py`, `sb reco baseline` (segmento: Recall@5 = 0,639) |
 | Servicio de recomendación por API | ✅ | `/recomendaciones/{cliente_id}` (línea base por segmento) |
 | Recomendación por perfil descrito (sin identificación) | ✅ | `recomendar_por_perfil`, `POST /chat`, foto «¿qué hago?» |
 | Modelo e5-small + LightGBM (Recall@5 ≥ 0,70) | ⏳ | T-23 |
 | Auditoría de sesgo | ⏳ | T-25 |
-| Front web | 🟡 | chat público listo (yellowdata.com.co/casos/asistente-seguros/chat); consola del asesor: T-26 |
-| Despliegue de la API | ⏳ | `passenger_wsgi.py` listo para cPanel: T-33; imagen Docker con la API: T-28 |
+| Front web | ✅ | frontend propio React (SPEC-022 a 032); el chat de yellowdata.com.co sigue disponible |
+| Despliegue reproducible | 🟡 | `docker-compose.yml` con API, frontend y MLflow (SPEC-041), sin probar localmente; `passenger_wsgi.py` para cPanel: T-33 |
 
 ## Técnicas Avanzadas de IA en Modelos de Lenguaje
 
@@ -51,7 +60,18 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Memoria persistente | ✅ | `SqliteSaver` por conversación (`data/memoria/`), `agente.historial`, `agente.olvidar` · ADR-017 |
 | Modelo multimodal (visión) con privacidad | ✅ | foto «¿qué hago?»: YOLO difumina personas y Claude entiende la situación · ADR-020 |
 | Clasificador de intención | 🟡 | línea base por reglas en `model/intencion.py` (en uso en el chat); modelo entrenado: T-27 |
-| Chat con orquestador (Q&A, recomendador, clasificador) | ✅ | `POST /chat`, `controller/chat.py`, pestaña de chat en yellowdata.com.co/casos · ADR-013 |
+| Chat con orquestador (Q&A, recomendador, clasificador) | ✅ | `POST /chat`, `controller/chat.py`, pestaña de chat en yellowdata.com.co · ADR-013 |
+| M2 · Memoria corto plazo: checkpointer + thread_id persistente | ✅ | `SqliteSaver`, hilo recuperado tras reinicio (`tests/test_sesiones.py`), checkpoints (time travel) por REST (SPEC-020) |
+| M2 · Gestión del contexto: trim_messages + SummarizationMiddleware | ✅ | recorte por tokens y resumen con umbrales en `config.py` (SPEC-016) |
+| M2 · Memoria largo plazo: Store con namespace y search() | ✅ | `SqliteStore`, namespace `(usuarios, id, perfil)`, `dynamic_prompt` (SPEC-015) |
+| M2 · Herramienta determinista CSV con @tool y Pydantic | ✅ | `consultar_datos` / `ConsultaDatos` (SPEC-011) |
+| M2 · RAG sobre Qdrant (ANN, payload, cita) e híbrido | ✅ | `model/rag/qdrant.py` + BM25 con RRF (SPEC-013) |
+| M2 · Router (directo, datos, RAG, mixto) | ✅ | `model/router.py`, banco 32/32, tools por ruta, sin LLM fuera de alcance (SPEC-012, 017) |
+| M2 · Blindaje del RAG contra inyección indirecta | ✅ | delimitación, escape, marca de sospecha y documento de prueba (SPEC-014) |
+| M2 · Frontend propio con streaming, sesiones y errores | ✅ | React + SSE (SPEC-019, 022 a 032) |
+| M2 · Trazas (LangSmith o logs equivalentes) | 🟡 | `data/logs/turnos.jsonl` con latencia por tool y `sb trazas` (SPEC-021); LangSmith sin clave (T-66) |
+| M2 · Diagramas: grafo del agente, checkpointer vs. Store, router | ✅ | [`arquitectura.md`](arquitectura.md), [`arquitectura.html`](arquitectura.html) (SPEC-038) |
+| M2 · Evaluación del retrieval (recall@10, nDCG@10) | ✅ | 21 consultas etiquetadas, 5 métodos, MLflow (SPEC-036) · [`evaluacion-resultados.md`](evaluacion-resultados.md) §5 |
 
 ## Comunes a los dos cursos (gobernanza y herramientas)
 
@@ -62,7 +82,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Arquitectura MVC | ✅ | `src/sb_asistente/{model,controller,view}` · ADR-007 |
 | Type hints y docstrings | ✅ | regla `ANN` y `D` de Ruff en `pyproject.toml` |
 | RPC (JSON-RPC 2.0) | ✅ | `POST /rpc`, `view/rpc.py`, `rpc.descubrir`, `make rpc-demo` · ADR-015 |
-| Interfaz web para el cliente y para el equipo | ✅ | Streamlit en dos áreas, chat con fuentes, tema corporativo neutro · ADR-021 |
+| Interfaz web | ✅ | producto: frontend React desacoplado (Módulo 2); Streamlit solo como herramienta interna del equipo (ADR-021) |
 | LangSmith (trazas y dataset de evaluación) | 🟡 | `LANGSMITH_*` en `.env`, `make langsmith-dataset`; falta la clave: T-66 |
 | Ruff (lint y formato) | ✅ | `make lint`, `make format-check` |
 | pre-commit con hook de GGA | ✅ | `.pre-commit-config.yaml` (higiene, Ruff, `uv lock --check`, GGA, bloqueo de datos y secretos) |
