@@ -47,7 +47,7 @@ describe("chat de punta a punta (con API simulada)", () => {
       { tipo: "final", turno },
     ]);
     vi.stubGlobal("fetch", falso);
-    render(<Chat conversacionId="hilo-prueba-01" usuarioId={null} />);
+    render(<Chat conversacionId="hilo-prueba-01" usuarioId={null} proveedor="anthropic" />);
     // Act
     fireEvent.change(screen.getByLabelText("Mensaje"), { target: { value: "¿Cuántas pólizas se vendieron?" } });
     fireEvent.click(screen.getByText("Enviar"));
@@ -56,7 +56,7 @@ describe("chat de punta a punta (con API simulada)", () => {
     expect(screen.getByText("datos · CSV")).toBeTruthy();
     const [url, init] = falso.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toMatch(/\/agente\/stream$/);
-    expect(JSON.parse(String(init.body))).toMatchObject({ conversacion_id: "hilo-prueba-01" });
+    expect(JSON.parse(String(init.body))).toMatchObject({ conversacion_id: "hilo-prueba-01", proveedor: "anthropic" });
   });
 
   it("un error de la API se ve en la burbuja con Reintentar", async () => {

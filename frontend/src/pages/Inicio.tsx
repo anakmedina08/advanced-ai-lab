@@ -8,7 +8,7 @@ import PanelPerfil from "../components/PanelPerfil";
 import Chat from "./Chat";
 
 /** Página principal: lista de hilos, chat del hilo activo y memoria de largo plazo. */
-export default function Inicio() {
+export default function Inicio({ proveedor }: { proveedor?: string }) {
   const { usuarioId, hilos, activo, elegir, nuevo, titular, quitar } = useSesiones();
   const [mensajes, setMensajes] = useState<MensajeHistorial[] | undefined>(undefined);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -83,6 +83,7 @@ export default function Inicio() {
           key={activo}
           conversacionId={activo}
           usuarioId={usuarioId}
+          proveedor={proveedor}
           historial={mensajes}
           onPrimerMensaje={titular}
           onTurno={() => setVersion((v) => v + 1)}

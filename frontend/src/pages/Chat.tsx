@@ -21,10 +21,12 @@ interface Props {
   historial?: { rol: "usuario" | "asistente"; texto: string }[];
   /** Se llama al terminar cada turno (p. ej., para refrescar la memoria de largo plazo). */
   onTurno?: () => void;
+  /** Proveedor del LLM elegido en el encabezado (si falta, el de la API). */
+  proveedor?: string;
 }
 
 /** Chat con el agente: la respuesta llega por SSE y se ve crecer mientras se genera. */
-export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, historial, onTurno }: Props) {
+export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, historial, onTurno, proveedor }: Props) {
   const [estado, despachar] = useReducer(reducir, inicial);
   const [borrador, setBorrador] = useState("");
   const control = useRef<AbortController | null>(null);
@@ -49,7 +51,7 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
       despachar({ tipo: "enviar", texto: limpio, id: crypto.randomUUID() });
       control.current = new AbortController();
       try {
-        const entrada = { mensaje: limpio, conversacion_id: conversacionId, usuario_id: usuarioId };
+        const entrada = { mensaje: limpio, conversacion_id: conversacionId, usuario_id: usuarioId, proveedor };
         for await (const evento of streamAgente(entrada, control.current.signal)) {
           despachar({ tipo: "evento", evento });
           if (evento.tipo === "final") onTurno?.();
@@ -62,7 +64,7 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
         control.current = null;
       }
     },
-    [conversacionId, usuarioId, ocupado, estado.mensajes.length, onPrimerMensaje, onTurno],
+    [conversacionId, usuarioId, proveedor, ocupado, estado.mensajes.length, onPrimerMensaje, onTurno],
   );
 
   const detener = () => {
