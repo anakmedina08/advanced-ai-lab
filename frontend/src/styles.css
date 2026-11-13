@@ -292,3 +292,107 @@ button:disabled {
 .entrada textarea:focus {
   outline: none;
 }
+
+/* ---- Conversaciones y memoria (SPEC-025) ---- */
+.conversaciones {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 12px;
+}
+
+.hilos ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.hilos li {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.hilos li.activo {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+}
+
+.hilo {
+  flex: 1;
+  text-align: left;
+  border: none;
+  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icono {
+  border: none;
+  background: transparent;
+  color: var(--texto-suave);
+  padding: 4px 10px;
+}
+
+.ancho {
+  width: 100%;
+}
+
+.suave {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.mini {
+  font-size: 0.78rem;
+}
+
+.perfil {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px;
+}
+
+.perfil h2 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.perfil dl {
+  margin: 0 0 8px;
+}
+
+.perfil dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.perfil dt {
+  color: var(--texto-suave);
+  text-transform: capitalize;
+}
+
+.perfil dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.boton-menu {
+  display: none;
+}
+
+.principal {
+  min-width: 0;
+}
