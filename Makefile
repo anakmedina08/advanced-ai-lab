@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help api frontend frontend-build mlflow-server vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
+.PHONY: help api frontend frontend-build mlflow-server mlflow-yolo vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
 	data process index app eval docker-build docker-run
 
 help: ## Muestra esta ayuda
@@ -62,6 +62,9 @@ frontend-build: ## Compila el frontend (tsc + vite build) en frontend/dist
 
 mlflow: ## Abre la bitácora de experimentos en http://127.0.0.1:5050 (requiere uv sync --extra mlflow)
 	uv run --extra mlflow sb mlflow ui
+
+mlflow-yolo: ## Evalúa YOLO (3 corridas comparables) y lo registra en MLflow (experimento vision-yolo)
+	MLFLOW_TRACKING_URI=http://127.0.0.1:5050 uv run --extra vision --extra mlflow python scripts/evaluar_yolo.py
 
 mlflow-server: ## Servidor de tracking MLflow en http://127.0.0.1:5050 (export MLFLOW_TRACKING_URI=http://127.0.0.1:5050)
 	uv run --extra mlflow sb mlflow servidor
