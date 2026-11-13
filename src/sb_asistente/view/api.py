@@ -26,6 +26,7 @@ from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
+from sb_asistente.model.vision.privacidad import a_jpeg_b64
 from sb_asistente.view import errores, observabilidad
 from sb_asistente.view.dependencias import (
     Responder,
@@ -298,6 +299,9 @@ async def analizar_foto(
     ] = False,
     responder: Annotated[bool, Query(description="Que el asistente explique qué hacer, con fuente")] = False,
     proveedor: Annotated[str | None, Query(description="Proveedor del LLM")] = None,
+    devolver_imagen: Annotated[
+        bool, Query(description="Incluir la imagen difuminada (JPEG base64) para mostrarla en el frontend")
+    ] = False,
 ) -> FotoOut:
     """Foto → ¿qué hago?: privacidad local, situación, respuesta con fuente y recomendaciones.
 
@@ -359,6 +363,7 @@ async def analizar_foto(
         aviso=analisis.aviso,
         respuesta=_salida(analisis.respuesta) if analisis.respuesta else None,
         recomendaciones=[RecomendacionOut(**r) for r in analisis.recomendaciones],
+        imagen_jpeg_b64=a_jpeg_b64(analisis.imagen_privada) if devolver_imagen else None,
     )
 
 

@@ -363,3 +363,6 @@ class FotoOut(BaseModel):
     aviso: str | None = None
     respuesta: RespuestaOut | None = None
     recomendaciones: list[RecomendacionOut] = []
+    imagen_jpeg_b64: str | None = Field(
+        None, description="Imagen con las personas ya difuminadas (JPEG base64), si se pidió devolver_imagen"
+    )

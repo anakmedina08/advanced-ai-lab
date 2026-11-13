@@ -466,3 +466,83 @@ button:disabled {
   border-radius: 6px;
   background: var(--fondo);
 }
+
+/* ---- Foto (SPEC-027) ---- */
+.zona-carga {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border: 2px dashed var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  text-align: center;
+  cursor: pointer;
+}
+
+.zona-carga.arrastrando {
+  border-color: var(--acento);
+}
+
+.zona-carga input {
+  max-width: 100%;
+}
+
+.estado-foto {
+  color: var(--texto-suave);
+}
+
+.resultado-foto {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.cajas {
+  margin: 0;
+}
+
+.cajas svg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radio);
+}
+
+.caja {
+  fill: none;
+  stroke: #ffb020;
+}
+
+.etiqueta-fondo {
+  fill: rgba(0, 0, 0, 0.65);
+}
+
+.etiqueta {
+  fill: #ffffff;
+  font-family: inherit;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.aviso-foto {
+  color: var(--alerta);
+}
+
+@media (max-width: 767px) {
+  .resultado-foto {
+    grid-template-columns: 1fr;
+  }
+}
