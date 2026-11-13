@@ -128,6 +128,15 @@ class SaludOut(BaseModel):
     recomendador_listo: bool
 
 
+class HealthOut(BaseModel):
+    """Estado del servicio y de cada dependencia (``GET /health``)."""
+
+    status: Literal["ok", "degradado"]
+    version: str
+    llm: str
+    componentes: dict[str, bool]
+
+
 class ChatIn(_Entrada):
     """Mensaje del chat (estilo conversación)."""
 

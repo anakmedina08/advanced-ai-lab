@@ -20,6 +20,7 @@ from starlette.concurrency import run_in_threadpool
 
 from sb_asistente.config import BASE_URL, CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
 from sb_asistente.controller import chat, pipeline, recomendador, vision
+from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.view.dependencias import (
@@ -40,6 +41,7 @@ from sb_asistente.view.schemas import (
     EscenaOut,
     EtapaOut,
     FotoOut,
+    HealthOut,
     PlanOut,
     PreguntaIn,
     RecomendacionesOut,
@@ -94,6 +96,15 @@ def _salida(ans: Answer) -> RespuestaOut:
         cita_fuente=ans.cites_source,
         fuentes=extraer_fuentes(ans.text),
     )
+
+
+@app.get("/health", response_model=HealthOut, tags=["servicio"])
+def health() -> HealthOut:
+    """Estado del servicio: ``ok`` o ``degradado`` y qué componente falta (sin cargar modelos)."""
+    detector = vision.detector_por_defecto() if find_spec("ultralytics") is not None else None
+    estado = estado_servicio.componentes(yolo_cargado=detector.cargado if detector is not None else None)
+    r = estado_servicio.reporte(app.version, estado)
+    return HealthOut(status=r.status, version=r.version, llm=r.llm, componentes=r.componentes)
 
 
 @app.get("/salud", response_model=SaludOut, tags=["servicio"])
