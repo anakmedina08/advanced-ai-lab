@@ -589,3 +589,56 @@ button:disabled {
 .luz.roja {
   background: var(--error);
 }
+
+/* ---- Responsive y accesibilidad (SPEC-029) ---- */
+html,
+body {
+  overflow-x: hidden;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .conversaciones {
+    grid-template-columns: 1fr;
+  }
+
+  .boton-menu {
+    display: inline-block;
+    justify-self: start;
+  }
+
+  .lateral {
+    display: none;
+    position: static;
+  }
+
+  .conversaciones.menu-abierto .lateral {
+    display: flex;
+  }
+
+  .burbuja {
+    max-width: 100%;
+  }
+
+  .entrada {
+    flex-direction: column;
+  }
+
+  .encabezado nav a {
+    padding: 6px 8px;
+  }
+
+  .detalle {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punto {
+    animation: none;
+  }
+}
