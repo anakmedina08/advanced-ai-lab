@@ -18,8 +18,11 @@
 - [x] T-40 [ml] Foto → ¿qué hago?: YOLO difumina personas, Claude entiende la situación, RAG y recomendador (Katherine)
 - [x] T-41 [ui] Interfaz en dos áreas (cliente / equipo), chat con fuentes y tema corporativo neutro (Katherine)
 - [x] T-39 [ml] Evaluar los modos reducido, rag y agente frente a la Fase 1 con Claude (Katherine)
+- [x] T-34 [ml] Indexar Chroma con nomic-embed-text y medir hit@k del recuperador híbrido (Katherine)
+- [x] T-65 [ml] Comparar hit@k de BM25, híbrido Chroma, Qdrant denso y búsqueda por palabras (Katherine)
 
 ## Pendiente
+- [ ] T-66 [ml] Subir el banco de preguntas como dataset de LangSmith (requiere LANGSMITH_API_KEY) (Katherine)
 - [ ] T-22 [infra] Publicar el panel en vivo en yellowdata.com.co y cargar los secretos AGENT_EVENTS_* (Daniel)
 - [ ] T-23 [ml] Candidatos con multilingual-e5-small y ranking LightGBM (Recall@5 ≥ 0,70) (Daniel)
 - [ ] T-24 [ml] Seguimiento de experimentos con MLflow (Katherine)
@@ -28,6 +31,4 @@
 - [ ] T-27 [ml] Clasificador de intención entrenado que supere la línea base por reglas (Katherine)
 - [ ] T-28 [infra] Imagen Docker con la API (uvicorn) y despliegue (Daniel)
 - [ ] T-29 [documentation] Registrar ADR-009 a ADR-014 en Engram (Katherine)
-- [ ] T-34 [ml] Indexar con nomic-embed-text, medir hit@k del híbrido y subir el dataset a LangSmith (Katherine)
 - [ ] T-33 [infra] Publicar la API en cPanel (Setup Python App + passenger_wsgi.py) y ASSISTANT_API_URL (Daniel)
-- [ ] T-65 [ml] Comparar los modos rag y agente con el RAG híbrido de Chroma (hit@k con nomic-embed-text) (Daniel)

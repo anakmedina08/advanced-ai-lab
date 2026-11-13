@@ -18,7 +18,7 @@ Maestría en Inteligencia Artificial y Ciencia de Datos, Universidad Autónoma d
 \maketitle
 
 \begin{abstract}
-This paper presents the knowledge core of a virtual assistant for Seguros Bolívar, a Colombian insurance company. Public web content was collected with an ethical, reproducible scraping pipeline (robots.txt, sitemap, polite delays) organized in a Medallion architecture (Bronze, Silver, Gold). The cleaned corpus is consolidated in the system prompt of a large language model orchestrated with LangChain to solve three tasks: question answering, summarization and FAQ generation. Prompt engineering techniques (XML delimitation, strict grounding, source citation, refusal policy) were compared across four prompt versions on a 25-question test set. With Claude Haiku, the structured prompt (v3) raised source citation from 20\% (v1) to 100\% and correct refusals from 84\% to 96\%, while keyword accuracy stayed between 0.98 and 1.00. Context strategies were also compared: keyword retrieval matched the full context, whereas dense retrieval with four chunks lost recall on broad product questions (keyword accuracy 0.66), which supports hybrid retrieval.
+This paper presents the knowledge core of a virtual assistant for Seguros Bolívar, a Colombian insurance company. Public web content was collected with an ethical, reproducible scraping pipeline (robots.txt, sitemap, polite delays) organized in a Medallion architecture (Bronze, Silver, Gold). The cleaned corpus is consolidated in the system prompt of a large language model orchestrated with LangChain to solve three tasks: question answering, summarization and FAQ generation. Prompt engineering techniques (XML delimitation, strict grounding, source citation, refusal policy) were compared across four prompt versions on a 25-question test set. With Claude Haiku, the structured prompt (v3) raised source citation from 20\% (v1) to 100\% and correct refusals from 84\% to 96\%, while keyword accuracy stayed between 0.98 and 1.00. Context strategies were also compared: keyword retrieval matched the full context, whereas dense retrieval with four chunks lost recall on broad product questions (keyword accuracy 0.66). A retrieval-only evaluation (hit@k) confirmed that lexical signals dominate on this small, near-duplicate corpus: keyword matching reached 0.95 at k = 10, against 0.81 for hybrid BM25 + vectors and 0.71 for dense retrieval alone.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -108,13 +108,31 @@ Latencia (s) & 1,63 & 1,44 & 1,35 & 10,81 \\ \hline
 \end{tabular}
 \end{table}
 
-En la Tabla~\ref{tab:modos}, la recuperación por palabras igualó a la base completa enviando solo unos 2.500 \textit{tokens} de contexto. La recuperación densa con cuatro fragmentos (Qdrant, \textit{embeddings} de Ollama) perdió exhaustividad en preguntas amplias de producto (seguro de vida, todo riesgo, carros eléctricos, seguros para clientes Davivienda): las muchas páginas casi idénticas de Davivienda desplazan a la página correcta entre los cuatro fragmentos más parecidos. El agente recuperó parte de esa pérdida con búsquedas adicionales, a cambio de una latencia siete veces mayor. Estos resultados respaldan la búsqueda híbrida (léxica + densa) del Módulo 2.
+En la Tabla~\ref{tab:modos}, la recuperación por palabras igualó a la base completa enviando solo unos 2.500 \textit{tokens} de contexto. La recuperación densa con cuatro fragmentos (Qdrant, \textit{embeddings} de Ollama) perdió exhaustividad en preguntas amplias de producto (seguro de vida, todo riesgo, carros eléctricos, seguros para clientes Davivienda): las muchas páginas casi idénticas de Davivienda desplazan a la página correcta entre los cuatro fragmentos más parecidos. El agente recuperó parte de esa pérdida con búsquedas adicionales, a cambio de una latencia siete veces mayor.
+
+Para aislar la recuperación del modelo se midió hit@k (los $k$ fragmentos recuperados contienen todas las palabras clave de la pregunta) sobre las 21 preguntas en alcance, con el mismo criterio para los cuatro métodos (Tabla~\ref{tab:hitk}).
+
+\begin{table}[H]
+\centering
+\caption{Recuperación: hit@k sobre 21 preguntas en alcance}
+\label{tab:hitk}
+\begin{tabular}{lccc}
+\hline
+Método & hit@4 & hit@6 & hit@10 \\ \hline
+BM25 (léxico) & 0,67 & 0,71 & 0,86 \\
+Híbrido Chroma (BM25 + vectores) & 0,62 & 0,76 & 0,81 \\
+Qdrant denso & 0,62 & 0,62 & 0,71 \\
+Por palabras (título, ruta y texto) & 0,86 & 0,90 & 0,95 \\ \hline
+\end{tabular}
+\end{table}
+
+La recuperación densa pura es la más débil en este corpus y la combinación híbrida no supera con claridad a BM25 solo, mientras que la coincidencia de palabras con peso en título y ruta es la más exhaustiva (aun excluyendo las preguntas de canales, falla en una pregunta de producto frente a cuatro del híbrido). Con un corpus pequeño y muy homogéneo, la señal léxica domina; los \textit{embeddings} aportarían más con un corpus mayor y con las páginas casi duplicadas agrupadas antes de indexar.
 
 \subsection{Limitaciones}
 Solo la primera pestaña de coberturas se renderiza en el HTML; el detalle completo está en clausulados PDF (Fase 2). El contexto completo aumenta la latencia y el costo frente a RAG. La información puede cambiar después de la fecha de captura. Un ejemplo real: el sitio informa que la compañía dejó de vender SOAT el 3 de octubre de 2025, algo que un modelo sin \textit{grounding} contestaría mal desde su conocimiento previo; por eso se incluyó como pregunta trampa (P01). Además, los datos de contacto del Defensor del Consumidor Financiero (teléfonos y correos) están en enlaces o íconos que la extracción no conserva, por lo que esa respuesta queda incompleta.
 
 \section{Conclusiones}
-El diseño del \textit{prompt} pesa más que el modelo en la confiabilidad: con el mismo modelo y el mismo conocimiento, las reglas explícitas, la delimitación XML y la citación obligatoria llevaron la citación de la fuente del 20\,\% al 100\,\% y los rechazos correctos del 84\,\% al 96\,\%. Con un corpus de unos 36 mil \textit{tokens}, enviar todo el conocimiento al modelo es viable con un modelo en la nube, pero no con un modelo pequeño en CPU. La recuperación por palabras ofrece la misma calidad con una fracción del contexto, mientras que la recuperación densa pura requiere más fragmentos o una combinación híbrida para no perder páginas relevantes en un corpus con contenidos muy parecidos.
+El diseño del \textit{prompt} pesa más que el modelo en la confiabilidad: con el mismo modelo y el mismo conocimiento, las reglas explícitas, la delimitación XML y la citación obligatoria llevaron la citación de la fuente del 20\,\% al 100\,\% y los rechazos correctos del 84\,\% al 96\,\%. Con un corpus de unos 36 mil \textit{tokens}, enviar todo el conocimiento al modelo es viable con un modelo en la nube, pero no con un modelo pequeño en CPU. La recuperación por palabras ofrece la misma calidad con una fracción del contexto, mientras que la recuperación densa pura pierde páginas relevantes en un corpus con contenidos muy parecidos: en este caso la señal léxica fue la más útil, y la densa necesitaría deduplicar el corpus o más fragmentos para competir.
 
 \section*{Consideraciones éticas}
 Solo se usó información pública, respetando \texttt{robots.txt}, sin contenido tras autenticación ni datos personales \cite{ley1581}.

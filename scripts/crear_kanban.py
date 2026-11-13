@@ -61,7 +61,9 @@ def gh(*args: str, dry: bool) -> str:
     print("gh", " ".join(a if len(a) < 70 else a[:67] + "..." for a in args))
     if dry:
         return "https://github.com/OWNER/REPO/issues/0"
-    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(
+        ["gh", *args], check=True, capture_output=True, text=True, encoding="utf-8"
+    ).stdout.strip()
 
 
 def main() -> None:
@@ -92,7 +94,10 @@ def main() -> None:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",  # gh responde en UTF-8; con la codificación de Windows la lista quedaba vacía
         ).stdout
+        if not listed:
+            raise SystemExit("gh no devolvió la lista de issues: se aborta para no crear duplicados.")
         existing = {i["title"].split("]")[0] + "]": i for i in json.loads(listed or "[]")}
     for task in tasks:
         title = f"[{task.id}] {task.title}"

@@ -52,7 +52,41 @@
 - **Conclusión:** la recuperación densa pura necesita más fragmentos o combinarse con búsqueda léxica.
   Esto respalda el RAG híbrido BM25 + vectores (ADR-016).
 
+## 3. Recuperación: hit@k con la misma métrica para los cuatro métodos · T-34 y T-65
+
+`hit@k` (`model/rag/evaluacion.hit_at_k`, de Daniel): una pregunta acierta si los k fragmentos
+recuperados traen **todas** sus palabras clave. Se mide sobre las 21 preguntas en alcance.
+
+- **Índices:** Chroma con `nomic-embed-text` (414 fragmentos, `sb rag indexar`) y Qdrant con
+  `embeddinggemma` (`sb index`).
+- **Cómo reproducirlo:** `uv run python scripts/comparar_recuperacion.py -k 4 6 10`.
+
+| Método | hit@4 | hit@6 | hit@10 |
+|---|---|---|---|
+| BM25 (léxico) | 67 % | 71 % | 86 % |
+| Híbrido Chroma (BM25 + vectores, RRF) | 62 % | 76 % | 81 % |
+| Qdrant denso (modo «rag») | 62 % | 62 % | 71 % |
+| **Por palabras (modo «reducido»)** | **86 %** | **90 %** | **95 %** |
+
+**Prueba oficial del híbrido** (`uv run sb rag evaluar -k 3 6`):
+- hit@3 = 57 %: falla en C03, C06, C07, P02, P03, P04, P05, P07 y P10.
+- hit@6 = 76 %: falla en P02, P03, P04, P07 y P10.
+
+**Lectura:**
+- En este corpus, la **recuperación densa es la más débil**: Qdrant solo vectores queda último y el
+  híbrido no supera claramente a BM25 solo. Las páginas casi idénticas de Davivienda confunden a los
+  *embeddings*, lo mismo que mostró la evaluación de respuestas (sección 2).
+- La **búsqueda por palabras** (cuenta coincidencias en título, ruta y texto) es la mejor.
+  - Salvedad: los modos «rag» y «reducido» siempre agregan el bloque de canales, y eso favorece las
+    preguntas de canales (C03, C06, C07).
+  - Aun así, en las preguntas de producto falla en 1 (P04) frente a 4 del híbrido (P02, P03, P07,
+    P10).
+- **Mejoras posibles:**
+  - deduplicar o agrupar las páginas de Davivienda antes de indexar;
+  - subir k;
+  - dar más peso al título y a la ruta en el componente denso.
+
 ## Pendiente
 
-- **T-65:** comparar con el RAG híbrido de Chroma (`sb rag evaluar`, hit@k). Requiere indexar con
-  `nomic-embed-text`.
+- **T-66:** subir el banco de preguntas como dataset de LangSmith (`make langsmith-dataset`).
+  Requiere `LANGSMITH_API_KEY`, que no está configurada.
