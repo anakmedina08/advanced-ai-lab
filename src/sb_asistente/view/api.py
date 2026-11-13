@@ -6,8 +6,9 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
     uv run sb api            # http://127.0.0.1:8000/docs
 """
 
+import json
 import logging
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from importlib.metadata import version
@@ -16,6 +17,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from sb_asistente.config import BASE_URL, CHUNKS_JSONL, FRONTEND_ORIGINS, LLM_PROVIDER, RECO_DIR, RECO_K
@@ -212,6 +214,25 @@ def agente_mensaje(
     except FileNotFoundError as exc:
         raise HTTPException(503, f"Faltan datos: {exc}") from exc
     return turno.a_dict()
+
+
+@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse)
+def agente_stream(
+    entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+) -> StreamingResponse:
+    """El mismo turno de ``/agente/mensajes`` en streaming (Server-Sent Events).
+
+    Eventos: ``router`` (ruta elegida), ``tool_inicio``/``tool_fin``, ``texto`` (fragmentos de la
+    respuesta), ``final`` (el ``AgenteOut`` completo, con fuentes validadas) y ``error``.
+    """
+    agente = fabrica(entrada.proveedor or LLM_PROVIDER)
+
+    def eventos() -> Iterator[str]:
+        for evento in agente.transmitir(entrada.mensaje, entrada.conversacion_id, entrada.usuario_id):
+            yield f"event: {evento['tipo']}\ndata: {json.dumps(evento, ensure_ascii=False, default=str)}\n\n"
+
+    cabeceras = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    return StreamingResponse(eventos(), media_type="text/event-stream", headers=cabeceras)
 
 
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])

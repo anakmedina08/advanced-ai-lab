@@ -9,15 +9,16 @@
 
 import re
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool
+from langchain_core.utils.json import parse_partial_json
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -44,7 +45,7 @@ from sb_asistente.model.rag.blindaje import cargar_corpus_demo
 from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 from sb_asistente.model.rag.qdrant import BuscadorQdrant
-from sb_asistente.model.router import enrutar
+from sb_asistente.model.router import Decision, enrutar
 
 CONVERSACION_VALIDA = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _URL = re.compile(r"https?://[^\s)\]>\"']+")
@@ -138,6 +139,56 @@ def _tablas() -> dict:
     return _tablas_cacheadas()
 
 
+class _TextoParcial:
+    """Extrae el campo ``respuesta`` mientras el modelo genera los argumentos de ``RespuestaAgente``."""
+
+    def __init__(self) -> None:
+        self.buffers: dict[tuple[object, object], str] = {}
+        self.nombres: dict[tuple[object, object], str] = {}
+        self.enviado = ""
+
+    def _nuevo(self, completo: str) -> str:
+        if not completo.startswith(self.enviado) or len(completo) <= len(self.enviado):
+            return ""
+        delta, self.enviado = completo[len(self.enviado) :], completo
+        return delta
+
+    def agregar(self, mensaje: BaseMessage, meta: dict[str, Any]) -> str:
+        """Texto nuevo de la respuesta (o ``""``) a partir de un fragmento del modelo."""
+        paso = meta.get("langgraph_step") if isinstance(meta, dict) else None
+        if isinstance(mensaje, AIMessageChunk):
+            for parte in mensaje.tool_call_chunks:
+                clave = (paso, parte.get("index") or 0)
+                if parte.get("name"):
+                    self.nombres[clave] = parte["name"]
+                self.buffers[clave] = self.buffers.get(clave, "") + (parte.get("args") or "")
+                if self.nombres.get(clave) == RespuestaAgente.__name__:
+                    try:
+                        parcial = parse_partial_json(self.buffers[clave])
+                    except ValueError:
+                        continue
+                    if isinstance(parcial, dict) and isinstance(parcial.get("respuesta"), str):
+                        return self._nuevo(parcial["respuesta"])
+        elif isinstance(mensaje, AIMessage):  # modelos sin streaming: llega el mensaje completo
+            for llamada in mensaje.tool_calls:
+                if llamada["name"] == RespuestaAgente.__name__:
+                    return self._nuevo(str(llamada["args"].get("respuesta", "")))
+        return ""
+
+
+def _eventos_de_tools(actualizacion: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Eventos ``tool_inicio`` / ``tool_fin`` a partir de las actualizaciones de los nodos."""
+    for cambios in actualizacion.values():
+        mensajes = cambios.get("messages", []) if isinstance(cambios, dict) else []
+        for m in mensajes if isinstance(mensajes, list) else []:
+            if isinstance(m, AIMessage):
+                for llamada in m.tool_calls:
+                    if llamada["name"] != RespuestaAgente.__name__:
+                        yield {"tipo": "tool_inicio", "tool": llamada["name"], "argumentos": llamada["args"]}
+            elif isinstance(m, ToolMessage) and m.name != RespuestaAgente.__name__:
+                yield {"tipo": "tool_fin", "tool": m.name, "resumen": _texto(m)[:400]}
+
+
 def _texto(mensaje: BaseMessage) -> str:
     contenido = getattr(mensaje, "content", "")
     return contenido if isinstance(contenido, str) else str(contenido)
@@ -180,29 +231,86 @@ class AgenteAsistente:
         datos = datos or crear_tool_datos(_tablas)
         self.grafo = construir_agente(llm, crear_tools(recuperador, reco, datos), checkpointer, store)
 
-    def responder(self, mensaje: str, conversacion_id: str, usuario_id: str | None = None) -> TurnoAgente:
-        """Un turno: guarda los hechos del usuario, el agente decide qué tools usar y llena la salida."""
+    def _preparar(self, mensaje: str, conversacion_id: str, usuario_id: str | None) -> Decision:
+        """Valida, guarda los hechos del usuario en el Store y enruta el mensaje."""
         if not CONVERSACION_VALIDA.match(conversacion_id):
             raise ValueError("conversacion_id inválido (6 a 64 letras, números, - o _).")
         if not mensaje.strip():
             raise ValueError("El mensaje está vacío.")
         if usuario_id and self.perfiles is not None:
             self.perfiles.guardar(usuario_id, extraer_hechos(mensaje))
-        decision = enrutar(mensaje)
-        if decision.ruta == "fuera_de_alcance":  # respuesta fija: no se gasta una llamada al LLM
-            salida = RespuestaAgente(respuesta=FUERA, intencion="fuera_de_alcance", confianza="alta")
-            return TurnoAgente(conversacion_id, salida, decision=asdict(decision), usuario_id=usuario_id)
-        config = {
+        return enrutar(mensaje)
+
+    @staticmethod
+    def _config(conversacion_id: str, decision: Decision) -> dict[str, Any]:
+        return {
             "configurable": {"thread_id": conversacion_id},
-            "tags": ["sb-asistente", "agente"],
+            "tags": ["sb-asistente", "agente", f"ruta:{decision.ruta}"],
             "metadata": {"conversacion_id": conversacion_id, "proyecto": LANGSMITH_PROJECT},
             "run_name": "turno-agente",
         }
+
+    @staticmethod
+    def _fijo(conversacion_id: str, decision: Decision, usuario_id: str | None) -> TurnoAgente:
+        """Respuesta fija fuera de alcance: no se gasta una llamada al LLM."""
+        salida = RespuestaAgente(respuesta=FUERA, intencion="fuera_de_alcance", confianza="alta")
+        return TurnoAgente(conversacion_id, salida, decision=asdict(decision), usuario_id=usuario_id)
+
+    def responder(self, mensaje: str, conversacion_id: str, usuario_id: str | None = None) -> TurnoAgente:
+        """Un turno: guarda los hechos del usuario, el agente decide qué tools usar y llena la salida."""
+        decision = self._preparar(mensaje, conversacion_id, usuario_id)
+        if decision.ruta == "fuera_de_alcance":
+            return self._fijo(conversacion_id, decision, usuario_id)
         estado = self.grafo.invoke(
             {"messages": [HumanMessage(mensaje)]},
-            config=config,
+            config=self._config(conversacion_id, decision),
             context=ContextoTurno(usuario_id, decision.ruta, decision.tools, decision.cautela),
         )
+        return self._turno(estado, conversacion_id, decision, usuario_id)
+
+    def transmitir(
+        self, mensaje: str, conversacion_id: str, usuario_id: str | None = None
+    ) -> Iterator[dict[str, Any]]:
+        """Un turno en streaming: eventos ``router``, ``tool_inicio``, ``tool_fin``, ``texto``, ``final``.
+
+        El texto sale del campo ``respuesta`` de la salida estructurada a medida que el modelo genera
+        sus argumentos (JSON parcial). Cualquier error se emite como evento ``error``.
+        """
+        try:
+            decision = self._preparar(mensaje, conversacion_id, usuario_id)
+            yield {"tipo": "router", **asdict(decision)}
+            if decision.ruta == "fuera_de_alcance":
+                turno = self._fijo(conversacion_id, decision, usuario_id)
+                yield {"tipo": "texto", "delta": turno.salida.respuesta}
+                yield {"tipo": "final", "turno": turno.a_dict()}
+                return
+            config = self._config(conversacion_id, decision)
+            contexto = ContextoTurno(usuario_id, decision.ruta, decision.tools, decision.cautela)
+            texto = _TextoParcial()
+            for modo, dato in self.grafo.stream(
+                {"messages": [HumanMessage(mensaje)]},
+                config=config,
+                context=contexto,
+                stream_mode=["updates", "messages"],
+            ):
+                if modo == "messages":
+                    delta = texto.agregar(*dato)
+                    if delta:
+                        yield {"tipo": "texto", "delta": delta}
+                else:
+                    yield from _eventos_de_tools(dato)
+            estado = self.grafo.get_state(config).values
+            yield {
+                "tipo": "final",
+                "turno": self._turno(estado, conversacion_id, decision, usuario_id).a_dict(),
+            }
+        except Exception as exc:  # noqa: BLE001 - el flujo se cierra con un evento de error legible
+            yield {"tipo": "error", "detalle": str(exc) or type(exc).__name__}
+
+    def _turno(
+        self, estado: dict[str, Any], conversacion_id: str, decision: Decision, usuario_id: str | None
+    ) -> TurnoAgente:
+        """Valida la salida estructurada (fuentes vistas en la búsqueda) y arma el turno."""
         salida: RespuestaAgente = estado.get("structured_response") or SIN_RESPUESTA
         pasos = _pasos_del_turno(estado["messages"])
         vistas = {
