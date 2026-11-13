@@ -396,3 +396,73 @@ button:disabled {
 .principal {
   min-width: 0;
 }
+
+/* ---- Decisión del router (SPEC-026) ---- */
+.decision {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--borde);
+  font-size: 0.85rem;
+}
+
+.insignia {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+}
+
+.ruta-directo {
+  color: var(--texto-suave);
+}
+
+.ruta-datos {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.ruta-rag {
+  color: var(--acento);
+  border-color: var(--acento);
+}
+
+.ruta-mixto {
+  color: var(--alerta);
+  border-color: var(--alerta);
+}
+
+.ruta-fuera_de_alcance {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.decision summary {
+  cursor: pointer;
+  margin-top: 6px;
+  color: var(--texto-suave);
+}
+
+.detalle {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+
+.detalle dt {
+  color: var(--texto-suave);
+}
+
+.detalle dd {
+  margin: 0;
+}
+
+.detalle code {
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--fondo);
+}
