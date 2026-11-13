@@ -21,11 +21,13 @@ from starlette.concurrency import run_in_threadpool
 from sb_asistente.config import BASE_URL, CHUNKS_JSONL, FRONTEND_ORIGINS, LLM_PROVIDER, RECO_DIR, RECO_K
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import salud as estado_servicio
+from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.view import errores, observabilidad
 from sb_asistente.view.dependencias import (
     Responder,
+    get_agente,
     get_asistente,
     get_chat_qa,
     get_detector,
@@ -35,6 +37,8 @@ from sb_asistente.view.dependencias import (
     get_responder,
 )
 from sb_asistente.view.schemas import (
+    AgenteIn,
+    AgenteOut,
     CajaOut,
     ChatIn,
     ChatOut,
@@ -186,6 +190,27 @@ def conversar(
         raise HTTPException(503, f"Faltan datos para esta herramienta: {exc}") from exc
     except KeyError as exc:
         raise HTTPException(404, str(exc.args[0]) if exc.args else "No encontrado") from exc
+    return turno.a_dict()
+
+
+@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"])
+def agente_mensaje(
+    entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+) -> dict[str, object]:
+    """Un turno del agente: el router elige la ruta (directo, datos, RAG o mixto) y el agente responde.
+
+    Devuelve la salida estructurada, la **decisión del router**, las tools usadas y las fuentes
+    descartadas. La memoria del hilo vive en SQLite (``conversacion_id``) y el perfil del usuario
+    en el Store (``usuario_id``).
+    """
+    try:
+        turno = fabrica(entrada.proveedor or LLM_PROVIDER).responder(
+            entrada.mensaje, entrada.conversacion_id, entrada.usuario_id
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"Faltan datos: {exc}") from exc
     return turno.a_dict()
 
 

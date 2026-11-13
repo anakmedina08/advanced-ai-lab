@@ -104,6 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--conversacion", default="cli-local", help="Id de la conversación (memoria)")
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
+    ag.add_argument("--usuario", default=None, help="Id del usuario (memoria de largo plazo en el Store)")
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
@@ -283,7 +284,9 @@ def _agente(args: argparse.Namespace) -> int:
         agente.olvidar(args.conversacion)
         print(f"Memoria de «{args.conversacion}» borrada.")
         return 0
-    turno = agente.responder(args.mensaje, args.conversacion)
+    turno = agente.responder(args.mensaje, args.conversacion, args.usuario)
+    d = turno.decision
+    print(f"Router → {d['ruta']} (confianza {d['confianza']}) · tools: {', '.join(d['tools']) or 'ninguna'}")
     for paso in turno.pasos:
         print(f"  · tool {paso.tool}({json.dumps(paso.argumentos, ensure_ascii=False)})")
     print()

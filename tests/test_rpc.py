@@ -27,7 +27,7 @@ class AgenteFalso:
     def __init__(self):
         self.memoria: dict[str, list] = {}
 
-    def responder(self, mensaje, conversacion_id):
+    def responder(self, mensaje, conversacion_id, usuario_id=None):
         self.memoria.setdefault(conversacion_id, []).append(mensaje)
         salida = RespuestaAgente(
             respuesta="Por WhatsApp.", fuentes=[URL], intencion="conocimiento", confianza="alta"

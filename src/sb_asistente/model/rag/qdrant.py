@@ -25,12 +25,24 @@ def filtro_payload(filtro: dict[str, str] | None) -> models.Filter | None:
 
 
 class BuscadorQdrant:
-    """Búsqueda vectorial en Qdrant con la interfaz que usa el recuperador híbrido."""
+    """Búsqueda vectorial en Qdrant con la interfaz que usa el recuperador híbrido.
 
-    def __init__(self, store: QdrantVectorStore) -> None:
-        """Recibe el índice ya abierto (``vector_store.build_index``)."""
+    ``extra`` es una colección aparte (en memoria) para el corpus de prueba del blindaje: así el
+    documento con la instrucción escondida compite en el ranking vectorial sin tocar el índice
+    persistido que usa el modo «rag».
+    """
+
+    def __init__(self, store: QdrantVectorStore, extra: QdrantVectorStore | None = None) -> None:
+        """Recibe el índice ya abierto (``vector_store.build_index``) y, opcionalmente, uno extra."""
         self.store = store
+        self.extra = extra
 
     def similarity_search(self, query: str, k: int = 4, filter: dict | None = None) -> list[Document]:  # noqa: A002
-        """Top-k por similitud coseno, filtrado por *payload* si se pide."""
-        return self.store.similarity_search(query, k=k, filter=filtro_payload(filter))
+        """Top-k por similitud coseno (de ambas colecciones), filtrado por *payload* si se pide."""
+        qfiltro = filtro_payload(filter)
+        if self.extra is None:
+            return self.store.similarity_search(query, k=k, filter=qfiltro)
+        candidatos = self.store.similarity_search_with_score(query, k=k, filter=qfiltro)
+        candidatos += self.extra.similarity_search_with_score(query, k=k, filter=qfiltro)
+        candidatos.sort(key=lambda par: par[1], reverse=True)
+        return [doc for doc, _ in candidatos[:k]]
