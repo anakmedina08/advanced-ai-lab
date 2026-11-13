@@ -206,6 +206,8 @@ class AgenteOut(BaseModel):
     pasos: list[PasoAgenteOut]
     fuentes_descartadas: list[str]
     mensajes_en_memoria: int
+    tiempos_tools: list[dict[str, object]] = []
+    ms_total: float = 0.0
 
 
 class MensajeHistorialOut(BaseModel):
