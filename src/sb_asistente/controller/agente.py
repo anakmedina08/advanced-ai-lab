@@ -9,6 +9,7 @@
 
 import re
 import sqlite3
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass, field
 from functools import lru_cache
@@ -33,6 +34,7 @@ from sb_asistente.config import (
     MEMORY_DB,
     MEMORY_STORE,
     QDRANT_DIR,
+    TRAZAS_LOG,
 )
 from sb_asistente.controller import recomendador
 from sb_asistente.controller.chat import FUERA
@@ -46,6 +48,7 @@ from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 from sb_asistente.model.rag.qdrant import BuscadorQdrant
 from sb_asistente.model.router import Decision, enrutar
+from sb_asistente.model.trazas import iniciar_medicion, linea_turno, registrar_turno
 
 CONVERSACION_VALIDA = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _URL = re.compile(r"https?://[^\s)\]>\"']+")
@@ -76,6 +79,8 @@ class TurnoAgente:
     mensajes_en_memoria: int = 0
     decision: dict[str, Any] = field(default_factory=dict)
     usuario_id: str | None = None
+    tiempos_tools: list[dict[str, Any]] = field(default_factory=list)
+    ms_total: float = 0.0
 
     def a_dict(self) -> dict[str, Any]:
         """Representación serializable."""
@@ -222,11 +227,13 @@ class AgenteAsistente:
         recomendar: Callable[[dict, int], list[dict]] | None = None,
         store: BaseStore | None = None,
         datos: BaseTool | None = None,
+        trazas: Path | None = None,
     ) -> None:
         """Inyecta modelo, recuperador, memoria de hilo y Store de largo plazo (las pruebas usan dobles)."""
         reco = recomendar or (lambda perfil, k: recomendador.recomendar_por_perfil(perfil, k)[0])
         self.checkpointer = checkpointer
         self.store = store
+        self.trazas = trazas
         self.perfiles = PerfilStore(store) if store is not None else None
         datos = datos or crear_tool_datos(_tablas)
         self.grafo = construir_agente(llm, crear_tools(recuperador, reco, datos), checkpointer, store)
@@ -258,15 +265,31 @@ class AgenteAsistente:
 
     def responder(self, mensaje: str, conversacion_id: str, usuario_id: str | None = None) -> TurnoAgente:
         """Un turno: guarda los hechos del usuario, el agente decide qué tools usar y llena la salida."""
+        inicio, tiempos = time.perf_counter(), iniciar_medicion()
         decision = self._preparar(mensaje, conversacion_id, usuario_id)
         if decision.ruta == "fuera_de_alcance":
-            return self._fijo(conversacion_id, decision, usuario_id)
-        estado = self.grafo.invoke(
-            {"messages": [HumanMessage(mensaje)]},
-            config=self._config(conversacion_id, decision),
-            context=ContextoTurno(usuario_id, decision.ruta, decision.tools, decision.cautela),
-        )
-        return self._turno(estado, conversacion_id, decision, usuario_id)
+            return self._trazar(self._fijo(conversacion_id, decision, usuario_id), inicio, tiempos)
+        try:
+            estado = self.grafo.invoke(
+                {"messages": [HumanMessage(mensaje)]},
+                config=self._config(conversacion_id, decision),
+                context=ContextoTurno(usuario_id, decision.ruta, decision.tools, decision.cautela),
+            )
+        except Exception as exc:
+            vacio = TurnoAgente(conversacion_id, SIN_RESPUESTA, decision=asdict(decision))
+            self._trazar(vacio, inicio, tiempos, type(exc).__name__)
+            raise
+        return self._trazar(self._turno(estado, conversacion_id, decision, usuario_id), inicio, tiempos)
+
+    def _trazar(
+        self, turno: TurnoAgente, inicio: float, tiempos: list[dict[str, Any]], error: str | None = None
+    ) -> TurnoAgente:
+        """Completa latencias y escribe la traza del turno (sin texto del usuario)."""
+        turno.tiempos_tools = list(tiempos)
+        turno.ms_total = round((time.perf_counter() - inicio) * 1000, 1)
+        if self.trazas is not None:
+            registrar_turno(self.trazas, linea_turno(turno.a_dict(), turno.ms_total, error))
+        return turno
 
     def transmitir(
         self, mensaje: str, conversacion_id: str, usuario_id: str | None = None
@@ -276,11 +299,12 @@ class AgenteAsistente:
         El texto sale del campo ``respuesta`` de la salida estructurada a medida que el modelo genera
         sus argumentos (JSON parcial). Cualquier error se emite como evento ``error``.
         """
+        inicio, tiempos = time.perf_counter(), iniciar_medicion()
         try:
             decision = self._preparar(mensaje, conversacion_id, usuario_id)
             yield {"tipo": "router", **asdict(decision)}
             if decision.ruta == "fuera_de_alcance":
-                turno = self._fijo(conversacion_id, decision, usuario_id)
+                turno = self._trazar(self._fijo(conversacion_id, decision, usuario_id), inicio, tiempos)
                 yield {"tipo": "texto", "delta": turno.salida.respuesta}
                 yield {"tipo": "final", "turno": turno.a_dict()}
                 return
@@ -300,10 +324,8 @@ class AgenteAsistente:
                 else:
                     yield from _eventos_de_tools(dato)
             estado = self.grafo.get_state(config).values
-            yield {
-                "tipo": "final",
-                "turno": self._turno(estado, conversacion_id, decision, usuario_id).a_dict(),
-            }
+            turno = self._trazar(self._turno(estado, conversacion_id, decision, usuario_id), inicio, tiempos)
+            yield {"tipo": "final", "turno": turno.a_dict()}
         except Exception as exc:  # noqa: BLE001 - el flujo se cierra con un evento de error legible
             yield {"tipo": "error", "detalle": str(exc) or type(exc).__name__}
 
@@ -380,5 +402,5 @@ def agente_por_defecto(proveedor: str = LLM_PROVIDER) -> AgenteAsistente:
     """Agente real: LLM del proveedor, RAG híbrido y memoria SQLite (una instancia por proveedor)."""
     recuperador, _ = recuperador_por_defecto()
     return AgenteAsistente(
-        build_llm(proveedor), recuperador, abrir_memoria(), store=abrir_store(MEMORY_STORE)
+        build_llm(proveedor), recuperador, abrir_memoria(), store=abrir_store(MEMORY_STORE), trazas=TRAZAS_LOG
     )

@@ -110,6 +110,8 @@ def build_parser() -> argparse.ArgumentParser:
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
     ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5000)")
     ui_ml.add_argument("--port", type=int, default=5000)
+    tr = sub.add_parser("trazas", help="Últimos turnos del agente: ruta, tools y latencia (sin texto)")
+    tr.add_argument("-n", type=int, default=10)
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
@@ -296,6 +298,22 @@ def _agente(args: argparse.Namespace) -> int:
     return 0
 
 
+def _trazas(args: argparse.Namespace) -> int:
+    """Resumen de las últimas trazas del agente (``data/logs/turnos.jsonl``)."""
+    from sb_asistente.config import TRAZAS_LOG
+    from sb_asistente.model.trazas import ultimas
+
+    filas = ultimas(TRAZAS_LOG, args.n)
+    if not filas:
+        print(f"Aún no hay trazas en {TRAZAS_LOG}. Converse con el agente (sb agente o la API).")
+        return 0
+    for f in filas:
+        tools = ", ".join(f"{t['tool']} {t['ms']:.0f} ms" for t in f["tools"]) or "sin tools"
+        error = f" · error {f['error']}" if f.get("error") else ""
+        print(f"{f['fecha']}  hilo {f['hilo']}  {f['ruta']:<16} {f['ms_total']:>8.0f} ms  [{tools}]{error}")
+    return 0
+
+
 def _chat(args: argparse.Namespace) -> int:
     """Un turno del chat en la terminal, con su traza."""
     lite: list[assistant.LiteAssistant] = []
@@ -326,6 +344,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _rag(args)
     if args.command == "agente":
         return _agente(args)
+    if args.command == "trazas":
+        return _trazas(args)
     if args.command == "foto":
         return _foto(args)
     if args.command == "mlflow":

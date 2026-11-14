@@ -43,6 +43,7 @@ from sb_asistente.model.intencion import clasificar
 from sb_asistente.model.memoria import PerfilStore, bloque_perfil
 from sb_asistente.model.rag.blindaje import formatear_pasajes
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
+from sb_asistente.model.trazas import medir_tools
 
 Seccion = Literal["canales_y_servicio", "movilidad", "hogar_y_mascotas", "vida_y_ahorro", "salud", "arl"]
 
@@ -256,6 +257,7 @@ def middleware(llm: BaseChatModel) -> Sequence:
         ToolCallLimitMiddleware(run_limit=5, exit_behavior="continue"),
         recortar_historial,
         filtrar_tools,
+        medir_tools,
         prompt_con_perfil,
     ]
 

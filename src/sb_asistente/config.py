@@ -160,6 +160,7 @@ RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
 MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
+TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad
 MEMORY_SUMMARY_TOKENS: Final[int] = int(os.getenv("MEMORY_SUMMARY_TOKENS", "8000"))
