@@ -1,8 +1,8 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 
-import Chat from "./pages/Chat";
 import Estado from "./pages/Estado";
 import Foto from "./pages/Foto";
+import Inicio from "./pages/Inicio";
 
 /** Layout común: encabezado con navegación, aviso de proyecto académico y la página activa. */
 export default function App() {
@@ -29,7 +29,7 @@ export default function App() {
       </p>
       <main className="contenido">
         <Routes>
-          <Route path="/" element={<Chat />} />
+          <Route path="/" element={<Inicio />} />
           <Route path="/foto" element={<Foto />} />
           <Route path="/estado" element={<Estado />} />
           <Route path="*" element={<p>Página no encontrada.</p>} />
