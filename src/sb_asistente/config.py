@@ -147,6 +147,7 @@ MLFLOW_ACTIVO: Final[bool] = os.getenv("SB_MLFLOW", "1") != "0"  # SB_MLFLOW=0 a
 EXPERIMENTO_QA: Final[str] = "asistente-qa"
 EXPERIMENTO_RECOMENDADOR: Final[str] = "recomendador"
 EXPERIMENTO_RECUPERACION: Final[str] = "recuperacion"
+EXPERIMENTO_VISION: Final[str] = "vision-yolo"  # SPEC-034: el modelo MaaS de la API
 
 # --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------
 VECTOR_DIR: Final[Path] = DATA_DIR / "vector"  # Chroma persistente (no versionado)

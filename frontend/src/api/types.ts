@@ -134,3 +134,44 @@ export interface FotoOut {
   recomendaciones: { product_id: string; nombre: string; linea: string; razon: string }[];
   imagen_jpeg_b64?: string | null;
 }
+
+export interface EtapaOut {
+  etapa: string;
+  capa: string;
+  hecha: boolean;
+  metricas: Record<string, number | string>;
+}
+
+export interface CorpusOut {
+  url: string;
+  titulo: string;
+  seccion: string;
+  fecha_captura: string;
+  sha256: string;
+  tokens: number;
+}
+
+export interface EvaluacionOut {
+  modelo: string;
+  version: string;
+  preguntas: number;
+  keyword_hit_promedio: number;
+  tasa_cita_fuente: number;
+  tasa_fallback_correcto: number;
+  latencia_promedio_s: number;
+}
+
+export interface CorridaOut {
+  nombre: string;
+  fecha: number;
+  commit: string;
+  parametros: Record<string, string>;
+  metricas: Record<string, number>;
+}
+
+export interface ExperimentosOut {
+  activa: boolean;
+  url_ui: string;
+  nombres: Record<string, string>;
+  experimentos: Record<string, CorridaOut[]>;
+}

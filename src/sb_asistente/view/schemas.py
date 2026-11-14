@@ -244,6 +244,48 @@ class PerfilOut(BaseModel):
     hechos: dict[str, str]
 
 
+class CorpusOut(BaseModel):
+    """Un documento del corpus Gold (sin el texto)."""
+
+    url: str
+    titulo: str
+    seccion: str
+    fecha_captura: str
+    sha256: str
+    tokens: int
+
+
+class EvaluacionOut(BaseModel):
+    """Resumen de una corrida de ``sb eval`` (proporciones de 0 a 1)."""
+
+    modelo: str
+    version: str
+    preguntas: int
+    keyword_hit_promedio: float
+    tasa_cita_fuente: float
+    tasa_fallback_correcto: float
+    latencia_promedio_s: float
+
+
+class CorridaOut(BaseModel):
+    """Una corrida de MLflow."""
+
+    nombre: str
+    fecha: int
+    commit: str
+    parametros: dict[str, str]
+    metricas: dict[str, float]
+
+
+class ExperimentosOut(BaseModel):
+    """Corridas de MLflow por experimento (vacío si la bitácora no está activa)."""
+
+    activa: bool
+    url_ui: str
+    nombres: dict[str, str]
+    experimentos: dict[str, list[CorridaOut]]
+
+
 class ChatIn(_Entrada):
     """Mensaje del chat (estilo conversación)."""
 

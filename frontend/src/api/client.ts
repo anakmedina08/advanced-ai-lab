@@ -11,11 +11,16 @@ import type {
   AgenteOut,
   CheckpointOut,
   ConversacionOut,
+  CorpusOut,
   ErrorOut,
+  EtapaOut,
+  EvaluacionOut,
+  ExperimentosOut,
   EventoAgente,
   FotoOut,
   HealthOut,
   PerfilOut,
+  RespuestaOut,
 } from "./types";
 
 export const API_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://127.0.0.1:8000";
@@ -128,4 +133,22 @@ export async function analizarFoto(archivo: File, señal?: AbortSignal): Promise
   const query = "interpretar=true&responder=true&devolver_imagen=true";
   const respuesta = await pedir(`/fotos?${query}`, { method: "POST", body: datos }, { timeoutMs: 120_000, señal });
   return (await respuesta.json()) as FotoOut;
+}
+
+// ---- Panel del equipo y guías (SPEC-044) ----
+export const temas = () => obtener<string[]>("/temas");
+export const etapasPipeline = () => obtener<EtapaOut[]>("/pipeline");
+export const corpus = () => obtener<CorpusOut[]>("/pipeline/corpus");
+export const evaluaciones = () => obtener<EvaluacionOut[]>("/evaluacion");
+export const detalleEvaluacion = (modelo: string, version: string) =>
+  obtener<Record<string, string | number | boolean>[]>(
+    `/evaluacion/${encodeURIComponent(modelo)}/${encodeURIComponent(version)}`,
+  );
+export const experimentos = () => obtener<ExperimentosOut>("/experimentos");
+
+/** Guía: resumen o preguntas frecuentes de un tema con toda la base pública. */
+export async function guia(tipo: "resumen" | "faq", tema: string, n: number, proveedor?: string): Promise<RespuestaOut> {
+  const ruta = tipo === "resumen" ? "/resumen" : "/faq";
+  const respuesta = await pedir(ruta, json({ tema, n, proveedor }), { timeoutMs: 180_000 });
+  return (await respuesta.json()) as RespuestaOut;
 }
