@@ -15,7 +15,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | M1 · Taller de código heredado (AI Doctors) | ✅ | repositorio aparte `daalrasi/gpia-m1-ai-doctors` (otro caso) |
 | M2 · Propuesta con backlog, criterios Dado/Cuando/Entonces, CPM y Gantt | ✅ | `docs/gestion/propuesta-m2.pdf`, `docs/gestion/backlog.json`, `docs/gestion/propuesta/build.py` |
 | Módulo 3 · Git: Gitflow con `main`, `develop` y ramas `feature/*` | ✅ | ramas del repositorio, Conventional Commits con hook `commit-msg` (`scripts/check_commit_msg.py`) |
-| Módulo 3 · Pull Requests con revisor (Reviewers) y responsable (Assignees) | 🟡 | 48 PR fusionadas; las 40 de las historias (SPEC-007 a SPEC-046, #161–#240) tienen responsable (Katherine o Daniel), revisor solicitado (Daniel) y `Closes #N`, pero se fusionaron sin la aprobación formal registrada en GitHub · `.github/pull_request_template.md` |
+| Módulo 3 · Pull Requests con revisor (Reviewers) y responsable (Assignees) | 🟡 | 61 PR fusionadas, cada historia con responsable, revisor (Daniel), `Closes #N` y CI; Daniel aprobó 30 de las 40 PR de historias, faltan #163 a #181 · `.github/pull_request_template.md` |
 | Mínimo 40 PR fusionadas con revisión (piso de 8 por integrante) | 🟡 | 48 PR fusionadas (≥ 40) y 0 abiertas; falta la aprobación registrada en las 40 últimas y el piso de 8 PR propias de Daniel |
 | Mínimo 40 especificaciones SDD (spec, plan y tasks) | ✅ | 45 en `openspec/specs/` (`find openspec -name spec.md`), una por historia, escritas antes del código y vinculadas a su issue y PR |
 | Frontend desacoplado (sin Streamlit) | ✅ | React + Vite + TypeScript en `frontend/` (SPEC-022 a 032): estados, Network visible, foto con confianza, CI propia |
@@ -29,8 +29,8 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | API con visión: `POST /fotos` con YOLO L | ✅ | `yolo26l` elegido por comparación (`docs/evaluacion-resultados.md` §4), `lifespan`, cliente `httpx` · ADR-020 |
 | MLflow: servidor en 5050, 3 corridas comparables y Model Registry | ✅ | `make mlflow-server`; experimento `vision-yolo` (3 corridas con P, R, F1, mAP, latencia p95 y throughput, artefactos y tags); `sb-yolo-difuminado@produccion` (SPEC-033 a 035) · ADR-022 |
 | Model Card | ✅ | [`model-card.md`](model-card.md) (SPEC-037) |
-| Diagrama de arquitectura (Archify) | 🟡 | [`arquitectura.html`](arquitectura.html) en formato Archify (JSON + HTML); falta instalar la skill externa para entregarlo con `archify deliver` (SPEC-038) |
-| Kanban con WIP, AC, Fibonacci y métricas | 🟡 | plantilla de historia, puntos en «Estimate», milestone M3, [`kanban.md`](kanban.md) con WIP, throughput, edad y cycle time (SPEC-040); falta fijar el límite de columna en la UI del tablero |
+| Diagrama de arquitectura (Archify) | ✅ | [`arquitectura.html`](arquitectura.html) generado con Archify (tipo *architecture*, perfil *showcase*, evidencia del repositorio por componente); fuente [`arquitectura.json`](arquitectura.json) (SPEC-038, SPEC-048) |
+| Kanban con WIP, AC, Fibonacci y métricas | ✅ | límites WIP de 2 en *In progress* e *In review* en el tablero, plantilla de historia, puntos en «Estimate», milestone M3 y [`kanban.md`](kanban.md) con WIP, throughput, edad y cycle time (SPEC-040) |
 | Datos sintéticos con contrato de datos (sin PII) | ✅ | `model/recomendador/sintetico.py`, `contrato.py`, `sb reco generar/validar` |
 | Líneas base y métricas (Recall@5, NDCG@5) | ✅ | `popularidad.py`, `metricas.py`, `particion.py`, `sb reco baseline` (segmento: Recall@5 = 0,639) |
 | Servicio de recomendación por API | ✅ | `/recomendaciones/{cliente_id}` (línea base por segmento) |
@@ -38,7 +38,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Modelo e5-small + LightGBM (Recall@5 ≥ 0,70) | ⛔ | no planeado para el Módulo 3 (T-23, T-71): queda para el Módulo 4 |
 | Auditoría de sesgo | ⛔ | no planeada para el Módulo 3 (T-25); los sesgos del modelo de la API están en la [Model Card](model-card.md) |
 | Front web | ✅ | frontend propio React (SPEC-022 a 032); el chat de yellowdata.com.co sigue disponible |
-| Despliegue reproducible | 🟡 | `docker-compose.yml` con API, frontend y MLflow (SPEC-041), sin probar localmente; cPanel no planeado (T-33) |
+| Despliegue reproducible | ✅ | `docker compose build` construye la API y el frontend; los contenedores responden (`/health` ok y nginx sirve la SPA) · `docker-compose.yml` (SPEC-041, SPEC-048); cPanel no planeado (T-33) |
 
 ## Técnicas Avanzadas de IA en Modelos de Lenguaje
 
