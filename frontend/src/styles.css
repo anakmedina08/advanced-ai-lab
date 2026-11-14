@@ -60,6 +60,8 @@ a:hover {
   display: grid;
   grid-template-columns: 272px 1fr;
   min-height: 100vh;
+  /* La columna de la barra se pinta oscura en todo el alto, aunque la página sea más larga que la ventana */
+  background: linear-gradient(to right, var(--lateral) 272px, var(--fondo) 272px);
 }
 
 .barra-lateral {
@@ -242,6 +244,7 @@ button:disabled {
 @media (max-width: 899px) {
   .app {
     grid-template-columns: 1fr;
+    background: var(--fondo);
   }
 
   .barra-lateral {

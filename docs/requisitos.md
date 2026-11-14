@@ -24,7 +24,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Spec-Driven Development (SDD) | ✅ | `openspec/specs/` (spec, plan y tasks por funcionalidad, requisitos R1–R32 con escenarios y pruebas) |
 | GitHub Projects (tablero Kanban) | ✅ | proyecto «Gestion» generado desde los `tasks.md` con `scripts/crear_kanban.py`; issues con responsable |
 | Tareas que no se harán: «Close as not planned» | ✅ | las tareas fuera del alcance de los Módulos 2 y 3 se cerraron como *not planned* con su motivo (T-22, T-23, T-25, T-26, T-27, T-29, T-33, T-66, T-71); 0 issues abiertos |
-| Pruebas unitarias (mínimo 120), AAA sin red ni API | ✅ | `tests/` (cerca de 490 casos), `uv run pytest --collect-only -q`, cobertura ≥ 85 % en la CI |
+| Pruebas unitarias (mínimo 120), AAA sin red ni API | ✅ | `tests/` (más de 640 casos de Python y 44 del frontend con Vitest), `uv run pytest --collect-only -q`, cobertura ≥ 85 % en la CI |
 | FastAPI con contratos Pydantic | ✅ | `view/api.py`, `view/schemas.py`, `uv run sb api` → `/docs` · ADR-010 |
 | API con visión: `POST /fotos` con YOLO L | ✅ | `yolo26l` elegido por comparación (`docs/evaluacion-resultados.md` §4), `lifespan`, cliente `httpx` · ADR-020 |
 | MLflow: servidor en 5050, 3 corridas comparables y Model Registry | ✅ | `make mlflow-server`; experimento `vision-yolo` (3 corridas con P, R, F1, mAP, latencia p95 y throughput, artefactos y tags); `sb-yolo-difuminado@produccion` (SPEC-033 a 035) · ADR-022 |
