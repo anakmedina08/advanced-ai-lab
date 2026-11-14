@@ -134,3 +134,19 @@ def test_experimento_sin_corridas_lo_dice(con_bitacora):
     at = app().switch_page(PAGINA.format("experimentos")).run()
     at.get("button_group")[0].set_value("recomendador").run()
     assert "aún no tiene corridas" in at.info[0].value
+
+
+def test_estado_no_planeado_se_lee_de_la_matriz(tmp_path):
+    # Arrange
+    from sb_asistente.model.proyecto import leer_requisitos
+
+    ruta = tmp_path / "requisitos.md"
+    ruta.write_text(
+        "## Gestión\n\n| Requisito | Estado | Evidencia |\n|---|---|---|\n"
+        "| Auditoría de sesgo | ⛔ | T-25 |\n",
+        encoding="utf-8",
+    )
+    # Act
+    filas = leer_requisitos(ruta)
+    # Assert
+    assert filas[0].estado == "no planeado"

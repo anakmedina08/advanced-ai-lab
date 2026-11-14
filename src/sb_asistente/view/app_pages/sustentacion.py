@@ -12,6 +12,7 @@ ESTILO = {  # estado → (color del badge, ícono)
     "cumplido": ("green", ":material/check_circle:"),
     "en curso": ("orange", ":material/pending:"),
     "pendiente": ("gray", ":material/schedule:"),
+    "no planeado": ("gray", ":material/block:"),
 }
 PESTANAS = {  # título de la sección en requisitos.md → etiqueta corta e ícono
     "Gestión de Proyectos en IA y CD": ("Gestión de Proyectos", ":material/account_tree:"),
