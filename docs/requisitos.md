@@ -20,7 +20,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Mínimo 40 especificaciones SDD (spec, plan y tasks) | ✅ | 45 en `openspec/specs/` (`find openspec -name spec.md`), una por historia, escritas antes del código y vinculadas a su issue y PR |
 | Frontend desacoplado (sin Streamlit) | ✅ | React + Vite + TypeScript en `frontend/` (SPEC-022 a 032): estados, Network visible, foto con confianza, CI propia |
 | Backend en 3 capas con /health y errores HTTP | ✅ | `model/vision` → `controller/vision` → `view/api.py`; `GET /health`, `ErrorOut` 400/404/422/500/503 (SPEC-007, 008) |
-| Módulo 3 · Proteger `main` (PR + CI en verde) | ⏳ | Settings › Branches: T-15 |
+| Módulo 3 · Proteger `main` (PR + CI en verde) | ✅ | rama protegida: exige PR y el check «Ruff + Pytest», sin force push ni borrado (T-15) |
 | Spec-Driven Development (SDD) | ✅ | `openspec/specs/` (spec, plan y tasks por funcionalidad, requisitos R1–R32 con escenarios y pruebas) |
 | GitHub Projects (tablero Kanban) | ✅ | proyecto «Gestion» generado desde los `tasks.md` con `scripts/crear_kanban.py`; issues con responsable |
 | Tareas que no se harán: «Close as not planned» | ✅ | las tareas fuera del alcance de los Módulos 2 y 3 se cerraron como *not planned* con su motivo (T-22, T-23, T-25, T-26, T-27, T-29, T-33, T-66, T-71); 0 issues abiertos |
