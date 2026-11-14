@@ -86,6 +86,7 @@ class AgenteParams(_Params):
 
     mensaje: Annotated[str, Field(min_length=1, max_length=800)]
     conversacion_id: ConversacionId
+    usuario_id: ConversacionId | None = None
     proveedor: str | None = None
 
     @field_validator("mensaje")
@@ -194,7 +195,8 @@ def _chat(p: ChatIn, ctx: Contexto) -> dict[str, object]:
 
 
 def _conversar(p: AgenteParams, ctx: Contexto) -> dict[str, object]:
-    return ctx.agente(p.proveedor or LLM_PROVIDER).responder(p.mensaje, p.conversacion_id).a_dict()
+    agente = ctx.agente(p.proveedor or LLM_PROVIDER)
+    return agente.responder(p.mensaje, p.conversacion_id, p.usuario_id).a_dict()
 
 
 def _historial(p: ConversacionParams, ctx: Contexto) -> dict[str, object]:

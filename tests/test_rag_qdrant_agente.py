@@ -122,3 +122,16 @@ def test_sin_qdrant_ni_chroma_queda_solo_bm25(monkeypatch, tmp_path):
     _, modo = agente.recuperador_por_defecto(tmp_path / "chunks.jsonl", tmp_path / "qdrant")
     # Assert
     assert modo.startswith("solo BM25")
+
+
+def test_coleccion_extra_compite_en_el_ranking_sin_tocar_la_principal():
+    # Arrange
+    embeddings = DeterministicFakeEmbedding(size=16)
+    principal = vector_store.build_index(CHUNKS[:1], embeddings, vector_store.open_client(), collection="p")
+    extra = vector_store.build_index(CHUNKS[1:], embeddings, vector_store.open_client(), collection="demo")
+    buscador = BuscadorQdrant(principal, extra)
+    # Act
+    ids = {d.metadata["chunk_id"] for d in buscador.similarity_search("seguro", k=3)}
+    # Assert
+    assert ids == {"soat#0", "hogar#0", "canales#0"}
+    assert principal.client.count(principal.collection_name).count == 1

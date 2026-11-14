@@ -146,6 +146,68 @@ class HealthOut(BaseModel):
     componentes: dict[str, bool]
 
 
+class AgenteIn(_Entrada):
+    """Mensaje para el agente (``POST /agente/mensajes`` y ``/agente/stream``)."""
+
+    mensaje: Annotated[str, Field(min_length=1, max_length=800, examples=["¿Qué cubre el SOAT?"])]
+    conversacion_id: Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{6,64}$", examples=["hilo-7f3a9c"])]
+    usuario_id: Annotated[
+        str | None, Field(default=None, pattern=r"^[A-Za-z0-9_-]{6,64}$", examples=["usuario-ana-01"])
+    ] = None
+    proveedor: str | None = None
+
+    @field_validator("mensaje")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+    @field_validator("proveedor")
+    @classmethod
+    def _proveedor_valido(cls, valor: str | None) -> str | None:
+        return PreguntaIn._proveedor_valido(valor)
+
+
+class DecisionOut(BaseModel):
+    """Decisión del router: ruta, confianza, señales y tools habilitadas."""
+
+    ruta: Literal["directo", "datos", "rag", "mixto", "fuera_de_alcance"]
+    confianza: float
+    senales: list[str]
+    tools: list[str]
+    cautela: bool
+
+
+class PasoAgenteOut(BaseModel):
+    """Una llamada a tool dentro del turno."""
+
+    tool: str
+    argumentos: dict[str, object]
+    resultado: str
+
+
+class SalidaAgenteOut(BaseModel):
+    """Salida estructurada del agente (validada: fuentes vistas en la búsqueda)."""
+
+    respuesta: str
+    fuentes: list[str]
+    intencion: str
+    confianza: Literal["alta", "media", "baja"]
+    productos_recomendados: list[str] = []
+    requiere_asesor: bool = False
+
+
+class AgenteOut(BaseModel):
+    """Turno completo del agente."""
+
+    conversacion_id: str
+    usuario_id: str | None = None
+    salida: SalidaAgenteOut
+    decision: DecisionOut
+    pasos: list[PasoAgenteOut]
+    fuentes_descartadas: list[str]
+    mensajes_en_memoria: int
+
+
 class ChatIn(_Entrada):
     """Mensaje del chat (estilo conversación)."""
 

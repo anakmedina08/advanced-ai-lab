@@ -50,12 +50,14 @@ Seccion = Literal["canales_y_servicio", "movilidad", "hogar_y_mascotas", "vida_y
 class RespuestaAgente(BaseModel):
     """Salida estructurada obligatoria de cada turno del agente."""
 
-    respuesta: str = Field(description="Respuesta al cliente en español, breve, en Markdown.")
+    respuesta: str = Field(
+        min_length=1, description="Respuesta al cliente en español, breve, en Markdown (nunca vacía)."
+    )
     fuentes: list[str] = Field(
         default_factory=list,
         description="URLs de segurosbolivar.com (de buscar_conocimiento) que respaldan la respuesta.",
     )
-    intencion: Literal["conocimiento", "recomendacion", "saludo", "fuera_de_alcance"] = Field(
+    intencion: Literal["conocimiento", "recomendacion", "datos", "saludo", "fuera_de_alcance"] = Field(
         description="Tipo de pregunta atendida."
     )
     confianza: Literal["alta", "media", "baja"] = Field(
@@ -96,9 +98,24 @@ no eres un canal oficial). Respondes en español, con frases cortas.
 
 @dataclass(slots=True)
 class ContextoTurno:
-    """Contexto de ejecución de un turno (``runtime.context``): quién pregunta."""
+    """Contexto de ejecución de un turno (``runtime.context``): quién pregunta y qué decidió el router."""
 
     usuario_id: str | None = None
+    ruta: str | None = None
+    tools: tuple[str, ...] | None = None
+    cautela: bool = False
+
+
+GUIA_RUTA: dict[str, str] = {
+    "directo": "Responde sin buscar: es un saludo, un dato personal o una pregunta sobre la conversación.",
+    "datos": "Pregunta numérica: usa consultar_datos y copia el valor exacto; no calcules ni estimes.",
+    "rag": "Busca con buscar_conocimiento y responde solo con lo que digan los pasajes, citando sus URLs.",
+    "mixto": (
+        "Combina fuentes: buscar_conocimiento para lo que dicen los documentos y consultar_datos para las "
+        "cifras; presenta ambas partes por separado y cita cada una."
+    ),
+}
+CAUTELA = "La confianza del enrutamiento es baja: si no hay evidencia, dilo y sugiere los canales oficiales."
 
 
 @dynamic_prompt
@@ -106,15 +123,37 @@ def prompt_con_perfil(request: ModelRequest) -> str:
     """Prompt del sistema + el perfil de largo plazo del usuario (``store.search`` en su namespace)."""
     contexto = request.runtime.context if request.runtime else None
     store = request.runtime.store if request.runtime else None
+    partes = [SYSTEM_PROMPT]
+    ruta = getattr(contexto, "ruta", None)
+    if ruta in GUIA_RUTA:
+        cautela = getattr(contexto, "cautela", False)
+        guia = GUIA_RUTA[ruta] + (f" {CAUTELA}" if cautela else "")
+        partes.append(f'<ruta_router ruta="{ruta}">{guia}</ruta_router>')
     usuario = getattr(contexto, "usuario_id", None)
-    if not (usuario and store):
-        return SYSTEM_PROMPT
-    hechos = PerfilStore(store).leer(usuario)
-    return f"{SYSTEM_PROMPT}\n\n{bloque_perfil(hechos)}" if hechos else SYSTEM_PROMPT
+    hechos = PerfilStore(store).leer(usuario) if usuario and store else {}
+    if hechos:
+        partes.append(bloque_perfil(hechos))
+    return "\n\n".join(partes)
+
+
+@wrap_model_call
+def filtrar_tools(request, handler):  # noqa: ANN001, ANN201 - firma definida por LangChain
+    """Router: el modelo solo ve las tools de la ruta elegida (``directo`` → ninguna).
+
+    La tool de la salida estructurada no se filtra: LangChain la agrega después.
+    """
+    contexto = request.runtime.context if request.runtime else None
+    permitidas = getattr(contexto, "tools", None)
+    if permitidas is None:
+        return handler(request)
+    tools = [t for t in request.tools if getattr(t, "name", None) in permitidas]
+    return handler(request.override(tools=tools))
 
 
 def crear_tools(
-    recuperador: RecuperadorHibrido, recomendar: Callable[[dict, int], list[dict]]
+    recuperador: RecuperadorHibrido,
+    recomendar: Callable[[dict, int], list[dict]],
+    datos: BaseTool | None = None,
 ) -> list[BaseTool]:
     """Tools del agente con sus dependencias inyectadas (permiten dobles en pruebas)."""
 
@@ -186,7 +225,8 @@ def crear_tools(
             ensure_ascii=False,
         )
 
-    return [buscar_conocimiento, recomendar_seguros, clasificar_intencion]
+    tools = [buscar_conocimiento, recomendar_seguros, clasificar_intencion]
+    return tools + ([datos] if datos is not None else [])
 
 
 @wrap_model_call
@@ -215,6 +255,7 @@ def middleware(llm: BaseChatModel) -> Sequence:
         ModelCallLimitMiddleware(run_limit=6, exit_behavior="end"),
         ToolCallLimitMiddleware(run_limit=5, exit_behavior="continue"),
         recortar_historial,
+        filtrar_tools,
         prompt_con_perfil,
     ]
 
