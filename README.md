@@ -18,7 +18,7 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 
 | Recurso | Enlace |
 |---|---|
-| Tablero Kanban (GitHub Projects) | https://github.com/users/anakmedina08/projects/2 |
+| Tablero Kanban (GitHub Projects) | https://github.com/users/anakmedina08/projects/2 · políticas y métricas en [`docs/kanban.md`](docs/kanban.md) |
 | Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
 | Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
 | Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
