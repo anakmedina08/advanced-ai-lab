@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 
-import { useProveedor } from "./chat/proveedor";
+import { useAjustes } from "./chat/ajustes";
 import { useSalud } from "./chat/salud";
 import AvisoConexion from "./components/AvisoConexion";
 import BarraLateral from "./components/BarraLateral";
@@ -19,12 +19,13 @@ import Sustentacion from "./pages/Sustentacion";
 /** Layout de la versión Streamlit: barra lateral oscura con tres áreas y el contenido a la derecha. */
 export default function App() {
   const { estado, reintentar } = useSalud();
-  const [proveedor, setProveedor] = useProveedor();
+  const [ajustes, cambiarAjustes] = useAjustes();
+  const { proveedor } = ajustes;
   const [menuAbierto, setMenuAbierto] = useState(false);
   const pagina = paginaDe(useLocation().pathname);
   const reintentarSalud = () => void reintentar();
   const configuracion = (
-    <Configuracion proveedor={proveedor} onProveedor={setProveedor} salud={estado} onReintentar={reintentarSalud} />
+    <Configuracion ajustes={ajustes} onCambiar={cambiarAjustes} salud={estado} onReintentar={reintentarSalud} />
   );
 
   return (
@@ -50,8 +51,8 @@ export default function App() {
             </h1>
           )}
           <Routes>
-            <Route path="/" element={<Inicio proveedor={proveedor} />} />
-            <Route path="/foto" element={<Foto />} />
+            <Route path="/" element={<Inicio proveedor={proveedor} modo={ajustes.modo} versionPrompt={ajustes.version} />} />
+            <Route path="/foto" element={<Foto proveedor={proveedor} />} />
             <Route path="/configuracion" element={configuracion} />
             <Route path="/estado" element={configuracion} />
             <Route path="/guias" element={<Guias proveedor={proveedor} />} />

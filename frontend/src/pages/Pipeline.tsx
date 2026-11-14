@@ -1,4 +1,6 @@
-import { corpus, etapasPipeline } from "../api/client";
+import { useState } from "react";
+
+import { ApiError, corpus, descubrir, etapasPipeline, reprocesar } from "../api/client";
 import Icono from "../components/Icono";
 import { EstadoCarga, Metrica, useDatos } from "../components/Panel";
 
@@ -6,13 +8,57 @@ import { EstadoCarga, Metrica, useDatos } from "../components/Panel";
 export default function Pipeline() {
   const etapas = useDatos(etapasPipeline);
   const documentos = useDatos(corpus);
+  const [accion, setAccion] = useState<{ fase: "idle" | "trabajando" | "listo" | "error"; mensaje: string }>({
+    fase: "idle",
+    mensaje: "",
+  });
+
+  const ejecutar = async (tipo: "procesar" | "descubrir") => {
+    setAccion({
+      fase: "trabajando",
+      mensaje: tipo === "procesar" ? "Limpiando, deduplicando y fragmentando…" : "Consultando robots.txt y sitemap.xml…",
+    });
+    try {
+      if (tipo === "procesar") {
+        const r = await reprocesar();
+        setAccion({
+          fase: "listo",
+          mensaje: `Pipeline terminado: ${r.documentos} documentos y ${r.chunks} fragmentos · ${r.duplicadas_descartadas} páginas duplicadas descartadas.`,
+        });
+        void etapas.recargar();
+        void documentos.recargar();
+      } else {
+        const r = await descubrir();
+        setAccion({
+          fase: "listo",
+          mensaje: `Sitemap: ${r.total_sitemap} URLs · seleccionadas ${r.seleccionadas} · descartadas ${r.descartadas}.`,
+        });
+      }
+    } catch (e) {
+      const detalle = e instanceof ApiError ? e.detalle : String(e);
+      setAccion({ fase: "error", mensaje: `No se pudo completar: ${detalle}. Se muestran los datos ya capturados.` });
+    }
+  };
 
   return (
     <div className="pila">
       <p className="leyenda">
         Fuente: segurosbolivar.com · respeta robots.txt y sitemap.xml · User-Agent identificado · 1,5 s entre peticiones ·
-        Bronze → Silver → Gold. Reprocesar: <code>make process</code>.
+        Bronze → Silver → Gold.
       </p>
+      <div className="acciones">
+        <button type="button" className="primario" disabled={accion.fase === "trabajando"} onClick={() => void ejecutar("procesar")}>
+          <Icono nombre="sync" /> Reprocesar sin volver a la web
+        </button>
+        <button type="button" disabled={accion.fase === "trabajando"} onClick={() => void ejecutar("descubrir")}>
+          <Icono nombre="travel_explore" /> Descubrir en vivo (robots.txt + sitemap)
+        </button>
+      </div>
+      {accion.mensaje && (
+        <p className={accion.fase === "error" ? "error" : "exito"} role="status">
+          {accion.mensaje}
+        </p>
+      )}
       <EstadoCarga cargando={etapas.cargando} error={etapas.error} onReintentar={() => void etapas.recargar()} />
       {(etapas.datos ?? []).map((e) => {
         const principales = Object.entries(e.metricas).filter(([k]) => !k.startsWith("  ·"));

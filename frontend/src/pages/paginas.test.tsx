@@ -114,3 +114,35 @@ describe("foto", () => {
     expect(screen.getByText(/personas difuminadas: 1/)).toBeTruthy();
   });
 });
+
+describe("paridad con la versión Streamlit", () => {
+  it("con el modo «Reducido» el chat pregunta a /preguntas con la versión del prompt", async () => {
+    // Arrange
+    const respuesta = { texto: "Por WhatsApp.", tarea: "qa", version_prompt: "v1", latencia_s: 1.2, tokens_contexto: 900, cita_fuente: true, fuentes: ["https://www.segurosbolivar.com/canales"] };
+    const falso = vi.fn(async () => new Response(JSON.stringify(respuesta), { status: 200 }));
+    vi.stubGlobal("fetch", falso);
+    render(<Chat conversacionId="hilo-prueba-03" usuarioId={null} proveedor="anthropic" modo="reducido" version="v1" />);
+    // Act
+    fireEvent.click(screen.getByText("¿Cuál es el WhatsApp de atención?"));
+    // Assert
+    await waitFor(() => expect(screen.getByText("Por WhatsApp.")).toBeTruthy());
+    const [url, init] = falso.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/preguntas$/);
+    expect(JSON.parse(String(init.body))).toMatchObject({ modo: "reducido", version: "v1", proveedor: "anthropic" });
+    expect(screen.getByText(/prompt v1/)).toBeTruthy();
+  });
+
+  it("la foto envía el proveedor elegido (Claude) para entender la escena", async () => {
+    // Arrange
+    const falso = vi.fn(async () => new Response(JSON.stringify({ error: "x", detalle: "x", ruta: "/fotos", request_id: "r" }), { status: 503 }));
+    vi.stubGlobal("fetch", falso);
+    const { container } = render(<Foto proveedor="anthropic" />);
+    // Act
+    fireEvent.change(container.querySelector("input[type=file]") as HTMLInputElement, {
+      target: { files: [new File(["x"], "choque.jpg", { type: "image/jpeg" })] },
+    });
+    // Assert
+    await waitFor(() => expect(falso).toHaveBeenCalled());
+    expect(String((falso.mock.calls[0] as unknown as [string])[0])).toContain("proveedor=anthropic");
+  });
+});

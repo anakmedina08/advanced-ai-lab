@@ -993,3 +993,37 @@ input[type="range"] {
   color: var(--texto-suave);
   background: var(--superficie-2);
 }
+
+/* ---- Paridad con Streamlit (SPEC-046) ---- */
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exito {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radio);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  background: #f0fdf4;
+}
+
+.insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.etiqueta-campo {
+  margin: 12px 0 6px;
+  font-size: 0.9rem;
+  color: var(--texto);
+}
+
+.tarjeta h3 {
+  font-size: 1rem;
+  margin: 16px 0 8px;
+}

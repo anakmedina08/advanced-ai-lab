@@ -16,7 +16,7 @@ _DOC_O_TELEFONO = re.compile(r"(?<!\d)\d{7,12}(?!\d)")  # cédula, NIT o celular
 _SEPARADOR_DIGITOS = re.compile(r"(?<=\d)[\s.-](?=\d)")
 _URL = re.compile(r"https?://[^\s)\]>\"']+")
 
-Modo = Literal["completo", "reducido"]
+Modo = Literal["completo", "reducido", "rag", "agente"]
 
 
 def rechazar_datos_personales(texto: str) -> str:
@@ -301,6 +301,33 @@ class ProyectoOut(BaseModel):
     contadores: dict[str, int]
     corridas_mlflow: int | None
     enlaces: dict[str, str]
+
+
+class SistemaOut(BaseModel):
+    """Estado del sistema para el panel: insignias y métricas del corpus (como la versión Streamlit)."""
+
+    base_lista: bool
+    vision_instalada: bool
+    clave_anthropic: bool
+    paginas: int | None = None
+    fragmentos: int | None = None
+    tokens_contexto: int | None = None
+
+
+class ProcesoOut(BaseModel):
+    """Resultado de reprocesar el pipeline (Bronze → Silver → Gold, sin volver a la web)."""
+
+    documentos: int
+    chunks: int
+    duplicadas_descartadas: int
+
+
+class DescubrimientoOut(BaseModel):
+    """Resultado de consultar robots.txt y sitemap.xml en vivo."""
+
+    total_sitemap: int
+    seleccionadas: int
+    descartadas: int
 
 
 class ChatIn(_Entrada):

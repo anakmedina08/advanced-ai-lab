@@ -8,6 +8,7 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
 
 import json
 import logging
+import os
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -24,6 +25,7 @@ from sb_asistente.config import (
     BASE_URL,
     CHUNKS_JSONL,
     FRONTEND_ORIGINS,
+    GOLD_DIR,
     LLM_PROVIDER,
     MLFLOW_PUERTO,
     RECO_DIR,
@@ -60,6 +62,7 @@ from sb_asistente.view.schemas import (
     ConversacionOut,
     CorpusOut,
     CorridaOut,
+    DescubrimientoOut,
     DeteccionOut,
     EscenaOut,
     EtapaOut,
@@ -70,12 +73,14 @@ from sb_asistente.view.schemas import (
     PerfilOut,
     PlanOut,
     PreguntaIn,
+    ProcesoOut,
     ProyectoOut,
     RecomendacionesOut,
     RecomendacionOut,
     RequisitoOut,
     RespuestaOut,
     SaludOut,
+    SistemaOut,
     SkillOut,
     SugerenciaOut,
     TemaIn,
@@ -159,6 +164,49 @@ def salud() -> SaludOut:
 def etapas_pipeline() -> list[dict[str, object]]:
     """Métricas de cada etapa del scraping Medallion (sin volver a la web)."""
     return pipeline.stage_report()
+
+
+@app.get("/sistema", response_model=SistemaOut, tags=["servicio"])
+def sistema() -> SistemaOut:
+    """Insignias y métricas del corpus para el panel (páginas, fragmentos y tokens de contexto)."""
+    resumen = GOLD_DIR / "resumen.json"
+    datos = json.loads(resumen.read_text(encoding="utf-8")) if resumen.is_file() else {}
+    return SistemaOut(
+        base_lista=CHUNKS_JSONL.is_file(),
+        vision_instalada=find_spec("ultralytics") is not None,
+        clave_anthropic=bool(os.getenv("ANTHROPIC_API_KEY")),
+        paginas=datos.get("documentos"),
+        fragmentos=datos.get("chunks"),
+        tokens_contexto=datos.get("tokens_conocimiento_est"),
+    )
+
+
+@app.post("/pipeline/procesar", response_model=ProcesoOut, tags=["conocimiento"])
+def reprocesar() -> ProcesoOut:
+    """Regenera Silver y Gold desde Bronze sin volver a la web (limpieza, deduplicación y fragmentos)."""
+    try:
+        r = pipeline.process()
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"No hay capturas en Bronze: {exc}. Ejecute: make data") from exc
+    return ProcesoOut(
+        documentos=int(r["documentos"]),
+        chunks=int(r["chunks"]),
+        duplicadas_descartadas=len(r.get("descartadas_duplicadas", [])),
+    )
+
+
+@app.post("/pipeline/descubrir", response_model=DescubrimientoOut, tags=["conocimiento"])
+def descubrir() -> DescubrimientoOut:
+    """Consulta robots.txt y sitemap.xml en vivo (respeta robots.txt; no descarga páginas)."""
+    try:
+        plan = pipeline.discover(pipeline.new_session())
+    except Exception as exc:  # noqa: BLE001 - sin red: se informa como servicio no disponible
+        raise HTTPException(503, f"No se pudo consultar el sitio: {exc}") from exc
+    return DescubrimientoOut(
+        total_sitemap=int(plan["total_sitemap"]),
+        seleccionadas=len(plan["seleccionadas"]),
+        descartadas=len(plan["descartadas"]),
+    )
 
 
 @app.get("/pipeline/corpus", response_model=list[CorpusOut], tags=["conocimiento"])

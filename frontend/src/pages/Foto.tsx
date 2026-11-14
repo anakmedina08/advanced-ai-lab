@@ -16,7 +16,7 @@ const PLANES: Record<FotoOut["plan"]["tipo"], string> = {
 };
 
 /** Foto → «¿qué hago?»: YOLO detecta y difumina personas en el backend; Claude entiende la escena. */
-export default function Foto() {
+export default function Foto({ proveedor }: { proveedor?: string }) {
   const [fase, setFase] = useState<Fase>("idle");
   const [error, setError] = useState<{ detalle: string; requestId: string | null } | null>(null);
   const [resultado, setResultado] = useState<FotoOut | null>(null);
@@ -37,7 +37,7 @@ export default function Foto() {
     setError(null);
     control.current = new AbortController();
     try {
-      setResultado(await analizarFoto(archivo, control.current.signal));
+      setResultado(await analizarFoto(archivo, control.current.signal, proveedor));
       setFase("listo");
     } catch (e) {
       const err = e instanceof ApiError ? e : new ApiError(0, "desconocido", String(e));
