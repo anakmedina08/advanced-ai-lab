@@ -22,6 +22,7 @@ from sb_asistente.config import (
     EXPERIMENTO_QA,
     EXPERIMENTO_RECOMENDADOR,
     EXPERIMENTO_RECUPERACION,
+    EXPERIMENTO_VISION,
     OLLAMA_MODEL,
 )
 from sb_asistente.model import evaluation
@@ -94,14 +95,16 @@ def registrar_baselines(
     ]
 
 
-def registrar_recuperacion(metodo: str, hit_por_k: Mapping[int, float], preguntas: int) -> str | None:
-    """Corrida del experimento ``recuperacion``: hit@k de un método de búsqueda."""
+def registrar_recuperacion(
+    metodo: str, hit_por_k: Mapping[int, float], preguntas: int, extra: Mapping[str, float] | None = None
+) -> str | None:
+    """Corrida del experimento ``recuperacion``: hit@k (y recall@10, nDCG@10) de un método de búsqueda."""
     return bitacora().registrar(
         Corrida(
             experimento=EXPERIMENTO_RECUPERACION,
             nombre=metodo,
             parametros={"metodo": metodo, "preguntas_en_alcance": preguntas},
-            metricas={f"hit@{k}": tasa for k, tasa in hit_por_k.items()},
+            metricas={f"hit@{k}": tasa for k, tasa in hit_por_k.items()} | dict(extra or {}),
             etiquetas={"origen": "scripts/comparar_recuperacion.py"},
         )
     )
@@ -141,8 +144,9 @@ def importar_evaluaciones(directorio: Path = EVAL_RESULTS.parent) -> list[tuple[
 
 EXPERIMENTOS: dict[str, str] = {
     EXPERIMENTO_QA: "Asistente (prompts y modos de contexto)",
-    EXPERIMENTO_RECUPERACION: "Recuperación (hit@k)",
+    EXPERIMENTO_RECUPERACION: "Recuperación (hit@k, recall@10, nDCG@10)",
     EXPERIMENTO_RECOMENDADOR: "Recomendador (Gestión)",
+    EXPERIMENTO_VISION: "YOLO de la API (calidad y latencia)",
 }
 
 

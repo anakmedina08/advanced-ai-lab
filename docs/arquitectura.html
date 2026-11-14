@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura del asistente</title>
+<style>
+:root{--fondo:#f5f6f8;--sup:#fff;--borde:#cfd6de;--texto:#1d2733;--suave:#5b6878;--acento:#2f6fb0;--ext:#a15c00;--capa:#eef1f5}
+@media (prefers-color-scheme:dark){:root:not([data-tema=claro]){--fondo:#11161d;--sup:#19212b;--borde:#2c3846;--texto:#e6ebf1;--suave:#9aa8b8;--acento:#6aa7e6;--ext:#e0a243;--capa:#151b23}}
+:root[data-tema=oscuro]{--fondo:#11161d;--sup:#19212b;--borde:#2c3846;--texto:#e6ebf1;--suave:#9aa8b8;--acento:#6aa7e6;--ext:#e0a243;--capa:#151b23}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:Inter,system-ui,sans-serif}
+header{padding:16px 20px}h1{font-size:1.2rem;margin:0 0 4px}header p{margin:0;color:var(--suave);max-width:900px}
+button{font:inherit;border:1px solid var(--borde);background:var(--sup);color:var(--texto);border-radius:8px;padding:4px 10px;cursor:pointer}
+main{overflow:auto;padding:0 12px 20px}svg{min-width:1500px;width:100%;height:auto}
+.capa{fill:var(--capa);stroke:none;rx:12}.titulo-capa{fill:var(--suave);font-size:13px;text-anchor:middle;font-weight:600}
+.limite{fill:none;stroke:var(--acento);stroke-dasharray:6 5;rx:14}.texto-limite{fill:var(--acento);font-size:12px}
+.nodo rect{fill:var(--sup);stroke:var(--borde);stroke-width:1.5}.nodo.externo rect{stroke:var(--ext);stroke-width:2}
+.nodo .nombre{fill:var(--texto);font-weight:700;font-size:14px}.nodo p{margin:0;font-size:10.5px;line-height:1.25;color:var(--suave)}
+.arista path{fill:none;stroke:var(--suave);stroke-width:1.4;opacity:.7}.arista text{fill:var(--suave);font-size:10px;text-anchor:middle}
+.punta{fill:var(--suave)}.activo rect{stroke:var(--acento);stroke-width:3}.arista.activo path{stroke:var(--acento);opacity:1;stroke-width:2.4}
+.tenue{opacity:.25}
+</style></head><body>
+<header><h1>Asistente de seguros · arquitectura de runtime (Módulos 2 y 3)</h1><p>Frontend propio desacoplado → API FastAPI → controladores → agente LangGraph, modelos y datos. Solo la imagen ya difuminada y el texto de la pregunta salen del equipo hacia Anthropic.</p>
+<p><button id="tema" type="button">Cambiar tema</button> · Pase el mouse (o el foco) por un componente para ver sus relaciones. Fuente: <code>docs/arquitectura.json</code>.</p></header>
+<main><svg viewBox="0 0 1970 538" role="img" aria-label="Asistente de seguros · arquitectura de runtime (Módulos 2 y 3)">
+<defs><marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class="punta"/></marker></defs>
+<rect x="30" y="40" width="250" height="478" class="capa"/>
+<text x="155.0" y="64" class="titulo-capa">Cliente</text>
+<rect x="300" y="40" width="250" height="478" class="capa"/>
+<text x="425.0" y="64" class="titulo-capa">Frontend (React + Vite)</text>
+<rect x="570" y="40" width="250" height="478" class="capa"/>
+<text x="695.0" y="64" class="titulo-capa">API (FastAPI)</text>
+<rect x="840" y="40" width="250" height="478" class="capa"/>
+<text x="965.0" y="64" class="titulo-capa">Controladores (servicio)</text>
+<rect x="1110" y="40" width="250" height="478" class="capa"/>
+<text x="1235.0" y="64" class="titulo-capa">Modelo (agente e inferencia)</text>
+<rect x="1380" y="40" width="250" height="478" class="capa"/>
+<text x="1505.0" y="64" class="titulo-capa">Datos y servicios</text>
+<rect x="1650" y="40" width="250" height="478" class="capa"/>
+<text x="1775.0" y="64" class="titulo-capa">Proveedor externo</text>
+<rect x="290" y="22" width="1350" height="508" class="limite"/>
+<text x="300" y="36" class="texto-limite">Equipo local · los datos no salen</text>
+<g class="arista" data-de="navegador" data-a="spa"><path d="M 270 129.0 C 290.0 129.0, 290.0 129.0, 310 129.0" marker-end="url(#flecha)"/><text x="290.0" y="125.0">HTTP</text></g>
+<g class="arista" data-de="spa" data-a="cliente_api"><path d="M 425.0 168 C 425.0 168, 425.0 190, 425.0 190" marker-end="url(#flecha)"/><text x="425.0" y="175.0">estado</text></g>
+<g class="arista" data-de="cliente_api" data-a="rest"><path d="M 540 229.0 C 560.0 229.0, 560.0 129.0, 580 129.0" marker-end="url(#flecha)"/><text x="560.0" y="175.0">POST SSE / JSON</text></g>
+<g class="arista" data-de="rest" data-a="ctrl_agente"><path d="M 810 129.0 C 830.0 129.0, 830.0 129.0, 850 129.0" marker-end="url(#flecha)"/><text x="830.0" y="125.0">turno</text></g>
+<g class="arista" data-de="rpc" data-a="ctrl_agente"><path d="M 810 229.0 C 830.0 229.0, 830.0 129.0, 850 129.0" marker-end="url(#flecha)"/><text x="830.0" y="175.0">agente.conversar</text></g>
+<g class="arista" data-de="rest" data-a="ctrl_vision"><path d="M 810 129.0 C 830.0 129.0, 830.0 229.0, 850 229.0" marker-end="url(#flecha)"/><text x="830.0" y="175.0">foto</text></g>
+<g class="arista" data-de="ctrl_agente" data-a="router"><path d="M 1080 129.0 C 1100.0 129.0, 1100.0 129.0, 1120 129.0" marker-end="url(#flecha)"/><text x="1100.0" y="125.0">enrutar</text></g>
+<g class="arista" data-de="ctrl_agente" data-a="agente"><path d="M 1080 129.0 C 1100.0 129.0, 1100.0 229.0, 1120 229.0" marker-end="url(#flecha)"/><text x="1100.0" y="175.0">stream</text></g>
+<g class="arista" data-de="agente" data-a="tools"><path d="M 1235.0 268 C 1235.0 268, 1235.0 290, 1235.0 290" marker-end="url(#flecha)"/><text x="1235.0" y="275.0">tool calls</text></g>
+<g class="arista" data-de="agente" data-a="claude"><path d="M 1350 229.0 C 1505.0 229.0, 1505.0 129.0, 1660 129.0" marker-end="url(#flecha)"/><text x="1505.0" y="175.0">LLM</text></g>
+<g class="arista" data-de="agente" data-a="sqlite"><path d="M 1350 229.0 C 1370.0 229.0, 1370.0 229.0, 1390 229.0" marker-end="url(#flecha)"/><text x="1370.0" y="225.0">memoria</text></g>
+<g class="arista" data-de="tools" data-a="qdrant"><path d="M 1350 329.0 C 1370.0 329.0, 1370.0 129.0, 1390 129.0" marker-end="url(#flecha)"/><text x="1370.0" y="225.0">top-k</text></g>
+<g class="arista" data-de="tools" data-a="csv"><path d="M 1350 329.0 C 1370.0 329.0, 1370.0 329.0, 1390 329.0" marker-end="url(#flecha)"/><text x="1370.0" y="325.0">pandas</text></g>
+<g class="arista" data-de="ctrl_vision" data-a="yolo"><path d="M 1080 229.0 C 1100.0 229.0, 1100.0 429.0, 1120 429.0" marker-end="url(#flecha)"/><text x="1100.0" y="325.0">detectar</text></g>
+<g class="arista" data-de="ctrl_vision" data-a="claude"><path d="M 1080 229.0 C 1370.0 229.0, 1370.0 129.0, 1660 129.0" marker-end="url(#flecha)"/><text x="1370.0" y="175.0">escena</text></g>
+<g class="arista" data-de="yolo" data-a="mlflow"><path d="M 1350 429.0 C 1370.0 429.0, 1370.0 429.0, 1390 429.0" marker-end="url(#flecha)"/><text x="1370.0" y="425.0">registrado</text></g>
+<g class="nodo" data-id="navegador" tabindex="0"><title>Chat, foto y estado; pestaña Network muestra cada llamada HTTP/SSE</title><rect x="40" y="90" width="230" height="78" rx="10"/><text x="52" y="116" class="nombre">Navegador</text><foreignObject x="50" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Chat, foto y estado; pestaña Network muestra cada llamada HTTP/SSE</p></foreignObject></g>
+<g class="nodo" data-id="spa" tabindex="0"><title>Rutas /, /foto, /estado · useReducer del chat · sesiones en localStorage</title><rect x="310" y="90" width="230" height="78" rx="10"/><text x="322" y="116" class="nombre">SPA React :5173</text><foreignObject x="320" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Rutas /, /foto, /estado · useReducer del chat · sesiones en localStorage</p></foreignObject></g>
+<g class="nodo" data-id="cliente_api" tabindex="0"><title>fetch con timeout y reintentos · lector SSE · ApiError con request_id</title><rect x="310" y="190" width="230" height="78" rx="10"/><text x="322" y="216" class="nombre">Cliente tipado</text><foreignObject x="320" y="222" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">fetch con timeout y reintentos · lector SSE · ApiError con request_id</p></foreignObject></g>
+<g class="nodo" data-id="rest" tabindex="0"><title>/agente/stream, /agente/mensajes, /agente/conversaciones, /fotos, /health · ErrorOut uniforme · logs JSON con latencia</title><rect x="580" y="90" width="230" height="78" rx="10"/><text x="592" y="116" class="nombre">REST + SSE :8000</text><foreignObject x="590" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">/agente/stream, /agente/mensajes, /agente/conversaciones, /fotos, /health · ErrorOut uniforme · logs JSON con latencia</p></foreignObject></g>
+<g class="nodo" data-id="rpc" tabindex="0"><title>POST /rpc con los mismos contratos Pydantic</title><rect x="580" y="190" width="230" height="78" rx="10"/><text x="592" y="216" class="nombre">JSON-RPC 2.0</text><foreignObject x="590" y="222" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">POST /rpc con los mismos contratos Pydantic</p></foreignObject></g>
+<g class="nodo" data-id="ctrl_agente" tabindex="0"><title>Valida, guarda hechos en el Store, enruta, invoca o transmite y valida las fuentes</title><rect x="850" y="90" width="230" height="78" rx="10"/><text x="862" y="116" class="nombre">controller/agente</text><foreignObject x="860" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Valida, guarda hechos en el Store, enruta, invoca o transmite y valida las fuentes</p></foreignObject></g>
+<g class="nodo" data-id="ctrl_vision" tabindex="0"><title>Detecta, difumina personas, interpreta la escena y arma el plan</title><rect x="850" y="190" width="230" height="78" rx="10"/><text x="862" y="216" class="nombre">controller/vision</text><foreignObject x="860" y="222" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Detecta, difumina personas, interpreta la escena y arma el plan</p></foreignObject></g>
+<g class="nodo" data-id="router" tabindex="0"><title>directo · datos · rag · mixto · fuera_de_alcance; 32/32 en el banco</title><rect x="1120" y="90" width="230" height="78" rx="10"/><text x="1132" y="116" class="nombre">Router (reglas)</text><foreignObject x="1130" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">directo · datos · rag · mixto · fuera_de_alcance; 32/32 en el banco</p></foreignObject></g>
+<g class="nodo" data-id="agente" tabindex="0"><title>Middleware: resumen, PII, límites, filtrar_tools, medir_tools, dynamic_prompt · salida estructurada</title><rect x="1120" y="190" width="230" height="78" rx="10"/><text x="1132" y="216" class="nombre">Agente create_agent</text><foreignObject x="1130" y="222" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Middleware: resumen, PII, límites, filtrar_tools, medir_tools, dynamic_prompt · salida estructurada</p></foreignObject></g>
+<g class="nodo" data-id="tools" tabindex="0"><title>buscar_conocimiento (RAG blindado) · consultar_datos (CSV, Pydantic) · recomendar_seguros</title><rect x="1120" y="290" width="230" height="78" rx="10"/><text x="1132" y="316" class="nombre">Tools @tool</text><foreignObject x="1130" y="322" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">buscar_conocimiento (RAG blindado) · consultar_datos (CSV, Pydantic) · recomendar_seguros</p></foreignObject></g>
+<g class="nodo" data-id="yolo" tabindex="0"><title>Carga única en lifespan · umbral 0,35 · difuminado de personas</title><rect x="1120" y="390" width="230" height="78" rx="10"/><text x="1132" y="416" class="nombre">YOLO26-L</text><foreignObject x="1130" y="422" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Carga única en lifespan · umbral 0,35 · difuminado de personas</p></foreignObject></g>
+<g class="nodo" data-id="qdrant" tabindex="0"><title>Índice HNSW con filtro de payload · fusión RRF</title><rect x="1390" y="90" width="230" height="78" rx="10"/><text x="1402" y="116" class="nombre">Qdrant + BM25</text><foreignObject x="1400" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Índice HNSW con filtro de payload · fusión RRF</p></foreignObject></g>
+<g class="nodo" data-id="sqlite" tabindex="0"><title>Hilos por thread_id (corto plazo) · perfil por namespace de usuario (largo plazo)</title><rect x="1390" y="190" width="230" height="78" rx="10"/><text x="1402" y="216" class="nombre">SQLite: checkpointer + Store</text><foreignObject x="1400" y="222" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Hilos por thread_id (corto plazo) · perfil por namespace de usuario (largo plazo)</p></foreignObject></g>
+<g class="nodo" data-id="csv" tabindex="0"><title>Pólizas, clientes y siniestros de práctica (Ley 1581)</title><rect x="1390" y="290" width="230" height="78" rx="10"/><text x="1402" y="316" class="nombre">CSV sintéticos</text><foreignObject x="1400" y="322" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Pólizas, clientes y siniestros de práctica (Ley 1581)</p></foreignObject></g>
+<g class="nodo" data-id="mlflow" tabindex="0"><title>Experimentos y Model Registry sb-yolo-difuminado@produccion</title><rect x="1390" y="390" width="230" height="78" rx="10"/><text x="1402" y="416" class="nombre">MLflow :5050</text><foreignObject x="1400" y="422" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">Experimentos y Model Registry sb-yolo-difuminado@produccion</p></foreignObject></g>
+<g class="nodo externo" data-id="claude" tabindex="0"><title>LLM del agente y visión de la escena; recibe texto y la imagen ya difuminada</title><rect x="1660" y="90" width="230" height="78" rx="10"/><text x="1672" y="116" class="nombre">Claude (Anthropic)</text><foreignObject x="1670" y="122" width="210" height="44"><p xmlns="http://www.w3.org/1999/xhtml">LLM del agente y visión de la escena; recibe texto y la imagen ya difuminada</p></foreignObject></g>
+</svg></main>
+<script>
+const raiz=document.documentElement;document.getElementById('tema').onclick=()=>{raiz.dataset.tema=raiz.dataset.tema==='oscuro'?'claro':'oscuro'};
+const nodos=[...document.querySelectorAll('.nodo')],aristas=[...document.querySelectorAll('.arista')];
+function marcar(id){const vec=new Set([id]);aristas.forEach(a=>{const r=a.dataset.de===id||a.dataset.a===id;a.classList.toggle('activo',r);a.classList.toggle('tenue',!r);if(r){vec.add(a.dataset.de);vec.add(a.dataset.a)}});nodos.forEach(n=>{n.classList.toggle('activo',n.dataset.id===id);n.classList.toggle('tenue',!vec.has(n.dataset.id))})}
+function limpiar(){[...nodos,...aristas].forEach(e=>e.classList.remove('activo','tenue'))}
+nodos.forEach(n=>{n.addEventListener('mouseenter',()=>marcar(n.dataset.id));n.addEventListener('focus',()=>marcar(n.dataset.id));n.addEventListener('mouseleave',limpiar);n.addEventListener('blur',limpiar)});
+</script></body></html>

@@ -13,6 +13,9 @@ data/memoria/
 data/modelos/
 data/mlflow.db
 data/mlflow-artefactos/
+data/datasets/
+data/mlflow-docker/
+data/logs/
 !data/*/.gitkeep
 
 # Resultados de evaluación generados (el banco de preguntas SÍ se versiona)

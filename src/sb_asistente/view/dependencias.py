@@ -16,9 +16,11 @@ Responder = Callable[[str, str, str, str], Answer]
 
 
 def _responder_real(pregunta: str, version_prompt: str, modo: str, proveedor: str) -> Answer:
-    """Usa el contexto reducido (rápido y barato) o la base completa."""
+    """Responde con el modo de contexto pedido: completo, reducido, rag (Qdrant) o agente (Deep Agents)."""
     if modo == "reducido":
         return assistant.LiteAssistant.build(proveedor).answer(pregunta, version=version_prompt)
+    if modo in ("rag", "agente"):
+        return assistant.build_assistant(proveedor, modo).answer(pregunta, version=version_prompt)
     return assistant.full_assistant(proveedor).answer(pregunta, version=version_prompt)
 
 
@@ -58,7 +60,7 @@ def _recuperador() -> tuple[RecuperadorHibrido, str]:
 
 
 def get_recuperador() -> Callable[[], tuple[RecuperadorHibrido, str]]:
-    """Recuperador híbrido (BM25 + Chroma) y su modo, para ``conocimiento.buscar``."""
+    """Recuperador híbrido (BM25 + Qdrant, o Chroma) y su modo, para ``conocimiento.buscar``."""
     return _recuperador
 
 

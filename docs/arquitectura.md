@@ -104,3 +104,87 @@ sequenceDiagram
 
 `Dockerfile` multi-stage (CPU): *builder* con `uv` ➔ *runtime* con Python, `.venv` y código, usuario
 sin privilegios, `data/` como volumen. Ver ADR-008.
+
+---
+
+## Módulo 2 · Agente conversacional (SPEC-007 a SPEC-036)
+
+Diagrama interactivo de runtime: [`docs/arquitectura.html`](arquitectura.html) (fuente
+[`arquitectura.json`](arquitectura.json), formato Archify tipo *architecture*; se regenera con
+`uv run python scripts/diagrama_arquitectura.py`).
+
+### Grafo del agente (router → modelo ↔ tools → salida estructurada)
+
+```mermaid
+flowchart TD
+    U[Mensaje + conversacion_id + usuario_id] --> H[extraer_hechos → Store]
+    H --> R{Router por reglas}
+    R -- fuera_de_alcance --> F[Respuesta fija · sin LLM]
+    R -- directo / datos / rag / mixto --> A[create_agent]
+    subgraph Middleware
+        S[SummarizationMiddleware] --> P[PII redact] --> L[Límites de llamadas] --> T[trim_messages por tokens]
+        T --> FT[filtrar_tools · tools de la ruta] --> MT[medir_tools · latencia] --> DP[dynamic_prompt · perfil + guía de ruta]
+    end
+    A --> S
+    DP --> M[LLM: Claude / Ollama / DeepSeek]
+    M -- tool call --> TL[buscar_conocimiento · consultar_datos · recomendar_seguros]
+    TL -- ToolMessage --> M
+    M -- RespuestaAgente --> V[Validar fuentes vistas en la búsqueda]
+    V --> O[AgenteOut + decisión + tiempos]
+```
+
+| Ruta | Tools que ve el modelo | Ejemplo |
+|---|---|---|
+| `directo` | ninguna | «hola», «me llamo Ana», «¿dónde trabajo?» |
+| `datos` | `consultar_datos` | «¿cuántas pólizas se vendieron en el T3 de 2025?» |
+| `rag` | `buscar_conocimiento`, `recomendar_seguros` | «¿qué cubre el SOAT?» |
+| `mixto` | `buscar_conocimiento`, `consultar_datos` | «¿qué cubre hogar y cuántas pólizas de hogar se vendieron?» |
+| `fuera_de_alcance` | — (sin LLM) | «¿quién ganó el mundial?» |
+
+### Memoria: checkpointer (corto plazo) vs. Store (largo plazo)
+
+```mermaid
+flowchart LR
+    subgraph Hilo_A[Hilo A · thread_id]
+        A1[Turno 1] --> A2[Turno 2]
+    end
+    subgraph Hilo_B[Hilo B · thread_id]
+        B1[Turno 1]
+    end
+    A1 & A2 -- checkpoints --> CK[(SqliteSaver<br/>data/memoria/checkpoints.sqlite)]
+    B1 -- checkpoints --> CK
+    A1 -- put hechos --> ST[(SqliteStore<br/>namespace usuarios/usuario_id/perfil)]
+    ST -- search → dynamic_prompt --> B1
+```
+
+- **Corto plazo:** cada hilo se guarda por `thread_id` y sobrevive al reinicio del proceso. Además,
+  `GET /agente/conversaciones/{id}/checkpoints` permite el *time travel*.
+- **Largo plazo:** el perfil del usuario (nombre, empresa, vehículo…) se recupera en cualquier hilo
+  nuevo. Se borra con `DELETE /agente/usuarios/{id}/perfil`.
+- **Ventana de contexto:** `SummarizationMiddleware` resume lo antiguo y `trim_messages` recorta
+  por tokens.
+
+### Secuencia del streaming (frontend ↔ API)
+
+```mermaid
+sequenceDiagram
+    participant N as Navegador (React)
+    participant A as API FastAPI
+    participant C as controller/agente
+    participant G as Grafo LangGraph
+    N->>A: POST /agente/stream {mensaje, conversacion_id, usuario_id, proveedor}
+    A->>C: transmitir()
+    C-->>N: event: router (ruta, confianza, tools)
+    C->>G: stream(updates + messages)
+    G-->>N: event: tool_inicio / tool_fin
+    G-->>N: event: texto (fragmentos de «respuesta»)
+    C-->>N: event: final (AgenteOut validado)
+    C->>C: registrar_turno → data/logs/turnos.jsonl
+```
+
+### Trazas
+
+- **Local:** `data/logs/turnos.jsonl` guarda una línea por turno, sin el texto del usuario: ruta, tools
+  con sus milisegundos, fuentes y errores. `sb trazas` muestra las últimas.
+- **API:** `X-Request-ID` y `X-Process-Time-ms` en cada respuesta, con un log JSON por petición.
+- **LangSmith:** con `LANGSMITH_TRACING=true`, cada turno se etiqueta `ruta:<r>`.

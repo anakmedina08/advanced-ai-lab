@@ -1,0 +1,35 @@
+# Banco etiquetado del router (SPEC-012). Mide si el agente decide con criterio:
+# directo (sin tools), datos (CSV), rag (documentos), mixto (ambos) o fuera_de_alcance.
+# Uso: uv run pytest tests/test_router.py -k banco
+- {mensaje: "hola", ruta: directo}
+- {mensaje: "Buenos días", ruta: directo}
+- {mensaje: "muchas gracias por la ayuda", ruta: directo}
+- {mensaje: "Me llamo Ana y trabajo en Carvajal", ruta: directo}
+- {mensaje: "¿Dónde trabajo?", ruta: directo}
+- {mensaje: "¿Cómo me llamo?", ruta: directo}
+- {mensaje: "Vivo en Cali", ruta: directo}
+- {mensaje: "¿Qué sabes de mí?", ruta: directo}
+- {mensaje: "¿Cuántas pólizas se vendieron en el tercer trimestre de 2025?", ruta: datos}
+- {mensaje: "Total de primas del seguro de hogar en 2024", ruta: datos}
+- {mensaje: "¿Cuántos siniestros hubo en 2025?", ruta: datos}
+- {mensaje: "ventas por canal del seguro de mascotas", ruta: datos}
+- {mensaje: "¿Cuántos clientes tienen seguro de vida?", ruta: datos}
+- {mensaje: "monto de los siniestros de autos en 2025", ruta: datos}
+- {mensaje: "¿Qué cubre el SOAT?", ruta: rag}
+- {mensaje: "¿Cuál es el WhatsApp de atención?", ruta: rag}
+- {mensaje: "¿Cómo reporto un siniestro de mi carro?", ruta: rag}
+- {mensaje: "¿Cuántos días tengo para reclamar un siniestro?", ruta: rag}
+- {mensaje: "¿Qué seguro me recomiendan si tengo moto?", ruta: rag}
+- {mensaje: "¿El seguro de hogar cubre inundaciones?", ruta: rag}
+- {mensaje: "¿Cuál es el horario de las oficinas?", ruta: rag}
+- {mensaje: "¿Qué dice la página sobre la ARL?", ruta: rag}
+- {mensaje: "Me llamo Ana, ¿qué cubre el seguro de mascotas?", ruta: rag}
+- {mensaje: "¿Qué cubre el seguro de autos y cuántas pólizas de autos se vendieron en 2025?", ruta: mixto}
+- {mensaje: "Compara lo que dice la página del seguro de hogar con las ventas de hogar", ruta: mixto}
+- {mensaje: "Según el documento, ¿qué cubre el seguro de vida?, y ¿cuántos clientes lo tienen?", ruta: mixto}
+- {mensaje: "Compara la meta del documento con las ventas del CSV", ruta: mixto}
+- {mensaje: "¿Quién ganó el mundial de fútbol?", ruta: fuera_de_alcance}
+- {mensaje: "dame una receta de arroz con pollo", ruta: fuera_de_alcance}
+- {mensaje: "¿Cómo estará el clima mañana?", ruta: fuera_de_alcance}
+- {mensaje: "recomiéndame una película", ruta: fuera_de_alcance}
+- {mensaje: "¿Qué pasa si choco y el otro conductor huye?", ruta: rag}

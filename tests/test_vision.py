@@ -1,5 +1,6 @@
 """Pruebas de detección y sugerencias por foto (YOLO simulado; sin red, sin API y sin ultralytics)."""
 
+import base64
 import sys
 from io import BytesIO
 
@@ -12,6 +13,7 @@ from sb_asistente.controller import vision
 from sb_asistente.model.llm.assistants import RetrievalAssistant
 from sb_asistente.model.vision import deteccion, seguros
 from sb_asistente.model.vision.deteccion import Caja, Deteccion, DetectorYolo, ResultadoDeteccion
+from sb_asistente.model.vision.privacidad import a_jpeg_b64
 from sb_asistente.view import cli
 from sb_asistente.view.anotaciones import COLOR_ASEGURABLE, dibujar_detecciones
 from sb_asistente.view.api import app
@@ -214,7 +216,7 @@ def test_api_foto_sin_extra_vision_responde_503():
         r = TestClient(app).post("/fotos", files={"archivo": ("a.png", foto(), "image/png")})
     finally:
         app.dependency_overrides.clear()
-    assert r.status_code == 503 and "extra vision" in r.json()["detail"]
+    assert r.status_code == 503 and "extra vision" in r.json()["detalle"]
 
 
 # --- Cliente httpx -----------------------------------------------------------------------------
@@ -240,3 +242,27 @@ def test_cli_foto_muestra_la_sugerencia(monkeypatch, capsys, tmp_path):
     assert cli.main(["foto", str(ruta)]) == 0
     salida = capsys.readouterr().out
     assert "bicicleta" in salida and "Plan: Bicicletas" in salida
+
+
+def test_api_foto_devuelve_la_imagen_difuminada_si_se_pide(api):
+    # Act
+    r = api.post("/fotos?devolver_imagen=true", files={"archivo": ("carro.png", foto(), "image/png")})
+    # Assert
+    datos = base64.b64decode(r.json()["imagen_jpeg_b64"])
+    assert datos[:2] == b"\xff\xd8"  # JPEG
+
+
+def test_api_foto_no_devuelve_imagen_por_defecto(api):
+    # Act
+    r = api.post("/fotos", files={"archivo": ("carro.png", foto(), "image/png")})
+    # Assert
+    assert r.json()["imagen_jpeg_b64"] is None
+
+
+def test_jpeg_b64_reduce_el_lado_mayor():
+    # Arrange
+    grande = Image.new("RGB", (3000, 1500), "white")
+    # Act
+    reducida = Image.open(BytesIO(base64.b64decode(a_jpeg_b64(grande, lado_maximo=1280))))
+    # Assert
+    assert reducida.size == (1280, 640)

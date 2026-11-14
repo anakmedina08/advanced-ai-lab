@@ -5,6 +5,9 @@
 ![LangChain](https://img.shields.io/badge/LLM-LangChain-1c3c3c) ![Ruff](https://img.shields.io/badge/lint-ruff-orange)
 ![pytest](https://img.shields.io/badge/tests-pytest-green) ![Docker](https://img.shields.io/badge/docker-multi--stage%20CPU-2496ED)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/frontend-React%2018%20%2B%20Vite-61DAFB) ![FastAPI](https://img.shields.io/badge/API-FastAPI%20%2B%20SSE-009688)
+![LangGraph](https://img.shields.io/badge/agente-LangGraph-1c3c3c) ![Qdrant](https://img.shields.io/badge/RAG-Qdrant-DC244C)
+![MLflow](https://img.shields.io/badge/MLflow-5050-0194E2)
 
 Producto único de dos cursos de la Maestría en IA de la UAO (Daniel Silva y Katherine Medina):
 **Técnicas Avanzadas de IA en Modelos de Lenguaje** aporta el módulo de conocimiento (scraping
@@ -12,6 +15,15 @@ Medallion + Q&A con fuentes sobre la información **pública** de Seguros Bolív
 Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen con una API FastAPI.
 
 > ✅ Qué pide cada curso y dónde está la evidencia: [`docs/requisitos.md`](docs/requisitos.md).
+
+| Recurso | Enlace |
+|---|---|
+| Tablero Kanban (GitHub Projects) | https://github.com/users/anakmedina08/projects/2 · políticas y métricas en [`docs/kanban.md`](docs/kanban.md) |
+| Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
+| Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
+| Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
+| Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
+| Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 
 > 📘 La fuente única de verdad del proyecto es [`CONSTITUTION.md`](CONSTITUTION.md).
 
@@ -50,19 +62,35 @@ preguntas, resume y genera FAQ **citando la URL de origen**.
 
 ## Inicio rápido
 
-```bash
-make dev        # uv sync + hooks de pre-commit
-make data       # descubrir → extraer → limpiar → deduplicar → enriquecer (~4 min)
-make app        # interfaz en http://localhost:8501
-```
-
-Sin `make` (por ejemplo, en Windows):
+El producto son **tres procesos separados**: el frontend no llama a ningún modelo, solo a la API.
 
 ```bash
-uv sync
-uv run python scripts/scrape_empresa.py
-uv run streamlit run app.py
+uv sync --extra vision --extra mlflow     # Python 3.13 con uv (sin pip)
+make dev                                  # + hooks de pre-commit (ruff, GGA, bloqueo de datos)
+make data && make index                   # corpus Gold (~4 min) e índice Qdrant (Ollama + embeddinggemma)
+uv run sb reco generar                    # datos sintéticos (CSV) para la tool de datos
+
+# Terminal 1 · backend del agente (API FastAPI)  →  http://127.0.0.1:8000/docs
+make api                                  # o: uv run sb api
+# Terminal 2 · frontend propio (React + Vite)    →  http://localhost:5173
+make frontend                             # o: cd frontend && npm install && npm run dev
+# Terminal 3 · servidor de tracking MLflow       →  http://127.0.0.1:5050
+make mlflow-server
 ```
+
+En el frontend, el selector **Modelo** elige Claude (por defecto), Ollama o DeepSeek. Los cuatro
+casos de la demo están como sugerencias en el chat.
+
+| Caso | Pregunta | Qué se ve |
+|---|---|---|
+| Memoria | «Me llamo Ana y trabajo en Carvajal» → «¿Dónde trabajo?» → nueva conversación | hilo persistente (SQLite) y perfil recuperado del Store |
+| RAG | «¿Qué cubre el SOAT?» | ruta `rag`, búsqueda híbrida en Qdrant y fuentes citadas |
+| Datos | «¿Cuántas pólizas se vendieron en el tercer trimestre de 2025?» | ruta `datos`, `consultar_datos` con la cifra exacta |
+| Mixto | «¿Qué cubre el seguro de hogar y cuántas pólizas de hogar se vendieron en 2025?» | ruta `mixto`, ambas tools |
+| Blindaje | «¿Qué dice la política de calidad del servicio?» | el documento de prueba con instrucción escondida se ignora |
+
+> Streamlit (`make app`) queda solo como herramienta interna del equipo; **no** es la interfaz del
+> producto desde el Módulo 2.
 
 Para usar Claude, copie `.env.example` a `.env` y escriba su `ANTHROPIC_API_KEY` (o `LLM_PROVIDER=deepseek`
 y `DEEPSEEK_API_KEY`). Para usar el modelo
@@ -70,7 +98,16 @@ local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 
 ## Capturas
 
-La interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
+**Frontend propio (Módulos 2 y 3):** React + Vite, desacoplado de la API.
+- El chat transmite la respuesta por SSE y muestra la decisión del router.
+- La barra lateral guarda los hilos y la memoria del usuario.
+- La página de estado consulta `/health`.
+
+| Chat con el agente | Estado del servicio | Arquitectura |
+|---|---|---|
+| ![Chat](docs/capturas/frontend-chat.png) | ![Estado](docs/capturas/frontend-estado.png) | ![Arquitectura](docs/capturas/arquitectura.png) |
+
+**Herramienta interna del equipo (Streamlit, Fase 1):** la interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
 cliente** (asistente en chat, foto «¿qué hago?» y guías) y **panel del equipo** (configuración,
 pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de Seguros Bolívar.
 
@@ -81,6 +118,11 @@ pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de 
 | Sustentación › Entregables por curso | Panel del equipo › Experimentos (MLflow) |
 |---|---|
 | ![Sustentación](docs/capturas/sustentacion.png) | ![Experimentos](docs/capturas/experimentos.png) |
+
+## Arquitectura
+
+- Diagrama interactivo de runtime: [`docs/arquitectura.html`](docs/arquitectura.html) (fuente [`docs/arquitectura.json`](docs/arquitectura.json), formato Archify).
+- Grafo del agente, checkpointer vs. Store, streaming y trazas: [`docs/arquitectura.md`](docs/arquitectura.md#módulo-2--agente-conversacional-spec-007-a-spec-036).
 
 ## Arquitectura MVC
 
@@ -163,6 +205,7 @@ make api        # o: uv run sb api  →  http://127.0.0.1:8000/docs
 
 | Método y ruta | Qué hace |
 |---|---|
+| `GET /health` | `ok` o `degradado` y qué componente falta (corpus, recomendador, Qdrant, memoria, YOLO) |
 | `GET /salud` | estado del servicio y de los datos |
 | `GET /pipeline` | métricas de cada etapa Medallion |
 | `POST /preguntas` | Q&A con `fuentes` citadas (`modo`: `reducido` o `completo`) |
@@ -258,9 +301,15 @@ curl -F "archivo=@choque.jpg" "localhost:8000/fotos?interpretar=true&responder=t
 
 Entender la situación usa Claude (`interpretar=true`); sin él, solo YOLO sugiere por objeto. Variables
 opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26l.pt`, elegido por comparación; se descarga si falta),
-`YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP). La foto se procesa en memoria y no se guarda;
+`YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP) y `FRONTEND_ORIGINS` (orígenes permitidos por CORS, separados por comas; por defecto Vite en el puerto 5173 y yellowdata.com.co). La foto se procesa en memoria y no se guarda;
 las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
 pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
+
+## Model Card
+
+[`docs/model-card.md`](docs/model-card.md): YOLO26-L (`ultralytics/assets@v8.4.0`, sha256 `9fe3c544…`),
+datos de origen, métricas medidas (precisión 0,834 · AP50 de *person* 0,709 · p95 438 ms), límites,
+sesgos y licencia AGPL-3.0. En MLflow: `sb-yolo-difuminado@produccion`.
 
 ## Bitácora de experimentos (MLflow)
 
@@ -271,7 +320,7 @@ Cada experimento queda registrado con sus parámetros, métricas, archivos y el 
 ```bash
 uv sync --extra mlflow          # extra opcional
 make mlflow-importar            # carga las evaluaciones ya hechas, sin volver a llamar al LLM
-make mlflow                     # http://127.0.0.1:5000 para comparar corridas
+make mlflow                     # http://127.0.0.1:5050 para comparar corridas
 ```
 
 `sb eval`, `sb reco baseline` y `scripts/comparar_recuperacion.py` registran solos cada corrida. La
@@ -316,6 +365,18 @@ segmento: Recall@5 = 0,639; meta del modelo e5-small + LightGBM: ≥ 0,70. La pr
 CPM, Gantt) está en [`docs/gestion/`](docs/gestion/).
 
 ## Docker
+
+```bash
+docker compose up --build   # api :8000 · frontend :5173 · mlflow :5050 (o: make docker-up)
+```
+
+Cada servicio tiene su propia imagen:
+
+- **API:** `Dockerfile`, multi-stage CPU; su comando por defecto es `sb api`.
+- **Frontend:** `frontend/Dockerfile`, que compila con Node y sirve los estáticos con nginx.
+- **MLflow:** la imagen oficial.
+
+`./data` se monta como volumen y Ollama corre en el anfitrión.
 
 Imagen **multi-stage** (CPU): la etapa *builder* resuelve `uv.lock` con `uv`; la etapa *runtime*
 solo lleva Python, el `.venv` y el código, y corre como usuario sin privilegios. `data/` se monta

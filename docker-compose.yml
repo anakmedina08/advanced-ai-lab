@@ -1,0 +1,49 @@
+# Producto completo en tres servicios separados (SPEC-041): docker compose up --build
+#   api       → http://localhost:8000/docs  (agente, RAG, foto; datos montados desde ./data)
+#   frontend  → http://localhost:5173       (React compilado, servido por nginx)
+#   mlflow    → http://localhost:5050       (tracking y Model Registry)
+# Ollama corre en el anfitrión (embeddings del RAG): http://host.docker.internal:11434.
+# Los datos (./data) se montan como volumen: nunca se copian en las imágenes.
+services:
+  api:
+    build: .
+    command: ["sb", "api", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FRONTEND_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      MLFLOW_TRACKING_URI: "http://mlflow:5050"
+      OLLAMA_HOST: "http://host.docker.internal:11434"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - mlflow
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: "http://localhost:8000"
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.18.0
+    command:
+      - mlflow
+      - server
+      - --host=0.0.0.0
+      - --port=5050
+      - --backend-store-uri=sqlite:////mlflow/mlflow.db
+      - --default-artifact-root=/mlflow/artefactos
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./data/mlflow-docker:/mlflow

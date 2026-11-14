@@ -16,7 +16,7 @@ _DOC_O_TELEFONO = re.compile(r"(?<!\d)\d{7,12}(?!\d)")  # cédula, NIT o celular
 _SEPARADOR_DIGITOS = re.compile(r"(?<=\d)[\s.-](?=\d)")
 _URL = re.compile(r"https?://[^\s)\]>\"']+")
 
-Modo = Literal["completo", "reducido"]
+Modo = Literal["completo", "reducido", "rag", "agente"]
 
 
 def rechazar_datos_personales(texto: str) -> str:
@@ -126,6 +126,208 @@ class SaludOut(BaseModel):
     proveedor: str
     corpus_listo: bool
     recomendador_listo: bool
+
+
+class ErrorOut(BaseModel):
+    """Esquema único de los errores de la API."""
+
+    error: str = Field(description="Código corto: validacion, no_encontrado, interno, no_disponible…")
+    detalle: str | list[dict[str, str]] | dict | None = None
+    ruta: str
+    request_id: str
+
+
+class HealthOut(BaseModel):
+    """Estado del servicio y de cada dependencia (``GET /health``)."""
+
+    status: Literal["ok", "degradado"]
+    version: str
+    llm: str
+    componentes: dict[str, bool]
+    modelo_yolo_sha256: str | None = Field(
+        None, description="sha256 corto de los pesos cargados; coincide con el tag del Model Registry"
+    )
+
+
+class AgenteIn(_Entrada):
+    """Mensaje para el agente (``POST /agente/mensajes`` y ``/agente/stream``)."""
+
+    mensaje: Annotated[str, Field(min_length=1, max_length=800, examples=["¿Qué cubre el SOAT?"])]
+    conversacion_id: Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{6,64}$", examples=["hilo-7f3a9c"])]
+    usuario_id: Annotated[
+        str | None, Field(default=None, pattern=r"^[A-Za-z0-9_-]{6,64}$", examples=["usuario-ana-01"])
+    ] = None
+    proveedor: str | None = None
+
+    @field_validator("mensaje")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+    @field_validator("proveedor")
+    @classmethod
+    def _proveedor_valido(cls, valor: str | None) -> str | None:
+        return PreguntaIn._proveedor_valido(valor)
+
+
+class DecisionOut(BaseModel):
+    """Decisión del router: ruta, confianza, señales y tools habilitadas."""
+
+    ruta: Literal["directo", "datos", "rag", "mixto", "fuera_de_alcance"]
+    confianza: float
+    senales: list[str]
+    tools: list[str]
+    cautela: bool
+
+
+class PasoAgenteOut(BaseModel):
+    """Una llamada a tool dentro del turno."""
+
+    tool: str
+    argumentos: dict[str, object]
+    resultado: str
+
+
+class SalidaAgenteOut(BaseModel):
+    """Salida estructurada del agente (validada: fuentes vistas en la búsqueda)."""
+
+    respuesta: str
+    fuentes: list[str]
+    intencion: str
+    confianza: Literal["alta", "media", "baja"]
+    productos_recomendados: list[str] = []
+    requiere_asesor: bool = False
+
+
+class AgenteOut(BaseModel):
+    """Turno completo del agente."""
+
+    conversacion_id: str
+    usuario_id: str | None = None
+    salida: SalidaAgenteOut
+    decision: DecisionOut
+    pasos: list[PasoAgenteOut]
+    fuentes_descartadas: list[str]
+    mensajes_en_memoria: int
+    tiempos_tools: list[dict[str, object]] = []
+    ms_total: float = 0.0
+
+
+class MensajeHistorialOut(BaseModel):
+    """Un mensaje guardado en la memoria del hilo."""
+
+    rol: Literal["usuario", "asistente"]
+    texto: str
+
+
+class ConversacionOut(BaseModel):
+    """Mensajes de un hilo (memoria de corto plazo, sobrevive al reinicio)."""
+
+    conversacion_id: str
+    mensajes: list[MensajeHistorialOut]
+
+
+class CheckpointOut(BaseModel):
+    """Un checkpoint del hilo (time travel)."""
+
+    checkpoint_id: str
+    paso: int
+    fecha: str
+    mensajes: int
+    siguiente: list[str]
+
+
+class PerfilOut(BaseModel):
+    """Memoria de largo plazo del usuario (Store, namespace por usuario)."""
+
+    usuario_id: str
+    hechos: dict[str, str]
+
+
+class CorpusOut(BaseModel):
+    """Un documento del corpus Gold (sin el texto)."""
+
+    url: str
+    titulo: str
+    seccion: str
+    fecha_captura: str
+    sha256: str
+    tokens: int
+
+
+class EvaluacionOut(BaseModel):
+    """Resumen de una corrida de ``sb eval`` (proporciones de 0 a 1)."""
+
+    modelo: str
+    version: str
+    preguntas: int
+    keyword_hit_promedio: float
+    tasa_cita_fuente: float
+    tasa_fallback_correcto: float
+    latencia_promedio_s: float
+
+
+class CorridaOut(BaseModel):
+    """Una corrida de MLflow."""
+
+    nombre: str
+    fecha: int
+    commit: str
+    parametros: dict[str, str]
+    metricas: dict[str, float]
+
+
+class ExperimentosOut(BaseModel):
+    """Corridas de MLflow por experimento (vacío si la bitácora no está activa)."""
+
+    activa: bool
+    url_ui: str
+    nombres: dict[str, str]
+    experimentos: dict[str, list[CorridaOut]]
+
+
+class RequisitoOut(BaseModel):
+    """Requisito de un curso con su estado y evidencia (``docs/requisitos.md``)."""
+
+    requisito: str
+    estado: Literal["cumplido", "en curso", "pendiente"]
+    evidencia: str
+
+
+class ProyectoOut(BaseModel):
+    """Entregables por curso y cifras del repositorio calculadas al momento."""
+
+    secciones: dict[str, list[RequisitoOut]]
+    contadores: dict[str, int]
+    corridas_mlflow: int | None
+    enlaces: dict[str, str]
+
+
+class SistemaOut(BaseModel):
+    """Estado del sistema para el panel: insignias y métricas del corpus (como la versión Streamlit)."""
+
+    base_lista: bool
+    vision_instalada: bool
+    clave_anthropic: bool
+    paginas: int | None = None
+    fragmentos: int | None = None
+    tokens_contexto: int | None = None
+
+
+class ProcesoOut(BaseModel):
+    """Resultado de reprocesar el pipeline (Bronze → Silver → Gold, sin volver a la web)."""
+
+    documentos: int
+    chunks: int
+    duplicadas_descartadas: int
+
+
+class DescubrimientoOut(BaseModel):
+    """Resultado de consultar robots.txt y sitemap.xml en vivo."""
+
+    total_sitemap: int
+    seleccionadas: int
+    descartadas: int
 
 
 class ChatIn(_Entrada):
@@ -250,3 +452,6 @@ class FotoOut(BaseModel):
     aviso: str | None = None
     respuesta: RespuestaOut | None = None
     recomendaciones: list[RecomendacionOut] = []
+    imagen_jpeg_b64: str | None = Field(
+        None, description="Imagen con las personas ya difuminadas (JPEG base64), si se pidió devolver_imagen"
+    )

@@ -4,7 +4,8 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    # feature/** cubre las PR apiladas (una historia que depende de otra aún sin fusionar)
+    branches: [main, develop, "feature/**"]
 
 jobs:
   quality:
@@ -20,6 +21,23 @@ jobs:
       - run: uv run ruff format --check .
       # Sin red ni API: fixtures HTML locales y LLM falso (no se gasta saldo de la API de Anthropic)
       - run: uv run pytest -v --cov --cov-report=term-missing --cov-fail-under=85
+
+  frontend:
+    name: Frontend (tipos, Vitest y build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
 
   docker:
     name: Build Docker multi-stage (CPU)
@@ -42,7 +60,7 @@ jobs:
   notificar:
     name: Evento al panel de agentes
     runs-on: ubuntu-latest
-    needs: [quality, docker]
+    needs: [quality, frontend, docker]
     if: always()
     steps:
       - name: Enviar resultado

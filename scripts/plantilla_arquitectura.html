@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura del asistente</title>
+<style>
+:root{--fondo:#f5f6f8;--sup:#fff;--borde:#cfd6de;--texto:#1d2733;--suave:#5b6878;--acento:#2f6fb0;--ext:#a15c00;--capa:#eef1f5}
+@media (prefers-color-scheme:dark){:root:not([data-tema=claro]){--fondo:#11161d;--sup:#19212b;--borde:#2c3846;--texto:#e6ebf1;--suave:#9aa8b8;--acento:#6aa7e6;--ext:#e0a243;--capa:#151b23}}
+:root[data-tema=oscuro]{--fondo:#11161d;--sup:#19212b;--borde:#2c3846;--texto:#e6ebf1;--suave:#9aa8b8;--acento:#6aa7e6;--ext:#e0a243;--capa:#151b23}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:Inter,system-ui,sans-serif}
+header{padding:16px 20px}h1{font-size:1.2rem;margin:0 0 4px}header p{margin:0;color:var(--suave);max-width:900px}
+button{font:inherit;border:1px solid var(--borde);background:var(--sup);color:var(--texto);border-radius:8px;padding:4px 10px;cursor:pointer}
+main{overflow:auto;padding:0 12px 20px}svg{min-width:1500px;width:100%;height:auto}
+.capa{fill:var(--capa);stroke:none;rx:12}.titulo-capa{fill:var(--suave);font-size:13px;text-anchor:middle;font-weight:600}
+.limite{fill:none;stroke:var(--acento);stroke-dasharray:6 5;rx:14}.texto-limite{fill:var(--acento);font-size:12px}
+.nodo rect{fill:var(--sup);stroke:var(--borde);stroke-width:1.5}.nodo.externo rect{stroke:var(--ext);stroke-width:2}
+.nodo .nombre{fill:var(--texto);font-weight:700;font-size:14px}.nodo p{margin:0;font-size:10.5px;line-height:1.25;color:var(--suave)}
+.arista path{fill:none;stroke:var(--suave);stroke-width:1.4;opacity:.7}.arista text{fill:var(--suave);font-size:10px;text-anchor:middle}
+.punta{fill:var(--suave)}.activo rect{stroke:var(--acento);stroke-width:3}.arista.activo path{stroke:var(--acento);opacity:1;stroke-width:2.4}
+.tenue{opacity:.25}
+</style></head><body>
+<header><h1>__TITULO__</h1><p>__DESCRIPCION__</p>
+<p><button id="tema" type="button">Cambiar tema</button> · Pase el mouse (o el foco) por un componente para ver sus relaciones. Fuente: <code>docs/arquitectura.json</code>.</p></header>
+<main>__SVG__</main>
+<script>
+const raiz=document.documentElement;document.getElementById('tema').onclick=()=>{raiz.dataset.tema=raiz.dataset.tema==='oscuro'?'claro':'oscuro'};
+const nodos=[...document.querySelectorAll('.nodo')],aristas=[...document.querySelectorAll('.arista')];
+function marcar(id){const vec=new Set([id]);aristas.forEach(a=>{const r=a.dataset.de===id||a.dataset.a===id;a.classList.toggle('activo',r);a.classList.toggle('tenue',!r);if(r){vec.add(a.dataset.de);vec.add(a.dataset.a)}});nodos.forEach(n=>{n.classList.toggle('activo',n.dataset.id===id);n.classList.toggle('tenue',!vec.has(n.dataset.id))})}
+function limpiar(){[...nodos,...aristas].forEach(e=>e.classList.remove('activo','tenue'))}
+nodos.forEach(n=>{n.addEventListener('mouseenter',()=>marcar(n.dataset.id));n.addEventListener('focus',()=>marcar(n.dataset.id));n.addEventListener('mouseleave',limpiar);n.addEventListener('blur',limpiar)});
+</script></body></html>

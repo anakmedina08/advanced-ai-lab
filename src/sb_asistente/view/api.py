@@ -6,24 +6,44 @@ El front web (yellowdata.com.co o cualquier otro) consume estos endpoints.
     uv run sb api            # http://127.0.0.1:8000/docs
 """
 
+import json
 import logging
-from collections.abc import AsyncIterator, Callable
+import os
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from importlib.metadata import version
 from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Path, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from sb_asistente.config import BASE_URL, CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
+from sb_asistente.config import (
+    BASE_URL,
+    CHUNKS_JSONL,
+    FRONTEND_ORIGINS,
+    GOLD_DIR,
+    LLM_PROVIDER,
+    MLFLOW_PUERTO,
+    RECO_DIR,
+    RECO_K,
+)
+from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
+from sb_asistente.controller import experimentos as experimentos_ctrl
+from sb_asistente.controller import proyecto as proyecto_ctrl
+from sb_asistente.controller import salud as estado_servicio
+from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
+from sb_asistente.model.vision.privacidad import a_jpeg_b64
+from sb_asistente.view import errores, observabilidad
 from sb_asistente.view.dependencias import (
     Responder,
+    get_agente,
     get_asistente,
     get_chat_qa,
     get_detector,
@@ -33,19 +53,34 @@ from sb_asistente.view.dependencias import (
     get_responder,
 )
 from sb_asistente.view.schemas import (
+    AgenteIn,
+    AgenteOut,
     CajaOut,
     ChatIn,
     ChatOut,
+    CheckpointOut,
+    ConversacionOut,
+    CorpusOut,
+    CorridaOut,
+    DescubrimientoOut,
     DeteccionOut,
     EscenaOut,
     EtapaOut,
+    EvaluacionOut,
+    ExperimentosOut,
     FotoOut,
+    HealthOut,
+    PerfilOut,
     PlanOut,
     PreguntaIn,
+    ProcesoOut,
+    ProyectoOut,
     RecomendacionesOut,
     RecomendacionOut,
+    RequisitoOut,
     RespuestaOut,
     SaludOut,
+    SistemaOut,
     SkillOut,
     SugerenciaOut,
     TemaIn,
@@ -76,11 +111,14 @@ app = FastAPI(
     ),
     lifespan=_lifespan,
 )
+errores.registrar(app)
+observabilidad.registrar(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://yellowdata.com.co", "http://localhost:3000"],
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=list(FRONTEND_ORIGINS),
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID", "X-Process-Time-ms"],
 )
 
 
@@ -93,6 +131,21 @@ def _salida(ans: Answer) -> RespuestaOut:
         tokens_contexto=ans.context_tokens_est,
         cita_fuente=ans.cites_source,
         fuentes=extraer_fuentes(ans.text),
+    )
+
+
+@app.get("/health", response_model=HealthOut, tags=["servicio"])
+def health() -> HealthOut:
+    """Estado del servicio: ``ok`` o ``degradado`` y qué componente falta (sin cargar modelos)."""
+    detector = vision.detector_por_defecto() if find_spec("ultralytics") is not None else None
+    estado = estado_servicio.componentes(yolo_cargado=detector.cargado if detector is not None else None)
+    r = estado_servicio.reporte(app.version, estado)
+    return HealthOut(
+        status=r.status,
+        version=r.version,
+        llm=r.llm,
+        componentes=r.componentes,
+        modelo_yolo_sha256=estado_servicio.huella_yolo(),
     )
 
 
@@ -111,6 +164,119 @@ def salud() -> SaludOut:
 def etapas_pipeline() -> list[dict[str, object]]:
     """Métricas de cada etapa del scraping Medallion (sin volver a la web)."""
     return pipeline.stage_report()
+
+
+@app.get("/sistema", response_model=SistemaOut, tags=["servicio"])
+def sistema() -> SistemaOut:
+    """Insignias y métricas del corpus para el panel (páginas, fragmentos y tokens de contexto)."""
+    resumen = GOLD_DIR / "resumen.json"
+    datos = json.loads(resumen.read_text(encoding="utf-8")) if resumen.is_file() else {}
+    return SistemaOut(
+        base_lista=CHUNKS_JSONL.is_file(),
+        vision_instalada=find_spec("ultralytics") is not None,
+        clave_anthropic=bool(os.getenv("ANTHROPIC_API_KEY")),
+        paginas=datos.get("documentos"),
+        fragmentos=datos.get("chunks"),
+        tokens_contexto=datos.get("tokens_conocimiento_est"),
+    )
+
+
+@app.post("/pipeline/procesar", response_model=ProcesoOut, tags=["conocimiento"])
+def reprocesar() -> ProcesoOut:
+    """Regenera Silver y Gold desde Bronze sin volver a la web (limpieza, deduplicación y fragmentos)."""
+    try:
+        r = pipeline.process()
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"No hay capturas en Bronze: {exc}. Ejecute: make data") from exc
+    return ProcesoOut(
+        documentos=int(r["documentos"]),
+        chunks=int(r["chunks"]),
+        duplicadas_descartadas=len(r.get("descartadas_duplicadas", [])),
+    )
+
+
+@app.post("/pipeline/descubrir", response_model=DescubrimientoOut, tags=["conocimiento"])
+def descubrir() -> DescubrimientoOut:
+    """Consulta robots.txt y sitemap.xml en vivo (respeta robots.txt; no descarga páginas)."""
+    try:
+        plan = pipeline.discover(pipeline.new_session())
+    except Exception as exc:  # noqa: BLE001 - sin red: se informa como servicio no disponible
+        raise HTTPException(503, f"No se pudo consultar el sitio: {exc}") from exc
+    return DescubrimientoOut(
+        total_sitemap=int(plan["total_sitemap"]),
+        seleccionadas=len(plan["seleccionadas"]),
+        descartadas=len(plan["descartadas"]),
+    )
+
+
+@app.get("/pipeline/corpus", response_model=list[CorpusOut], tags=["conocimiento"])
+def corpus() -> list[dict[str, object]]:
+    """Documentos del corpus Gold con sus metadatos (URL, sección, fecha, hash y tokens)."""
+    return pipeline.corpus_table()
+
+
+@app.get("/temas", response_model=list[str], tags=["conocimiento"])
+def temas() -> list[str]:
+    """Temas disponibles para las guías (resumen y preguntas frecuentes)."""
+    return list(assistant_ctrl.TOPICS)
+
+
+@app.get("/evaluacion", response_model=list[EvaluacionOut], tags=["evaluacion"])
+def evaluacion() -> list[dict[str, object]]:
+    """Corridas guardadas de ``sb eval``: palabras clave, cita de fuente, rechazo correcto y latencia."""
+    return assistant_ctrl.evaluation_summary()
+
+
+@app.get("/evaluacion/{modelo}/{version}", response_model=list[dict[str, object]], tags=["evaluacion"])
+def evaluacion_detalle(
+    modelo: Annotated[str, Path(pattern=r"^[a-z0-9-]+$")],
+    version: Annotated[str, Path(pattern=r"^(v\d+|agente)$")],
+) -> list[dict[str, object]]:
+    """Detalle por pregunta de una corrida."""
+    try:
+        return assistant_ctrl.evaluation_detail(modelo, version)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"No hay resultados para {modelo} {version}") from exc
+
+
+@app.get("/experimentos", response_model=ExperimentosOut, tags=["evaluacion"])
+def experimentos_mlflow() -> ExperimentosOut:
+    """Corridas de MLflow por experimento (asistente, recuperación, recomendador y YOLO)."""
+    activa = experimentos_ctrl.activa()
+    datos = experimentos_ctrl.resumen() if activa else {}
+    return ExperimentosOut(
+        activa=activa,
+        url_ui=f"http://127.0.0.1:{MLFLOW_PUERTO}",
+        nombres=experimentos_ctrl.EXPERIMENTOS,
+        experimentos={
+            nombre: [
+                CorridaOut(
+                    nombre=str(c["nombre"]),
+                    fecha=int(c["fecha"] or 0),
+                    commit=str(c["commit"] or ""),
+                    parametros={k: str(v) for k, v in dict(c["parametros"]).items()},
+                    metricas={k: float(v) for k, v in dict(c["metricas"]).items()},
+                )
+                for c in corridas
+            ]
+            for nombre, corridas in datos.items()
+        },
+    )
+
+
+@app.get("/proyecto", response_model=ProyectoOut, tags=["sustentacion"])
+def proyecto_entregables() -> ProyectoOut:
+    """Requisitos de cada curso (``docs/requisitos.md``) con su evidencia y las cifras del repositorio."""
+    secciones = {
+        seccion: [RequisitoOut(requisito=r.requisito, estado=r.estado, evidencia=r.evidencia) for r in filas]
+        for seccion, filas in proyecto_ctrl.requisitos_por_seccion().items()
+    }
+    return ProyectoOut(
+        secciones=secciones,
+        contadores=asdict(proyecto_ctrl.contadores()),
+        corridas_mlflow=proyecto_ctrl.corridas_mlflow(),
+        enlaces=proyecto_ctrl.ENLACES,
+    )
 
 
 @app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"])
@@ -174,6 +340,85 @@ def conversar(
     return turno.a_dict()
 
 
+@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"])
+def agente_mensaje(
+    entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+) -> dict[str, object]:
+    """Un turno del agente: el router elige la ruta (directo, datos, RAG o mixto) y el agente responde.
+
+    Devuelve la salida estructurada, la **decisión del router**, las tools usadas y las fuentes
+    descartadas. La memoria del hilo vive en SQLite (``conversacion_id``) y el perfil del usuario
+    en el Store (``usuario_id``).
+    """
+    try:
+        turno = fabrica(entrada.proveedor or LLM_PROVIDER).responder(
+            entrada.mensaje, entrada.conversacion_id, entrada.usuario_id
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(503, f"Faltan datos: {exc}") from exc
+    return turno.a_dict()
+
+
+@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse)
+def agente_stream(
+    entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+) -> StreamingResponse:
+    """El mismo turno de ``/agente/mensajes`` en streaming (Server-Sent Events).
+
+    Eventos: ``router`` (ruta elegida), ``tool_inicio``/``tool_fin``, ``texto`` (fragmentos de la
+    respuesta), ``final`` (el ``AgenteOut`` completo, con fuentes validadas) y ``error``.
+    """
+    agente = fabrica(entrada.proveedor or LLM_PROVIDER)
+
+    def eventos() -> Iterator[str]:
+        for evento in agente.transmitir(entrada.mensaje, entrada.conversacion_id, entrada.usuario_id):
+            yield f"event: {evento['tipo']}\ndata: {json.dumps(evento, ensure_ascii=False, default=str)}\n\n"
+
+    cabeceras = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    return StreamingResponse(eventos(), media_type="text/event-stream", headers=cabeceras)
+
+
+IdSeguro = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{6,64}$")]
+Fabrica = Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
+
+
+@app.get("/agente/conversaciones/{conversacion_id}", response_model=ConversacionOut, tags=["agente"])
+def conversacion(conversacion_id: IdSeguro, fabrica: Fabrica) -> ConversacionOut:
+    """Mensajes guardados del hilo (SQLite): permite retomarlo tras recargar o reiniciar el backend."""
+    mensajes = fabrica(LLM_PROVIDER).historial(conversacion_id)
+    return ConversacionOut(conversacion_id=conversacion_id, mensajes=mensajes)
+
+
+@app.get(
+    "/agente/conversaciones/{conversacion_id}/checkpoints",
+    response_model=list[CheckpointOut],
+    tags=["agente"],
+)
+def checkpoints(conversacion_id: IdSeguro, fabrica: Fabrica) -> list[dict[str, object]]:
+    """Checkpoints del hilo, del más reciente al más antiguo (time travel)."""
+    return fabrica(LLM_PROVIDER).checkpoints(conversacion_id)
+
+
+@app.delete("/agente/conversaciones/{conversacion_id}", status_code=204, tags=["agente"])
+def borrar_conversacion(conversacion_id: IdSeguro, fabrica: Fabrica) -> None:
+    """Borra la memoria del hilo."""
+    fabrica(LLM_PROVIDER).olvidar(conversacion_id)
+
+
+@app.get("/agente/usuarios/{usuario_id}/perfil", response_model=PerfilOut, tags=["agente"])
+def perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> PerfilOut:
+    """Lo que el asistente recuerda del usuario entre conversaciones (memoria de largo plazo)."""
+    return PerfilOut(usuario_id=usuario_id, hechos=fabrica(LLM_PROVIDER).perfil(usuario_id))
+
+
+@app.delete("/agente/usuarios/{usuario_id}/perfil", status_code=204, tags=["agente"])
+def borrar_perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> None:
+    """Borra la memoria de largo plazo del usuario (derecho a la supresión, Ley 1581)."""
+    fabrica(LLM_PROVIDER).olvidar_perfil(usuario_id)
+
+
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])
 def listar_skills() -> list[SkillOut]:
     """Skills que el chat puede aplicar (``metadata.uso: asistente``)."""
@@ -195,6 +440,9 @@ async def analizar_foto(
     ] = False,
     responder: Annotated[bool, Query(description="Que el asistente explique qué hacer, con fuente")] = False,
     proveedor: Annotated[str | None, Query(description="Proveedor del LLM")] = None,
+    devolver_imagen: Annotated[
+        bool, Query(description="Incluir la imagen difuminada (JPEG base64) para mostrarla en el frontend")
+    ] = False,
 ) -> FotoOut:
     """Foto → ¿qué hago?: privacidad local, situación, respuesta con fuente y recomendaciones.
 
@@ -256,6 +504,7 @@ async def analizar_foto(
         aviso=analisis.aviso,
         respuesta=_salida(analisis.respuesta) if analisis.respuesta else None,
         recomendaciones=[RecomendacionOut(**r) for r in analisis.recomendaciones],
+        imagen_jpeg_b64=a_jpeg_b64(analisis.imagen_privada) if devolver_imagen else None,
     )
 
 

@@ -5,6 +5,8 @@ Las placas de los vehículos no se detectan con el modelo COCO: el prompt prohí
 interfaz pide al usuario no enviar fotos con datos personales.
 """
 
+import base64
+import io
 from collections.abc import Iterable
 
 from PIL import Image, ImageFilter
@@ -12,6 +14,19 @@ from PIL import Image, ImageFilter
 from sb_asistente.model.vision.deteccion import Caja
 
 MARGEN = 0.12  # amplía cada caja un 12 % para cubrir bordes de cabello, manos, etc.
+
+
+def a_jpeg_b64(imagen: Image.Image, lado_maximo: int = 1280, calidad: int = 85) -> str:
+    """JPEG en base64 (reducido a ``lado_maximo`` px) para devolver la imagen ya difuminada por la API.
+
+    Las cajas de las detecciones siguen en píxeles de la imagen original: el cliente las escala con
+    ``ancho`` y ``alto``.
+    """
+    copia = imagen.convert("RGB").copy()
+    copia.thumbnail((lado_maximo, lado_maximo))
+    buffer = io.BytesIO()
+    copia.save(buffer, format="JPEG", quality=calidad)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def difuminar(imagen: Image.Image, cajas: Iterable[Caja], margen: float = MARGEN) -> Image.Image:

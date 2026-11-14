@@ -15,6 +15,7 @@ from sb_asistente.config import (
     EMBEDDINGS_PROVIDERS,
     GOLD_DIR,
     LLM_PROVIDER,
+    MLFLOW_PUERTO,
     PROVIDERS,
     RAG_K,
     RECO_DIR,
@@ -104,11 +105,16 @@ def build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--conversacion", default="cli-local", help="Id de la conversación (memoria)")
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
+    ag.add_argument("--usuario", default=None, help="Id del usuario (memoria de largo plazo en el Store)")
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
-    ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5000)")
-    ui_ml.add_argument("--port", type=int, default=5000)
+    ui_ml = ml_sub.add_parser("ui", help="Abre la interfaz de MLflow (http://127.0.0.1:5050)")
+    ui_ml.add_argument("--port", type=int, default=MLFLOW_PUERTO)
+    srv = ml_sub.add_parser("servidor", help="Servidor de tracking en http://127.0.0.1:5050 (UI + API)")
+    srv.add_argument("--port", type=int, default=MLFLOW_PUERTO)
+    tr = sub.add_parser("trazas", help="Últimos turnos del agente: ruta, tools y latencia (sin texto)")
+    tr.add_argument("-n", type=int, default=10)
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
@@ -267,11 +273,24 @@ def _mlflow(args: argparse.Namespace) -> int:
         return 0
     import subprocess
 
-    from sb_asistente.config import MLFLOW_TRACKING_URI
-
     print(f"MLflow en http://127.0.0.1:{args.port} (Ctrl+C para salir)")
-    comando = [sys.executable, "-m", "mlflow", "ui", "--backend-store-uri", MLFLOW_TRACKING_URI]
-    return subprocess.call([*comando, "--port", str(args.port)])
+    return subprocess.call(comando_mlflow(args.mlflow_command, args.port))
+
+
+def comando_mlflow(subcomando: str, puerto: int) -> list[str]:
+    """Comando de ``mlflow ui`` o ``mlflow server`` sobre la base SQLite y los artefactos de ``data/``.
+
+    Con el servidor arriba, el resto del proyecto registra contra él definiendo
+    ``MLFLOW_TRACKING_URI=http://127.0.0.1:5050``.
+    """
+    from sb_asistente.config import MLFLOW_ARTIFACTS, MLFLOW_BACKEND_URI
+
+    base = [sys.executable, "-m", "mlflow", "server" if subcomando == "servidor" else "ui"]
+    base += ["--backend-store-uri", MLFLOW_BACKEND_URI, "--host", "127.0.0.1", "--port", str(puerto)]
+    if subcomando == "servidor":
+        MLFLOW_ARTIFACTS.mkdir(parents=True, exist_ok=True)
+        base += ["--default-artifact-root", MLFLOW_ARTIFACTS.as_uri()]
+    return base
 
 
 def _agente(args: argparse.Namespace) -> int:
@@ -283,13 +302,31 @@ def _agente(args: argparse.Namespace) -> int:
         agente.olvidar(args.conversacion)
         print(f"Memoria de «{args.conversacion}» borrada.")
         return 0
-    turno = agente.responder(args.mensaje, args.conversacion)
+    turno = agente.responder(args.mensaje, args.conversacion, args.usuario)
+    d = turno.decision
+    print(f"Router → {d['ruta']} (confianza {d['confianza']}) · tools: {', '.join(d['tools']) or 'ninguna'}")
     for paso in turno.pasos:
         print(f"  · tool {paso.tool}({json.dumps(paso.argumentos, ensure_ascii=False)})")
     print()
     print(json.dumps(turno.salida.model_dump(), indent=2, ensure_ascii=False))
     if turno.fuentes_descartadas:
         print(f"\nFuentes descartadas (no vistas en las tools): {turno.fuentes_descartadas}")
+    return 0
+
+
+def _trazas(args: argparse.Namespace) -> int:
+    """Resumen de las últimas trazas del agente (``data/logs/turnos.jsonl``)."""
+    from sb_asistente.config import TRAZAS_LOG
+    from sb_asistente.model.trazas import ultimas
+
+    filas = ultimas(TRAZAS_LOG, args.n)
+    if not filas:
+        print(f"Aún no hay trazas en {TRAZAS_LOG}. Converse con el agente (sb agente o la API).")
+        return 0
+    for f in filas:
+        tools = ", ".join(f"{t['tool']} {t['ms']:.0f} ms" for t in f["tools"]) or "sin tools"
+        error = f" · error {f['error']}" if f.get("error") else ""
+        print(f"{f['fecha']}  hilo {f['hilo']}  {f['ruta']:<16} {f['ms_total']:>8.0f} ms  [{tools}]{error}")
     return 0
 
 
@@ -323,6 +360,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _rag(args)
     if args.command == "agente":
         return _agente(args)
+    if args.command == "trazas":
+        return _trazas(args)
     if args.command == "foto":
         return _foto(args)
     if args.command == "mlflow":

@@ -127,15 +127,27 @@ VISION_IGNORED_CLASSES: Final[frozenset[str]] = frozenset({"person"})
 VISION_BLUR_CONFIDENCE: Final[float] = 0.15  # umbral bajo para difuminar personas (mejor de más que de menos)
 VISION_PROVIDERS: Final[tuple[str, ...]] = ("anthropic",)  # proveedores que entienden imágenes
 API_URL: Final[str] = os.getenv("SB_API_URL", "http://127.0.0.1:8000")  # cliente HTTP (view/api_client)
+# Orígenes del frontend desacoplado que pueden llamar a la API (lista blanca, nunca "*")
+_ORIGENES = "http://localhost:5173,http://127.0.0.1:5173,https://yellowdata.com.co"
+# Documento de prueba con una instrucción escondida (demostración del blindaje del RAG, SPEC-014)
+CORPUS_DEMO_DIR: Final[Path] = PROJECT_ROOT / "evaluacion" / "corpus_demo"
+CORPUS_DEMO: Final[bool] = os.getenv("SB_CORPUS_DEMO", "1") == "1"
+FRONTEND_ORIGINS: Final[tuple[str, ...]] = tuple(
+    o.strip() for o in os.getenv("FRONTEND_ORIGINS", _ORIGENES).split(",") if o.strip()
+)
 
 # --- Bitácora de experimentos (MLflow; extra opcional `uv sync --extra mlflow`, ADR-022) -------
 MLFLOW_DB: Final[Path] = DATA_DIR / "mlflow.db"  # base local, no versionada (data/)
 MLFLOW_ARTIFACTS: Final[Path] = DATA_DIR / "mlflow-artefactos"
-MLFLOW_TRACKING_URI: Final[str] = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{MLFLOW_DB.as_posix()}")
+MLFLOW_BACKEND_URI: Final[str] = f"sqlite:///{MLFLOW_DB.as_posix()}"  # base del servidor de tracking
+MLFLOW_PUERTO: Final[int] = int(os.getenv("MLFLOW_PUERTO", "5050"))  # puerto de la rúbrica de Gestión
+# Cliente: el servidor (p. ej. http://127.0.0.1:5050) si está definido; si no, la base SQLite directa
+MLFLOW_TRACKING_URI: Final[str] = os.getenv("MLFLOW_TRACKING_URI", MLFLOW_BACKEND_URI)
 MLFLOW_ACTIVO: Final[bool] = os.getenv("SB_MLFLOW", "1") != "0"  # SB_MLFLOW=0 apaga el registro
 EXPERIMENTO_QA: Final[str] = "asistente-qa"
 EXPERIMENTO_RECOMENDADOR: Final[str] = "recomendador"
 EXPERIMENTO_RECUPERACION: Final[str] = "recuperacion"
+EXPERIMENTO_VISION: Final[str] = "vision-yolo"  # SPEC-034: el modelo MaaS de la API
 
 # --- RAG: base vectorial (Chroma) y recuperación híbrida -------------------------------------
 VECTOR_DIR: Final[Path] = DATA_DIR / "vector"  # Chroma persistente (no versionado)
@@ -151,7 +163,13 @@ RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2
 
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
+MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
+TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
+# Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad
+MEMORY_SUMMARY_TOKENS: Final[int] = int(os.getenv("MEMORY_SUMMARY_TOKENS", "8000"))
+MEMORY_KEEP_MESSAGES: Final[int] = 12  # mensajes recientes que el resumen deja intactos
+MEMORY_MAX_TOKENS: Final[int] = 12_000  # tope de tokens del historial enviado al modelo
 LANGSMITH_PROJECT: Final[str] = os.getenv("LANGSMITH_PROJECT", "sb-asistente")
 
 # --- Recomendador (curso de Gestión) -------------------------------------------------------

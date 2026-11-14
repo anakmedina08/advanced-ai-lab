@@ -1,0 +1,54 @@
+{
+  "tipo": "architecture",
+  "titulo": "Asistente de seguros · arquitectura de runtime (Módulos 2 y 3)",
+  "descripcion": "Frontend propio desacoplado → API FastAPI → controladores → agente LangGraph, modelos y datos. Solo la imagen ya difuminada y el texto de la pregunta salen del equipo hacia Anthropic.",
+  "capas": [
+    {"id": "cliente", "nombre": "Cliente"},
+    {"id": "frontend", "nombre": "Frontend (React + Vite)"},
+    {"id": "api", "nombre": "API (FastAPI)"},
+    {"id": "servicio", "nombre": "Controladores (servicio)"},
+    {"id": "modelo", "nombre": "Modelo (agente e inferencia)"},
+    {"id": "datos", "nombre": "Datos y servicios"},
+    {"id": "externo", "nombre": "Proveedor externo"}
+  ],
+  "limites": [
+    {"id": "equipo", "nombre": "Equipo local (Windows/Docker)", "capas": ["frontend", "api", "servicio", "modelo", "datos"]},
+    {"id": "externo", "nombre": "Proveedor externo", "nodos": ["claude"]}
+  ],
+  "nodos": [
+    {"id": "navegador", "capa": "cliente", "nombre": "Navegador", "detalle": "Chat, foto y estado; pestaña Network muestra cada llamada HTTP/SSE"},
+    {"id": "spa", "capa": "frontend", "nombre": "SPA React :5173", "detalle": "Rutas /, /foto, /estado · useReducer del chat · sesiones en localStorage"},
+    {"id": "cliente_api", "capa": "frontend", "nombre": "Cliente tipado", "detalle": "fetch con timeout y reintentos · lector SSE · ApiError con request_id"},
+    {"id": "rest", "capa": "api", "nombre": "REST + SSE :8000", "detalle": "/agente/stream, /agente/mensajes, /agente/conversaciones, /fotos, /health · ErrorOut uniforme · logs JSON con latencia"},
+    {"id": "rpc", "capa": "api", "nombre": "JSON-RPC 2.0", "detalle": "POST /rpc con los mismos contratos Pydantic"},
+    {"id": "ctrl_agente", "capa": "servicio", "nombre": "controller/agente", "detalle": "Valida, guarda hechos en el Store, enruta, invoca o transmite y valida las fuentes"},
+    {"id": "ctrl_vision", "capa": "servicio", "nombre": "controller/vision", "detalle": "Detecta, difumina personas, interpreta la escena y arma el plan"},
+    {"id": "router", "capa": "modelo", "nombre": "Router (reglas)", "detalle": "directo · datos · rag · mixto · fuera_de_alcance; 32/32 en el banco"},
+    {"id": "agente", "capa": "modelo", "nombre": "Agente create_agent", "detalle": "Middleware: resumen, PII, límites, filtrar_tools, medir_tools, dynamic_prompt · salida estructurada"},
+    {"id": "tools", "capa": "modelo", "nombre": "Tools @tool", "detalle": "buscar_conocimiento (RAG blindado) · consultar_datos (CSV, Pydantic) · recomendar_seguros"},
+    {"id": "yolo", "capa": "modelo", "nombre": "YOLO26-L", "detalle": "Carga única en lifespan · umbral 0,35 · difuminado de personas"},
+    {"id": "qdrant", "capa": "datos", "nombre": "Qdrant + BM25", "detalle": "Índice HNSW con filtro de payload · fusión RRF"},
+    {"id": "sqlite", "capa": "datos", "nombre": "SQLite: checkpointer + Store", "detalle": "Hilos por thread_id (corto plazo) · perfil por namespace de usuario (largo plazo)"},
+    {"id": "csv", "capa": "datos", "nombre": "CSV sintéticos", "detalle": "Pólizas, clientes y siniestros de práctica (Ley 1581)"},
+    {"id": "mlflow", "capa": "datos", "nombre": "MLflow :5050", "detalle": "Experimentos y Model Registry sb-yolo-difuminado@produccion"},
+    {"id": "claude", "capa": "externo", "nombre": "Claude (Anthropic)", "detalle": "LLM del agente y visión de la escena; recibe texto y la imagen ya difuminada"}
+  ],
+  "relaciones": [
+    {"de": "navegador", "a": "spa", "etiqueta": "HTTP"},
+    {"de": "spa", "a": "cliente_api", "etiqueta": "estado"},
+    {"de": "cliente_api", "a": "rest", "etiqueta": "POST SSE / JSON"},
+    {"de": "rest", "a": "ctrl_agente", "etiqueta": "turno"},
+    {"de": "rpc", "a": "ctrl_agente", "etiqueta": "agente.conversar"},
+    {"de": "rest", "a": "ctrl_vision", "etiqueta": "foto"},
+    {"de": "ctrl_agente", "a": "router", "etiqueta": "enrutar"},
+    {"de": "ctrl_agente", "a": "agente", "etiqueta": "stream"},
+    {"de": "agente", "a": "tools", "etiqueta": "tool calls"},
+    {"de": "agente", "a": "claude", "etiqueta": "LLM"},
+    {"de": "agente", "a": "sqlite", "etiqueta": "memoria"},
+    {"de": "tools", "a": "qdrant", "etiqueta": "top-k"},
+    {"de": "tools", "a": "csv", "etiqueta": "pandas"},
+    {"de": "ctrl_vision", "a": "yolo", "etiqueta": "detectar"},
+    {"de": "ctrl_vision", "a": "claude", "etiqueta": "escena"},
+    {"de": "yolo", "a": "mlflow", "etiqueta": "registrado"}
+  ]
+}
