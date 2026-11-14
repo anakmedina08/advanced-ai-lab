@@ -20,13 +20,14 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-from sb_asistente.config import CHUNKS_JSONL, LANGSMITH_PROJECT, LLM_PROVIDER, MEMORY_DB
+from sb_asistente.config import CHUNKS_JSONL, LANGSMITH_PROJECT, LLM_PROVIDER, MEMORY_DB, QDRANT_DIR
 from sb_asistente.controller import recomendador
 from sb_asistente.model.agente import RespuestaAgente, construir_agente, crear_tools
 from sb_asistente.model.llm.service import build_llm
 from sb_asistente.model.rag import indice
 from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
+from sb_asistente.model.rag.qdrant import BuscadorQdrant
 
 CONVERSACION_VALIDA = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _URL = re.compile(r"https?://[^\s)\]>\"']+")
@@ -69,13 +70,32 @@ def abrir_memoria(ruta: Path = MEMORY_DB) -> SqliteSaver:
     return SqliteSaver(sqlite3.connect(str(ruta), check_same_thread=False))
 
 
-def recuperador_por_defecto(chunks_path: Path = CHUNKS_JSONL) -> tuple[RecuperadorHibrido, str]:
-    """BM25 + Chroma si el índice existe; si no, solo BM25 (y lo informa)."""
+def _qdrant(chunks_path: Path, qdrant_dir: Path) -> BuscadorQdrant:
+    """Índice Qdrant de los fragmentos Gold, el mismo del modo «rag» (``make index``).
+
+    Se indexan los chunks tal cual (sin el bloque de canales) para que la huella coincida con la
+    colección existente y no se recalculen los embeddings.
+    """
+    from sb_asistente.model.llm import knowledge, vector_store  # noqa: PLC0415 - carga perezosa
+
+    cliente = vector_store.open_client(qdrant_dir)
+    chunks = knowledge.load_chunks(chunks_path)
+    return BuscadorQdrant(vector_store.build_index(chunks, vector_store.build_embeddings(), cliente))
+
+
+def recuperador_por_defecto(
+    chunks_path: Path = CHUNKS_JSONL, qdrant_dir: Path = QDRANT_DIR
+) -> tuple[RecuperadorHibrido, str]:
+    """BM25 + Qdrant (ANN con filtro de payload); si no hay Qdrant, BM25 + Chroma; si no, solo BM25."""
     chunks = fragmentos_rag(chunks_path)
     try:
-        return RecuperadorHibrido(chunks, indice.abrir()), "híbrido (BM25 + vectores)"
+        return RecuperadorHibrido(chunks, _qdrant(chunks_path, qdrant_dir)), "híbrido (BM25 + Qdrant)"
+    except Exception:  # noqa: BLE001 - sin Ollama o sin índice: se prueba el siguiente
+        pass
+    try:
+        return RecuperadorHibrido(chunks, indice.abrir()), "híbrido (BM25 + Chroma)"
     except indice.IndiceError:
-        return RecuperadorHibrido(chunks), "solo BM25 (falta `sb rag indexar`)"
+        return RecuperadorHibrido(chunks), "solo BM25 (falta el índice: make index)"
 
 
 def _texto(mensaje: BaseMessage) -> str:

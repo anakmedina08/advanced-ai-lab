@@ -28,7 +28,7 @@ class Fragmento:
 
 
 class BuscadorVectorial(Protocol):
-    """Lo mínimo que se usa de Chroma (permite dobles en pruebas)."""
+    """Lo mínimo que se usa de la base vectorial (Qdrant o Chroma; permite dobles en pruebas)."""
 
     def similarity_search(self, query: str, k: int = 4, filter: dict | None = None) -> list: ...  # noqa: A002, D102
 
@@ -47,7 +47,7 @@ def _tokens(chunk: dict[str, object]) -> list[str]:
 
 
 class RecuperadorHibrido:
-    """BM25 en memoria sobre los fragmentos + búsqueda vectorial en Chroma."""
+    """BM25 en memoria sobre los fragmentos + búsqueda vectorial (Qdrant o Chroma)."""
 
     def __init__(self, chunks: list[dict[str, object]], vectorial: BuscadorVectorial | None = None) -> None:
         """Construye el índice BM25; ``vectorial`` es opcional (sin él, solo BM25)."""
@@ -79,7 +79,10 @@ class RecuperadorHibrido:
         if self.vectorial is None:
             return []
         filtro = {"section": seccion} if seccion else None
-        docs = self.vectorial.similarity_search(consulta, k=n, filter=filtro)
+        try:
+            docs = self.vectorial.similarity_search(consulta, k=n, filter=filtro)
+        except Exception:  # noqa: BLE001 - p. ej. Ollama apagado: se sigue solo con BM25
+            return []
         return [
             str(d.metadata.get("chunk_id") or d.id)
             for d in docs

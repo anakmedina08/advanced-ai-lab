@@ -58,7 +58,7 @@ def _recuperador() -> tuple[RecuperadorHibrido, str]:
 
 
 def get_recuperador() -> Callable[[], tuple[RecuperadorHibrido, str]]:
-    """Recuperador híbrido (BM25 + Chroma) y su modo, para ``conocimiento.buscar``."""
+    """Recuperador híbrido (BM25 + Qdrant, o Chroma) y su modo, para ``conocimiento.buscar``."""
     return _recuperador
 
 
