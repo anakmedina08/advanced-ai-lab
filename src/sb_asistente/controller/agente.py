@@ -341,6 +341,27 @@ class AgenteAsistente:
                         )
         return salida
 
+    def checkpoints(self, conversacion_id: str, limite: int = 50) -> list[dict[str, Any]]:
+        """Historia de checkpoints del hilo, del más reciente al más antiguo (time travel).
+
+        Cada checkpoint es el estado guardado tras un paso del grafo; su ``checkpoint_id`` permite
+        inspeccionarlo o reanudar desde ahí (``config.configurable.checkpoint_id``).
+        """
+        config = {"configurable": {"thread_id": conversacion_id}}
+        salida = []
+        for estado in self.grafo.get_state_history(config, limit=limite):
+            metadatos = estado.metadata or {}
+            salida.append(
+                {
+                    "checkpoint_id": estado.config["configurable"].get("checkpoint_id", ""),
+                    "paso": int(metadatos.get("step", -1)),
+                    "fecha": estado.created_at or "",
+                    "mensajes": len(estado.values.get("messages", [])),
+                    "siguiente": list(estado.next),
+                }
+            )
+        return salida
+
     def perfil(self, usuario_id: str) -> dict[str, str]:
         """Memoria de largo plazo del usuario (vacía si no hay Store)."""
         return self.perfiles.leer(usuario_id) if self.perfiles is not None else {}

@@ -208,6 +208,37 @@ class AgenteOut(BaseModel):
     mensajes_en_memoria: int
 
 
+class MensajeHistorialOut(BaseModel):
+    """Un mensaje guardado en la memoria del hilo."""
+
+    rol: Literal["usuario", "asistente"]
+    texto: str
+
+
+class ConversacionOut(BaseModel):
+    """Mensajes de un hilo (memoria de corto plazo, sobrevive al reinicio)."""
+
+    conversacion_id: str
+    mensajes: list[MensajeHistorialOut]
+
+
+class CheckpointOut(BaseModel):
+    """Un checkpoint del hilo (time travel)."""
+
+    checkpoint_id: str
+    paso: int
+    fecha: str
+    mensajes: int
+    siguiente: list[str]
+
+
+class PerfilOut(BaseModel):
+    """Memoria de largo plazo del usuario (Store, namespace por usuario)."""
+
+    usuario_id: str
+    hechos: dict[str, str]
+
+
 class ChatIn(_Entrada):
     """Mensaje del chat (estilo conversación)."""
 
