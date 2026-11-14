@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 
-from sb_asistente.config import BASE_URL, CHUNKS_JSONL, LLM_PROVIDER, RECO_DIR, RECO_K
+from sb_asistente.config import BASE_URL, CHUNKS_JSONL, FRONTEND_ORIGINS, LLM_PROVIDER, RECO_DIR, RECO_K
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.model import skills
@@ -83,9 +83,10 @@ errores.registrar(app)
 observabilidad.registrar(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://yellowdata.com.co", "http://localhost:3000"],
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=list(FRONTEND_ORIGINS),
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID", "X-Process-Time-ms"],
 )
 
 

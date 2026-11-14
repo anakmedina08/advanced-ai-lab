@@ -259,7 +259,7 @@ curl -F "archivo=@choque.jpg" "localhost:8000/fotos?interpretar=true&responder=t
 
 Entender la situación usa Claude (`interpretar=true`); sin él, solo YOLO sugiere por objeto. Variables
 opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26l.pt`, elegido por comparación; se descarga si falta),
-`YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP). La foto se procesa en memoria y no se guarda;
+`YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP) y `FRONTEND_ORIGINS` (orígenes permitidos por CORS, separados por comas; por defecto Vite en el puerto 5173 y yellowdata.com.co). La foto se procesa en memoria y no se guarda;
 las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
 pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
 
