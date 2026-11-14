@@ -17,7 +17,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Módulo 3 · Git: Gitflow con `main`, `develop` y ramas `feature/*` | ✅ | ramas del repositorio, Conventional Commits con hook `commit-msg` (`scripts/check_commit_msg.py`) |
 | Módulo 3 · Pull Requests con revisor (Reviewers) y responsable (Assignees) | 🟡 | 7 PR fusionadas; las historias SPEC-007 a SPEC-042 tienen PR abierta con revisor (Daniel) y `Closes #N`, a la espera de aprobación · `.github/pull_request_template.md` |
 | Mínimo 40 PR fusionadas con revisión (piso de 8 por integrante) | ⏳ | se alcanza al aprobar y fusionar las PR de las historias; el piso individual de Daniel (8) no se cumple con su trabajo actual |
-| Mínimo 40 especificaciones SDD (spec, plan y tasks) | ✅ | 42 en `openspec/specs/` (`find openspec -name spec.md`), una por historia, escritas antes del código y vinculadas a su issue y PR |
+| Mínimo 40 especificaciones SDD (spec, plan y tasks) | ✅ | 45 en `openspec/specs/` (`find openspec -name spec.md`), una por historia, escritas antes del código y vinculadas a su issue y PR |
 | Frontend desacoplado (sin Streamlit) | ✅ | React + Vite + TypeScript en `frontend/` (SPEC-022 a 032): estados, Network visible, foto con confianza, CI propia |
 | Backend en 3 capas con /health y errores HTTP | ✅ | `model/vision` → `controller/vision` → `view/api.py`; `GET /health`, `ErrorOut` 400/404/422/500/503 (SPEC-007, 008) |
 | Módulo 3 · Proteger `main` (PR + CI en verde) | ⏳ | Settings › Branches: T-15 |

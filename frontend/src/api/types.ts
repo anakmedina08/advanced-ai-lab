@@ -175,3 +175,16 @@ export interface ExperimentosOut {
   nombres: Record<string, string>;
   experimentos: Record<string, CorridaOut[]>;
 }
+
+export interface RequisitoOut {
+  requisito: string;
+  estado: "cumplido" | "en curso" | "pendiente";
+  evidencia: string;
+}
+
+export interface ProyectoOut {
+  secciones: Record<string, RequisitoOut[]>;
+  contadores: Record<string, number>;
+  corridas_mlflow: number | null;
+  enlaces: Record<string, string>;
+}

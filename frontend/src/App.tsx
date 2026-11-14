@@ -13,8 +13,8 @@ import Experimentos from "./pages/Experimentos";
 import Foto from "./pages/Foto";
 import Guias from "./pages/Guias";
 import Inicio from "./pages/Inicio";
-import Pendiente from "./pages/Pendiente";
 import Pipeline from "./pages/Pipeline";
+import Sustentacion from "./pages/Sustentacion";
 
 /** Layout de la versión Streamlit: barra lateral oscura con tres áreas y el contenido a la derecha. */
 export default function App() {
@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/evaluacion" element={<Evaluacion />} />
             <Route path="/experimentos" element={<Experimentos />} />
-            <Route path="/sustentacion" element={<Pendiente />} />
+            <Route path="/sustentacion" element={<Sustentacion />} />
             <Route path="*" element={<p>Página no encontrada.</p>} />
           </Routes>
         </main>
