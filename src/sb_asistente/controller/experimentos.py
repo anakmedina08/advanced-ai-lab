@@ -94,14 +94,16 @@ def registrar_baselines(
     ]
 
 
-def registrar_recuperacion(metodo: str, hit_por_k: Mapping[int, float], preguntas: int) -> str | None:
-    """Corrida del experimento ``recuperacion``: hit@k de un método de búsqueda."""
+def registrar_recuperacion(
+    metodo: str, hit_por_k: Mapping[int, float], preguntas: int, extra: Mapping[str, float] | None = None
+) -> str | None:
+    """Corrida del experimento ``recuperacion``: hit@k (y recall@10, nDCG@10) de un método de búsqueda."""
     return bitacora().registrar(
         Corrida(
             experimento=EXPERIMENTO_RECUPERACION,
             nombre=metodo,
             parametros={"metodo": metodo, "preguntas_en_alcance": preguntas},
-            metricas={f"hit@{k}": tasa for k, tasa in hit_por_k.items()},
+            metricas={f"hit@{k}": tasa for k, tasa in hit_por_k.items()} | dict(extra or {}),
             etiquetas={"origen": "scripts/comparar_recuperacion.py"},
         )
     )

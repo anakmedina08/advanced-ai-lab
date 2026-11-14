@@ -106,6 +106,34 @@ modelo. La confianza se midió con umbral 0,15, el mismo que se usa para difumin
 - Su costo (~0,3 s) es pequeño frente a la llamada a Claude (~2 s), así que es el modelo por defecto.
 - yolo26s es la alternativa rápida, configurable con `YOLO_MODEL_PATH`.
 
+## 5. Retrieval del agente: recall@10 y nDCG@10 · SPEC-036
+
+Banco: las 21 preguntas en alcance de `evaluacion/preguntas.yaml` (25 en total; 4 son trampas fuera de
+alcance). Etiquetado: un fragmento es **relevante** si trae todas las palabras clave de la pregunta
+(los datos que la respuesta debe contener). recall@10 está acotado a `min(relevantes del corpus, 10)`;
+nDCG@10 usa ganancia binaria. Script: `uv run python scripts/comparar_recuperacion.py -k 4 6 10`
+(registra las 5 corridas en MLflow, experimento `recuperacion`).
+
+| Método | hit@4 | hit@6 | hit@10 | recall@10 | nDCG@10 |
+|---|---|---|---|---|---|
+| BM25 (léxico) | 67 % | 71 % | 86 % | 0,725 | **0,553** |
+| **Agente: híbrido BM25 + Qdrant** | 67 % | **81 %** | 86 % | 0,705 | 0,490 |
+| Qdrant denso (modo «rag») | 62 % | 62 % | 71 % | 0,584 | 0,377 |
+| Por palabras (modo «reducido») | **86 %** | **90 %** | **95 %** | **0,744** | 0,485 |
+| Híbrido BM25 + Chroma | 62 % | 76 % | 81 % | 0,689 | 0,535 |
+
+**Decisión.** El agente usa el híbrido BM25 + Qdrant:
+
+- Iguala a BM25 en hit@10 (86 %) y lo supera en hit@6 (81 % frente a 71 %). El agente pide 6
+  fragmentos (`RAG_K=6`), así que hit@6 es la métrica que más pesa en la práctica.
+- Qdrant aporta índice ANN (HNSW) y filtro de *payload* por sección.
+
+Qdrant solo (denso) es el peor: las preguntas con números exactos (#322, 01 8000…) necesitan la parte
+léxica. La búsqueda «por palabras» gana en hit@k porque el banco se escribió con palabras del corpus.
+Es un sesgo conocido del banco y no escala a paráfrasis («me chocaron»). El nDCG más bajo del
+híbrido indica que el fragmento correcto llega, pero no siempre en la primera posición. La
+siguiente mejora es un *re-ranker*.
+
 ## Pendiente
 
 - **T-66:** subir el banco de preguntas como dataset de LangSmith (`make langsmith-dataset`).
