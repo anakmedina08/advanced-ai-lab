@@ -109,9 +109,11 @@ sin privilegios, `data/` como volumen. Ver ADR-008.
 
 ## Módulo 2 · Agente conversacional (SPEC-007 a SPEC-036)
 
-Diagrama interactivo de runtime: [`docs/arquitectura.html`](arquitectura.html) (fuente
-[`arquitectura.json`](arquitectura.json), formato Archify tipo *architecture*; se regenera con
-`uv run python scripts/diagrama_arquitectura.py`).
+Diagrama interactivo de runtime: [`docs/arquitectura.html`](arquitectura.html), generado con **Archify** (tipo
+*architecture*, perfil *showcase*, con evidencia del repositorio en cada componente). Fuente:
+[`arquitectura.json`](arquitectura.json); se regenera con
+`node .agents/skills/archify/bin/archify.mjs finalize architecture docs/arquitectura.json docs/arquitectura.html --repo-root . --quality showcase`
+(la skill se instala con `make skill-add REPO=tt-a1i/archify SKILL=archify`).
 
 ### Grafo del agente (router → modelo ↔ tools → salida estructurada)
 

@@ -58,3 +58,10 @@ informe/*.blg
 
 # Telemetría local de agentes (hooks de Claude Code)
 logs/
+
+# Archify: la skill externa se instala con make skill-add (queda en skills-lock.json);
+# los recibos de verificación se regeneran con finalize
+.agents/skills/archify/
+.claude/skills/archify
+.archify/
+docs/arquitectura.*.json
