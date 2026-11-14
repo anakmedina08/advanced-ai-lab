@@ -9,7 +9,7 @@ Piezas (cada una cubre un tema de clase):
 - **Memoria de largo plazo**: un Store con namespace por usuario guarda su perfil y un
   ``dynamic_prompt`` lo inyecta en cualquier hilo nuevo.
 - **Memoria persistente**: un *checkpointer* SQLite guarda cada conversación por ``thread_id``;
-  el modelo solo relee los últimos ``MEMORY_MAX_MESSAGES`` mensajes.
+  lo antiguo se resume (``SummarizationMiddleware``) y lo enviado se recorta por tokens.
 - **Barandas**: límite de llamadas al modelo y a tools por turno (costo) y redacción de correos,
   tarjetas y números de documento antes de que lleguen al modelo o a la memoria.
 - **Trazas**: con ``LANGSMITH_TRACING=true`` cada turno queda en LangSmith con etiquetas.
@@ -25,6 +25,7 @@ from langchain.agents.middleware import (
     ModelCallLimitMiddleware,
     ModelRequest,
     PIIMiddleware,
+    SummarizationMiddleware,
     ToolCallLimitMiddleware,
     dynamic_prompt,
     wrap_model_call,
@@ -32,11 +33,12 @@ from langchain.agents.middleware import (
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import trim_messages
+from langchain_core.messages.utils import count_tokens_approximately
 from langchain_core.tools import BaseTool, tool
 from langgraph.store.base import BaseStore
 from pydantic import BaseModel, Field
 
-from sb_asistente.config import MEMORY_MAX_MESSAGES
+from sb_asistente.config import MEMORY_KEEP_MESSAGES, MEMORY_MAX_TOKENS, MEMORY_SUMMARY_TOKENS
 from sb_asistente.model.intencion import clasificar
 from sb_asistente.model.memoria import PerfilStore, bloque_perfil
 from sb_asistente.model.rag.blindaje import formatear_pasajes
@@ -189,21 +191,24 @@ def crear_tools(
 
 @wrap_model_call
 def recortar_historial(request, handler):  # noqa: ANN001, ANN201 - firma definida por LangChain
-    """Memoria acotada: el modelo solo relee los últimos mensajes de la conversación (ahorra tokens)."""
+    """Red de seguridad: lo enviado al modelo nunca supera ``MEMORY_MAX_TOKENS`` (conteo aproximado)."""
     recortados = trim_messages(
         request.messages,
         strategy="last",
-        token_counter=len,
-        max_tokens=MEMORY_MAX_MESSAGES,
+        token_counter=count_tokens_approximately,
+        max_tokens=MEMORY_MAX_TOKENS,
         start_on="human",
         allow_partial=False,
     )
     return handler(request.override(messages=recortados or request.messages[-1:]))
 
 
-def middleware() -> Sequence:
-    """Barandas del agente: privacidad, costo y memoria acotada."""
+def middleware(llm: BaseChatModel) -> Sequence:
+    """Barandas del agente: privacidad, costo, resumen del historial y recorte por tokens."""
     return [
+        SummarizationMiddleware(
+            llm, trigger=("tokens", MEMORY_SUMMARY_TOKENS), keep=("messages", MEMORY_KEEP_MESSAGES)
+        ),
         PIIMiddleware("email", strategy="redact"),
         PIIMiddleware("credit_card", strategy="redact"),
         PIIMiddleware("documento", detector=r"(?<!\d)\d{7,12}(?!\d)", strategy="redact"),
@@ -225,7 +230,7 @@ def construir_agente(  # noqa: ANN201
         llm,
         tools=tools,
         system_prompt=SYSTEM_PROMPT,
-        middleware=middleware(),
+        middleware=middleware(llm),
         response_format=ToolStrategy(RespuestaAgente),
         checkpointer=checkpointer,
         store=store,
