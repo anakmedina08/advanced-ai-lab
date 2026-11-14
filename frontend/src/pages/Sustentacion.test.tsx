@@ -8,6 +8,7 @@ const datos = {
     "Gestión de Proyectos en IA y CD": [
       { requisito: "Mínimo 40 specs", estado: "cumplido", evidencia: "`openspec/specs/`" },
       { requisito: "Proteger main", estado: "pendiente", evidencia: "T-15" },
+      { requisito: "Auditoría de sesgo", estado: "no planeado", evidencia: "T-25" },
     ],
     "Técnicas Avanzadas de IA en Modelos de Lenguaje": [{ requisito: "Router", estado: "cumplido", evidencia: "router.py" }],
   },
@@ -26,7 +27,8 @@ describe("Entregables por curso", () => {
     render(<Sustentacion />);
     // Assert
     await waitFor(() => expect(screen.getByText("540")).toBeTruthy());
-    expect(screen.getByText("1 de 2 cumplidos")).toBeTruthy();
+    expect(screen.getByText("1 de 3 cumplidos")).toBeTruthy();
+    expect(screen.getByText(/No planeado/)).toBeTruthy();
     expect(screen.getByText("openspec/specs/").tagName).toBe("CODE");
   });
 

@@ -8,6 +8,7 @@ const ESTADOS = [
   { id: "cumplido", icono: "check_circle", clase: "estado-ok" },
   { id: "en curso", icono: "pending", clase: "estado-curso" },
   { id: "pendiente", icono: "schedule", clase: "estado-pendiente" },
+  { id: "no planeado", icono: "block", clase: "estado-no-planeado" },
 ] as const;
 
 const PESTANAS: Record<string, [string, string]> = {

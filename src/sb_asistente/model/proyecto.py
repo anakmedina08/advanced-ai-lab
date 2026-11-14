@@ -11,9 +11,9 @@ from pathlib import Path
 from sb_asistente.config import PROJECT_ROOT
 
 REQUISITOS_MD = PROJECT_ROOT / "docs" / "requisitos.md"
-ESTADOS = {"✅": "cumplido", "🟡": "en curso", "⏳": "pendiente"}
+ESTADOS = {"✅": "cumplido", "🟡": "en curso", "⏳": "pendiente", "⛔": "no planeado"}
 _FILA = re.compile(
-    r"^\|\s*(?P<requisito>[^|]+?)\s*\|\s*(?P<estado>✅|🟡|⏳)\s*\|\s*(?P<evidencia>.*?)\s*\|\s*$"
+    r"^\|\s*(?P<requisito>[^|]+?)\s*\|\s*(?P<estado>✅|🟡|⏳|⛔)\s*\|\s*(?P<evidencia>.*?)\s*\|\s*$"
 )
 _TAREA = re.compile(r"^- \[(?P<hecha>[ x])\] T-\d+ ")
 _PRUEBA = re.compile(r"^\s*(?:async\s+)?def test_\w+", re.MULTILINE)
@@ -25,7 +25,7 @@ class Requisito:
 
     seccion: str
     requisito: str
-    estado: str  # cumplido · en curso · pendiente
+    estado: str  # cumplido · en curso · pendiente · no planeado (cerrado como «not planned»)
     evidencia: str
 
 

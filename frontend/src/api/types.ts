@@ -178,7 +178,7 @@ export interface ExperimentosOut {
 
 export interface RequisitoOut {
   requisito: string;
-  estado: "cumplido" | "en curso" | "pendiente";
+  estado: "cumplido" | "en curso" | "pendiente" | "no planeado";
   evidencia: string;
 }
 
