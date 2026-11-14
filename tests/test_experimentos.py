@@ -173,3 +173,42 @@ def test_mlflow_real_lee_las_corridas_para_el_panel(tmp_path):
     [corrida] = real.corridas(EXPERIMENTO_RECUPERACION)
     assert corrida["nombre"] == "BM25" and corrida["metricas"] == {"hit_at_10": 0.86}
     assert real.corridas("no-existe") == [] and BitacoraNula().corridas("x") == []
+
+
+def test_servidor_mlflow_usa_el_puerto_5050_y_la_base_sqlite():
+    # Arrange
+    from sb_asistente.config import MLFLOW_BACKEND_URI, MLFLOW_PUERTO
+    from sb_asistente.view.cli import comando_mlflow
+
+    # Act
+    comando = comando_mlflow("servidor", MLFLOW_PUERTO)
+    # Assert
+    assert comando[2:4] == ["mlflow", "server"]
+    assert comando[comando.index("--port") + 1] == "5050"
+    assert comando[comando.index("--backend-store-uri") + 1] == MLFLOW_BACKEND_URI
+    assert comando[comando.index("--default-artifact-root") + 1].startswith("file:")
+
+
+def test_ui_de_mlflow_no_define_raiz_de_artefactos():
+    # Arrange
+    from sb_asistente.view.cli import comando_mlflow
+
+    # Act
+    comando = comando_mlflow("ui", 5050)
+    # Assert
+    assert comando[3] == "ui" and "--default-artifact-root" not in comando
+
+
+def test_el_cliente_registra_contra_el_servidor_si_esta_definido(monkeypatch):
+    # Arrange
+    import importlib
+
+    import sb_asistente.config as config
+
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5050")
+    # Act
+    recargado = importlib.reload(config)
+    # Assert
+    assert recargado.MLFLOW_TRACKING_URI == "http://127.0.0.1:5050"
+    monkeypatch.delenv("MLFLOW_TRACKING_URI")
+    importlib.reload(config)

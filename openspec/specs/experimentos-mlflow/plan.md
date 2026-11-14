@@ -9,7 +9,7 @@ flowchart LR
     CE --> M[model/experimentos · Corrida y Bitacora]
     M -->|extra instalado| ML[(MLflow · data/mlflow.db)]
     M -->|sin extra o SB_MLFLOW=0| N[BitacoraNula]
-    ML --> UI[sb mlflow ui · http://127.0.0.1:5000]
+    ML --> UI[sb mlflow ui · http://127.0.0.1:5050]
 ```
 
 ## Cómo se verifica cada requisito

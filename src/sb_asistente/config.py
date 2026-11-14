@@ -139,7 +139,10 @@ FRONTEND_ORIGINS: Final[tuple[str, ...]] = tuple(
 # --- Bitácora de experimentos (MLflow; extra opcional `uv sync --extra mlflow`, ADR-022) -------
 MLFLOW_DB: Final[Path] = DATA_DIR / "mlflow.db"  # base local, no versionada (data/)
 MLFLOW_ARTIFACTS: Final[Path] = DATA_DIR / "mlflow-artefactos"
-MLFLOW_TRACKING_URI: Final[str] = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{MLFLOW_DB.as_posix()}")
+MLFLOW_BACKEND_URI: Final[str] = f"sqlite:///{MLFLOW_DB.as_posix()}"  # base del servidor de tracking
+MLFLOW_PUERTO: Final[int] = int(os.getenv("MLFLOW_PUERTO", "5050"))  # puerto de la rúbrica de Gestión
+# Cliente: el servidor (p. ej. http://127.0.0.1:5050) si está definido; si no, la base SQLite directa
+MLFLOW_TRACKING_URI: Final[str] = os.getenv("MLFLOW_TRACKING_URI", MLFLOW_BACKEND_URI)
 MLFLOW_ACTIVO: Final[bool] = os.getenv("SB_MLFLOW", "1") != "0"  # SB_MLFLOW=0 apaga el registro
 EXPERIMENTO_QA: Final[str] = "asistente-qa"
 EXPERIMENTO_RECOMENDADOR: Final[str] = "recomendador"
