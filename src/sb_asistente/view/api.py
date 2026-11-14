@@ -23,7 +23,7 @@ from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
-from sb_asistente.view import errores
+from sb_asistente.view import errores, observabilidad
 from sb_asistente.view.dependencias import (
     Responder,
     get_asistente,
@@ -80,6 +80,7 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 errores.registrar(app)
+observabilidad.registrar(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://yellowdata.com.co", "http://localhost:3000"],
