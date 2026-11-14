@@ -1,5 +1,6 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 
+import { PROVEEDORES, useProveedor } from "./chat/proveedor";
 import { useSalud } from "./chat/salud";
 import AvisoConexion from "./components/AvisoConexion";
 
@@ -10,6 +11,7 @@ import Inicio from "./pages/Inicio";
 /** Layout común: encabezado con navegación, aviso de proyecto académico y la página activa. */
 export default function App() {
   const { estado, reintentar } = useSalud();
+  const [proveedor, setProveedor] = useProveedor();
   return (
     <div className="app">
       <header className="encabezado">
@@ -27,6 +29,16 @@ export default function App() {
           <NavLink to="/foto">Foto: ¿qué hago?</NavLink>
           <NavLink to="/estado">Estado</NavLink>
         </nav>
+        <label className="proveedor">
+          <span>Modelo</span>
+          <select value={proveedor} onChange={(e) => setProveedor(e.target.value)} aria-label="Proveedor del modelo">
+            {PROVEEDORES.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
       </header>
       <p className="aviso" role="note">
         No es un canal oficial de la compañía. Las respuestas salen de información pública y citan su fuente.
@@ -34,7 +46,7 @@ export default function App() {
       <AvisoConexion estado={estado} onReintentar={() => void reintentar()} />
       <main className="contenido">
         <Routes>
-          <Route path="/" element={<Inicio />} />
+          <Route path="/" element={<Inicio proveedor={proveedor} />} />
           <Route path="/foto" element={<Foto />} />
           <Route path="/estado" element={<Estado estado={estado} onReintentar={() => void reintentar()} />} />
           <Route path="*" element={<p>Página no encontrada.</p>} />

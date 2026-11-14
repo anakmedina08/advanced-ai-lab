@@ -642,3 +642,17 @@ svg {
     animation: none;
   }
 }
+
+/* ---- Selector de proveedor (SPEC-032) ---- */
+.proveedor {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.proveedor select {
+  font: inherit;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
