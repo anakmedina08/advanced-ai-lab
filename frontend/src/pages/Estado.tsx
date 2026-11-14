@@ -19,7 +19,6 @@ interface Props {
 export default function Estado({ estado, onReintentar }: Props) {
   return (
     <section>
-      <h1>Estado del servicio</h1>
       <p className="suave">
         API: <code>{API_URL}</code> · documentación en{" "}
         <a href={`${API_URL}/docs`} target="_blank" rel="noreferrer">
@@ -41,7 +40,7 @@ export default function Estado({ estado, onReintentar }: Props) {
             <span className={`insignia ${estado.datos.status === "ok" ? "ruta-datos" : "ruta-mixto"}`}>
               {estado.datos.status === "ok" ? "Operativo" : "Degradado"}
             </span>{" "}
-            versión {estado.datos.version} · LLM: {estado.datos.llm}
+            versión {estado.datos.version} · LLM por defecto de la API: {estado.datos.llm} (el chat usa el elegido arriba)
           </p>
           <ul className="componentes">
             {Object.entries(estado.datos.componentes).map(([clave, listo]) => (
