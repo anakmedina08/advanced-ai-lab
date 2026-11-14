@@ -1,54 +1,64 @@
 {
-  "tipo": "architecture",
-  "titulo": "Asistente de seguros · arquitectura de runtime (Módulos 2 y 3)",
-  "descripcion": "Frontend propio desacoplado → API FastAPI → controladores → agente LangGraph, modelos y datos. Solo la imagen ya difuminada y el texto de la pregunta salen del equipo hacia Anthropic.",
-  "capas": [
-    {"id": "cliente", "nombre": "Cliente"},
-    {"id": "frontend", "nombre": "Frontend (React + Vite)"},
-    {"id": "api", "nombre": "API (FastAPI)"},
-    {"id": "servicio", "nombre": "Controladores (servicio)"},
-    {"id": "modelo", "nombre": "Modelo (agente e inferencia)"},
-    {"id": "datos", "nombre": "Datos y servicios"},
-    {"id": "externo", "nombre": "Proveedor externo"}
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Asistente de seguros · arquitectura de runtime",
+    "output": "docs/arquitectura.html",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/anakmedina08/advanced-ai-lab.git",
+      "revision": "28a8c24a2df7aec7e0fb4a128ef633bcf5568b62"
+    }
+  },
+  "components": [
+    { "id": "navegador", "type": "external", "label": "Navegador", "sublabel": "usuario", "pos": [40, 200], "size": [120, 64] },
+    { "id": "frontend", "type": "frontend", "label": "Frontend React", "sublabel": "Vite :5173", "pos": [230, 200], "size": [140, 64],
+      "sources": [{ "path": "frontend/src/App.tsx", "line": 20, "label": "layout y rutas" }, { "path": "frontend/src/api/client.ts", "line": 113, "label": "streamAgente (SSE)" }] },
+    { "id": "api", "type": "backend", "label": "API FastAPI", "sublabel": "REST + SSE :8000", "pos": [470, 200], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/view/api.py", "line": 364, "label": "POST /agente/stream" }, { "path": "src/sb_asistente/view/api.py", "line": 137, "label": "GET /health" }, { "path": "src/sb_asistente/view/api.py", "line": 94, "label": "lifespan carga YOLO" }] },
+    { "id": "ctrl_agente", "type": "backend", "label": "controller/agente", "sublabel": "valida y transmite", "pos": [720, 200], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/controller/agente.py", "line": 241, "label": "_preparar: Store + router" }, { "path": "src/sb_asistente/controller/agente.py", "line": 294, "label": "transmitir (stream)" }] },
+    { "id": "router", "type": "security", "label": "Router por reglas", "sublabel": "directo·datos·rag·mixto", "pos": [720, 60], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/model/router.py", "line": 108, "label": "enrutar" }] },
+    { "id": "agente", "type": "backend", "label": "Agente create_agent", "sublabel": "middleware + salida Pydantic", "pos": [960, 200], "size": [160, 64],
+      "sources": [{ "path": "src/sb_asistente/model/agente.py", "line": 265, "label": "construir_agente" }, { "path": "src/sb_asistente/model/agente.py", "line": 247, "label": "middleware" }] },
+    { "id": "memoria", "type": "database", "label": "SQLite", "sublabel": "checkpointer + Store", "pos": [960, 60], "size": [160, 64],
+      "sources": [{ "path": "src/sb_asistente/controller/agente.py", "line": 92, "label": "abrir_memoria (SqliteSaver)" }, { "path": "src/sb_asistente/model/memoria.py", "line": 100, "label": "abrir_store (SqliteStore)" }] },
+    { "id": "claude", "type": "cloud", "label": "Claude", "sublabel": "Anthropic API", "pos": [1210, 200], "size": [120, 64],
+      "sources": [{ "path": "src/sb_asistente/model/llm/service.py", "line": 66, "label": "build_llm" }] },
+    { "id": "tools", "type": "backend", "label": "Tools @tool", "sublabel": "RAG · CSV · recomendador", "pos": [960, 340], "size": [160, 64],
+      "sources": [{ "path": "src/sb_asistente/model/agente.py", "line": 154, "label": "crear_tools" }, { "path": "src/sb_asistente/model/datos.py", "line": 178, "label": "consultar_datos" }] },
+    { "id": "qdrant", "type": "database", "label": "Qdrant + BM25", "sublabel": "HNSW, filtro payload", "pos": [960, 480], "size": [160, 64],
+      "sources": [{ "path": "src/sb_asistente/model/rag/qdrant.py", "line": 27, "label": "BuscadorQdrant" }, { "path": "src/sb_asistente/model/rag/hibrido.py", "line": 92, "label": "RRF híbrido" }] },
+    { "id": "csv", "type": "database", "label": "CSV sintéticos", "sublabel": "pólizas y siniestros", "pos": [1210, 480], "size": [140, 64],
+      "sources": [{ "path": "src/sb_asistente/model/datos.py", "line": 178, "label": "lee las tablas" }] },
+    { "id": "ctrl_vision", "type": "backend", "label": "controller/vision", "sublabel": "detecta y difumina", "pos": [470, 340], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/controller/vision.py", "line": 117, "label": "analizar_foto" }, { "path": "src/sb_asistente/view/api.py", "line": 431, "label": "POST /fotos" }] },
+    { "id": "yolo", "type": "backend", "label": "YOLO26-L", "sublabel": "umbral 0,35", "pos": [470, 480], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/model/vision/deteccion.py", "line": 97, "label": "DetectorYolo" }] },
+    { "id": "mlflow", "type": "database", "label": "MLflow :5050", "sublabel": "runs + Model Registry", "pos": [720, 480], "size": [150, 64],
+      "sources": [{ "path": "src/sb_asistente/model/vision/registro.py", "line": 24, "label": "ModeloYolo pyfunc" }] }
   ],
-  "limites": [
-    {"id": "equipo", "nombre": "Equipo local (Windows/Docker)", "capas": ["frontend", "api", "servicio", "modelo", "datos"]},
-    {"id": "externo", "nombre": "Proveedor externo", "nodos": ["claude"]}
+  "connections": [
+    { "id": "abre-app", "from": "navegador", "to": "frontend", "label": "abre", "variant": "emphasis" },
+    { "id": "fetch-sse", "from": "frontend", "to": "api", "label": "fetch + SSE", "variant": "emphasis" },
+    { "id": "turno", "from": "api", "to": "ctrl_agente", "label": "turno", "variant": "emphasis" },
+    { "id": "enruta", "from": "ctrl_agente", "to": "router", "label": "enrutar" },
+    { "id": "stream", "from": "ctrl_agente", "to": "agente", "label": "stream", "variant": "emphasis" },
+    { "id": "llm", "from": "agente", "to": "claude", "label": "LLM" },
+    { "id": "persiste", "from": "agente", "to": "memoria", "label": "hilos y perfil" },
+    { "id": "usa-tools", "from": "agente", "to": "tools", "label": "tool calls" },
+    { "id": "top-k", "from": "tools", "to": "qdrant", "label": "top-k" },
+    { "id": "pandas", "from": "tools", "to": "csv", "label": "pandas" },
+    { "id": "foto", "from": "api", "to": "ctrl_vision", "label": "foto" },
+    { "id": "detecta", "from": "ctrl_vision", "to": "yolo", "label": "detectar" },
+    { "id": "registrado", "from": "yolo", "to": "mlflow", "label": "registrado", "variant": "dashed" }
   ],
-  "nodos": [
-    {"id": "navegador", "capa": "cliente", "nombre": "Navegador", "detalle": "Chat, foto y estado; pestaña Network muestra cada llamada HTTP/SSE"},
-    {"id": "spa", "capa": "frontend", "nombre": "SPA React :5173", "detalle": "Rutas /, /foto, /estado · useReducer del chat · sesiones en localStorage"},
-    {"id": "cliente_api", "capa": "frontend", "nombre": "Cliente tipado", "detalle": "fetch con timeout y reintentos · lector SSE · ApiError con request_id"},
-    {"id": "rest", "capa": "api", "nombre": "REST + SSE :8000", "detalle": "/agente/stream, /agente/mensajes, /agente/conversaciones, /fotos, /health · ErrorOut uniforme · logs JSON con latencia"},
-    {"id": "rpc", "capa": "api", "nombre": "JSON-RPC 2.0", "detalle": "POST /rpc con los mismos contratos Pydantic"},
-    {"id": "ctrl_agente", "capa": "servicio", "nombre": "controller/agente", "detalle": "Valida, guarda hechos en el Store, enruta, invoca o transmite y valida las fuentes"},
-    {"id": "ctrl_vision", "capa": "servicio", "nombre": "controller/vision", "detalle": "Detecta, difumina personas, interpreta la escena y arma el plan"},
-    {"id": "router", "capa": "modelo", "nombre": "Router (reglas)", "detalle": "directo · datos · rag · mixto · fuera_de_alcance; 32/32 en el banco"},
-    {"id": "agente", "capa": "modelo", "nombre": "Agente create_agent", "detalle": "Middleware: resumen, PII, límites, filtrar_tools, medir_tools, dynamic_prompt · salida estructurada"},
-    {"id": "tools", "capa": "modelo", "nombre": "Tools @tool", "detalle": "buscar_conocimiento (RAG blindado) · consultar_datos (CSV, Pydantic) · recomendar_seguros"},
-    {"id": "yolo", "capa": "modelo", "nombre": "YOLO26-L", "detalle": "Carga única en lifespan · umbral 0,35 · difuminado de personas"},
-    {"id": "qdrant", "capa": "datos", "nombre": "Qdrant + BM25", "detalle": "Índice HNSW con filtro de payload · fusión RRF"},
-    {"id": "sqlite", "capa": "datos", "nombre": "SQLite: checkpointer + Store", "detalle": "Hilos por thread_id (corto plazo) · perfil por namespace de usuario (largo plazo)"},
-    {"id": "csv", "capa": "datos", "nombre": "CSV sintéticos", "detalle": "Pólizas, clientes y siniestros de práctica (Ley 1581)"},
-    {"id": "mlflow", "capa": "datos", "nombre": "MLflow :5050", "detalle": "Experimentos y Model Registry sb-yolo-difuminado@produccion"},
-    {"id": "claude", "capa": "externo", "nombre": "Claude (Anthropic)", "detalle": "LLM del agente y visión de la escena; recibe texto y la imagen ya difuminada"}
-  ],
-  "relaciones": [
-    {"de": "navegador", "a": "spa", "etiqueta": "HTTP"},
-    {"de": "spa", "a": "cliente_api", "etiqueta": "estado"},
-    {"de": "cliente_api", "a": "rest", "etiqueta": "POST SSE / JSON"},
-    {"de": "rest", "a": "ctrl_agente", "etiqueta": "turno"},
-    {"de": "rpc", "a": "ctrl_agente", "etiqueta": "agente.conversar"},
-    {"de": "rest", "a": "ctrl_vision", "etiqueta": "foto"},
-    {"de": "ctrl_agente", "a": "router", "etiqueta": "enrutar"},
-    {"de": "ctrl_agente", "a": "agente", "etiqueta": "stream"},
-    {"de": "agente", "a": "tools", "etiqueta": "tool calls"},
-    {"de": "agente", "a": "claude", "etiqueta": "LLM"},
-    {"de": "agente", "a": "sqlite", "etiqueta": "memoria"},
-    {"de": "tools", "a": "qdrant", "etiqueta": "top-k"},
-    {"de": "tools", "a": "csv", "etiqueta": "pandas"},
-    {"de": "ctrl_vision", "a": "yolo", "etiqueta": "detectar"},
-    {"de": "ctrl_vision", "a": "claude", "etiqueta": "escena"},
-    {"de": "yolo", "a": "mlflow", "etiqueta": "registrado"}
+  "cards": [
+    { "dot": "cyan", "title": "Frontera frontend/backend", "items": ["El frontend React solo hace fetch a la API; nunca llama a un modelo", "Los turnos del agente llegan por Server-Sent Events: router, tool, texto y final"] },
+    { "dot": "emerald", "title": "Router y agente", "items": ["El router por reglas elige la ruta y las tools que ve el modelo", "Un saludo no gasta búsquedas; fuera de alcance no llama al LLM", "Pasajes recuperados delimitados como datos pasivos (blindaje)"] },
+    { "dot": "violet", "title": "Memoria", "items": ["Corto plazo: SqliteSaver por thread_id, sobrevive al reinicio", "Largo plazo: SqliteStore con namespace por usuario y dynamic_prompt"] },
+    { "dot": "amber", "title": "Foto y MLflow", "items": ["YOLO difumina a las personas antes de enviar la imagen a Claude para entender la escena", "El YOLO de la API está registrado como sb-yolo-difuminado@produccion"] }
   ]
 }
