@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { ApiError, streamAgente } from "../api/client";
 import { inicial, reducir, sinUltimoIntento } from "../chat/estado";
 import Burbuja from "../components/Burbuja";
+import PanelDecision from "../components/PanelDecision";
 
 const SUGERENCIAS = [
   "¿Qué cubre el SOAT?",
@@ -100,7 +101,9 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
               mensaje={m}
               transmitiendo={ultimo && ocupado}
               onReintentar={ultimo && m.error ? reintentar : undefined}
-            />
+            >
+              {m.decision && <PanelDecision decision={m.decision} turno={m.turno} toolsEnCurso={m.toolsUsadas} />}
+            </Burbuja>
           );
         })}
         <div ref={fin} />
