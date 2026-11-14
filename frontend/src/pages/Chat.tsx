@@ -18,10 +18,12 @@ interface Props {
   onPrimerMensaje?: (texto: string) => void;
   /** Historial inicial del hilo (al abrir uno existente). */
   historial?: { rol: "usuario" | "asistente"; texto: string }[];
+  /** Se llama al terminar cada turno (p. ej., para refrescar la memoria de largo plazo). */
+  onTurno?: () => void;
 }
 
 /** Chat con el agente: la respuesta llega por SSE y se ve crecer mientras se genera. */
-export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, historial }: Props) {
+export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, historial, onTurno }: Props) {
   const [estado, despachar] = useReducer(reducir, inicial);
   const [borrador, setBorrador] = useState("");
   const control = useRef<AbortController | null>(null);
@@ -49,6 +51,7 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
         const entrada = { mensaje: limpio, conversacion_id: conversacionId, usuario_id: usuarioId };
         for await (const evento of streamAgente(entrada, control.current.signal)) {
           despachar({ tipo: "evento", evento });
+          if (evento.tipo === "final") onTurno?.();
         }
       } catch (e) {
         if (e instanceof ApiError && e.codigo === "cancelado") return;
@@ -58,7 +61,7 @@ export default function Chat({ conversacionId, usuarioId, onPrimerMensaje, histo
         control.current = null;
       }
     },
-    [conversacionId, usuarioId, ocupado, estado.mensajes.length, onPrimerMensaje],
+    [conversacionId, usuarioId, ocupado, estado.mensajes.length, onPrimerMensaje, onTurno],
   );
 
   const detener = () => {
