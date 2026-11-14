@@ -263,6 +263,12 @@ opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26l.pt`, elegido po
 las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
 pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
 
+## Model Card
+
+[`docs/model-card.md`](docs/model-card.md): YOLO26-L (`ultralytics/assets@v8.4.0`, sha256 `9fe3c544…`),
+datos de origen, métricas medidas (precisión 0,834 · AP50 de *person* 0,709 · p95 438 ms), límites,
+sesgos y licencia AGPL-3.0. En MLflow: `sb-yolo-difuminado@produccion`.
+
 ## Bitácora de experimentos (MLflow)
 
 Cada experimento queda registrado con sus parámetros, métricas, archivos y el commit de git
