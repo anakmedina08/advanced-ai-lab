@@ -1,6 +1,6 @@
 # Tablero Kanban · políticas y métricas de flujo
 
-> Generado con `uv run python scripts/metricas_kanban.py` el 2026-11-13 20:56 UTC · 108 historias.
+> Generado con `uv run python scripts/metricas_kanban.py` el 2026-11-14 00:19 UTC · 115 historias.
 > Tablero: https://github.com/users/anakmedina08/projects/2
 
 ## Políticas
@@ -20,36 +20,27 @@ Plantilla de historia: `.github/ISSUE_TEMPLATE/historia.yml`.
 
 | Columna | Historias | Límite |
 |---|---|---|
-| In progress | 1 | 2 |
-| In review | 33 | 2 |
+| In progress | 0 | 2 |
+| In review | 0 | 2 |
 
-**Fuera de política:** In review supera su límite en 31
+Dentro de los límites WIP.
 
 ## Throughput (historias cerradas por semana)
 
 | Semana ISO | Cerradas |
 |---|---|
-| 2026-S46 | 63 |
+| 2026-S46 | 115 |
 
 ## Work item age (días abiertas, las 10 más antiguas en curso)
 
 | Historia | Días |
 |---|---|
-| #166 | 0.07 |
-| #164 | 0.07 |
-| #162 | 0.07 |
-| #160 | 0.07 |
-| #180 | 0.06 |
-| #178 | 0.06 |
-| #176 | 0.06 |
-| #174 | 0.06 |
-| #172 | 0.06 |
-| #170 | 0.06 |
+| — | — |
 
 ## Cycle time (inicio → cierre)
 
 - Mediana: **0.0 h** · percentil 85:
-  **0.0 h** sobre 63 historias cerradas.
+  **4.7 h** sobre 115 historias cerradas.
 - El percentil 85 es la base del SLE (*service level expectation*): «el 85 % de las historias se
   cierran en menos de ese tiempo».
 
@@ -60,3 +51,7 @@ Plantilla de historia: `.github/ISSUE_TEMPLATE/historia.yml`.
   historia.
 - **Throughput:** se concentra en la semana de la sustentación; para el Módulo 4 conviene un flujo
   más parejo, con historias más pequeñas cada semana.
+- **Cycle time:** las tareas de las fases anteriores (T-01 a T-74) se registraron en el tablero
+  después de terminarlas: se crearon y cerraron en el mismo minuto, así que su cycle time (≈ 0 h)
+  no es representativo. El cycle time real se mide con las historias SPEC-007 en adelante, que
+  se abren al empezar y se cierran al fusionar su PR.

@@ -92,7 +92,8 @@ def test_sustentacion_muestra_las_cifras_y_una_pestana_por_curso():
 def test_sustentacion_filtra_por_estado():
     at = app().switch_page(PAGINA.format("sustentacion")).run()
     todos = len(at.tabs[0].caption)  # una evidencia (caption) por tarjeta
-    at.tabs[0].get("button_group")[0].set_value(["pendiente"]).run()
+    # «en curso» siempre tiene requisitos en Gestión; «pendiente» puede quedar vacío al cerrar el tablero
+    at.tabs[0].get("button_group")[0].set_value(["en curso"]).run()
     assert 0 < len(at.tabs[0].caption) < todos
 
 
