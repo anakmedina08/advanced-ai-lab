@@ -163,6 +163,7 @@ make api        # o: uv run sb api  →  http://127.0.0.1:8000/docs
 
 | Método y ruta | Qué hace |
 |---|---|
+| `GET /health` | `ok` o `degradado` y qué componente falta (corpus, recomendador, Qdrant, memoria, YOLO) |
 | `GET /salud` | estado del servicio y de los datos |
 | `GET /pipeline` | métricas de cada etapa Medallion |
 | `POST /preguntas` | Q&A con `fuentes` citadas (`modo`: `reducido` o `completo`) |
