@@ -144,6 +144,9 @@ class HealthOut(BaseModel):
     version: str
     llm: str
     componentes: dict[str, bool]
+    modelo_yolo_sha256: str | None = Field(
+        None, description="sha256 corto de los pesos cargados; coincide con el tag del Model Registry"
+    )
 
 
 class AgenteIn(_Entrada):
