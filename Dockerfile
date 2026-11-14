@@ -33,12 +33,14 @@ COPY --from=builder /app/.venv /app/.venv
 COPY app.py ./
 COPY src/ src/
 COPY scripts/ scripts/
-COPY evaluacion/preguntas.yaml evaluacion/preguntas.yaml
+COPY evaluacion/ evaluacion/
 COPY .streamlit/ .streamlit/
 RUN mkdir -p data/raw data/silver data/gold && chown -R appuser data evaluacion
 
 USER appuser
-EXPOSE 8501
+# Desde el Módulo 2 el producto es la API (el frontend React es otro servicio). Streamlit queda
+# como herramienta interna: docker run -p 8501:8501 sb-asistente streamlit run app.py --server.port=8501
+EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+CMD ["sb", "api", "--host", "0.0.0.0", "--port", "8000"]

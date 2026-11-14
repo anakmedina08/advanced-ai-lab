@@ -366,6 +366,18 @@ CPM, Gantt) está en [`docs/gestion/`](docs/gestion/).
 
 ## Docker
 
+```bash
+docker compose up --build   # api :8000 · frontend :5173 · mlflow :5050 (o: make docker-up)
+```
+
+Cada servicio tiene su propia imagen:
+
+- **API:** `Dockerfile`, multi-stage CPU; su comando por defecto es `sb api`.
+- **Frontend:** `frontend/Dockerfile`, que compila con Node y sirve los estáticos con nginx.
+- **MLflow:** la imagen oficial.
+
+`./data` se monta como volumen y Ollama corre en el anfitrión.
+
 Imagen **multi-stage** (CPU): la etapa *builder* resuelve `uv.lock` con `uv`; la etapa *runtime*
 solo lleva Python, el `.venv` y el código, y corre como usuario sin privilegios. `data/` se monta
 como volumen (el contenido de Seguros Bolívar no va dentro de la imagen).
