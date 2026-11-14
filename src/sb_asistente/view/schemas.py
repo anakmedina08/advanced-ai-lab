@@ -290,7 +290,7 @@ class RequisitoOut(BaseModel):
     """Requisito de un curso con su estado y evidencia (``docs/requisitos.md``)."""
 
     requisito: str
-    estado: Literal["cumplido", "en curso", "pendiente"]
+    estado: Literal["cumplido", "en curso", "pendiente", "no planeado"]
     evidencia: str
 
 

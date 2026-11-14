@@ -1027,3 +1027,10 @@ input[type="range"] {
   font-size: 1rem;
   margin: 16px 0 8px;
 }
+
+.estado-no-planeado {
+  color: #6b7280;
+  border-color: #9ca3af;
+  background: #f3f4f6;
+  text-decoration: none;
+}
