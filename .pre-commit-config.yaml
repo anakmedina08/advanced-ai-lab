@@ -51,6 +51,12 @@ repos:
         language: system
         pass_filenames: false
         files: \.(py|toml|ya?ml)$|^Dockerfile$
+      # Quita Co-Authored-By de asistentes de IA y Claude-Session antes de validar (SPEC-050, ADR-023).
+      - id: limpiar-trailers-ia
+        name: Sin coautor de IA en el mensaje
+        entry: uv run python scripts/limpiar_trailers_ia.py
+        language: system
+        stages: [commit-msg]
       # Commits auditados con mensajes semánticos (evidencia pedida en cada entrega).
       - id: conventional-commit
         name: Conventional Commits
