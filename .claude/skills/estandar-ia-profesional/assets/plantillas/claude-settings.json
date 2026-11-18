@@ -1,0 +1,20 @@
+{
+  "$comment": "Fusionar con .claude/settings.json existente (no reemplazar hooks propios).",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./data/**)",
+      "Bash(git filter-repo:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr create:*)"
+    ]
+  }
+}

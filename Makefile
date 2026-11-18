@@ -36,6 +36,11 @@ test: ## Ejecuta las pruebas (sin red ni API)
 
 check: lint format-check test ## Verificación completa (lint + formato + pruebas)
 
+.PHONY: madurez
+MINIMO ?= 0
+madurez: ## Auditoría de madurez (9 dimensiones). Puerta: make madurez MINIMO=60
+	uv run python scripts/auditar_madurez.py --path . --minimo $(MINIMO)
+
 data: ## Scraping completo: descubrir → Bronze → Silver → Gold (~4 min, respeta robots.txt)
 	uv run python scripts/scrape_empresa.py
 
