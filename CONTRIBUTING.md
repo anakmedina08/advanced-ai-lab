@@ -45,31 +45,31 @@ uv run pre-commit install   # equivalente a: make dev
 make check
 ```
 
-## 🌿 Flujo de trabajo con Git
+## 🌿 Flujo de trabajo con Git (Gitflow)
 
-La rama **`main`** es la rama estable: **no se trabaja directamente sobre ella**.
+| Rama | Vida | Regla |
+|---|---|---|
+| `main` | permanente | solo releases; protegida (PR + checks, sin force-push) |
+| `develop` | permanente | integración; todo PR de trabajo apunta aquí |
+| `feature/NNN-*`, `fix/*`, `docs/*`, `chore/*` | **efímera** | se borra sola al fusionar (SPEC-057) |
 
-1. Actualiza `main`:
+1. Parte de `develop` actualizada:
    ```bash
-   git checkout main && git pull
+   git switch develop && git pull
+   git switch -c feature/NNN-nombre-corto      # NNN = número de la spec
    ```
-2. Crea una rama descriptiva:
+2. Primero se escribe la spec (`openspec/specs/NNN-nombre/`: `spec.md`, `plan.md`, `tasks.md`) en un commit `docs(spec): SPEC-NNN …`; después, el código.
+3. Commits pequeños con Conventional Commits. El hook `commit-msg` valida el formato y quita los coautores de IA (ADR-023).
+4. Abre el PR hacia **`develop`** con la plantilla y `Closes #N`. Lo aprueba **el otro integrante** (CODEOWNERS) con la CI en verde.
+5. Al fusionar, la rama se borra sola. En tu equipo, limpia las ramas locales de vez en cuando:
    ```bash
-   git checkout -b feat/nombre-corto
+   git fetch --prune
+   git branch --merged develop | grep -vE '^\*|main|develop' | xargs -r git branch -d
    ```
-   | Prefijo | Uso |
-   |---------|-----|
-   | `feat/` | Nueva funcionalidad |
-   | `fix/` | Corrección de bug |
-   | `docs/` | Documentación |
-   | `refactor/` | Refactorización |
-   | `test/` | Pruebas |
-   | `chore/` | Mantenimiento o configuración |
-3. Desarrolla en commits pequeños y atómicos.
-4. Abre un Pull Request hacia `main` con la plantilla; el **Code Reviewer (Daniel Silva)** lo aprueba y la CI debe estar en verde antes de fusionar.
+6. `develop` pasa a `main` con un PR de release cuando se cierra un módulo.
 
-> 💡 **Regla de oro:** nunca hagas `push` a `main` "para ver si funciona". Verifica
-> localmente con `make check` antes de integrar.
+> 💡 **Regla de oro:** nunca hagas `push` directo a `main` ni a `develop`. Verifica localmente con
+> `make check` antes de abrir el PR.
 
 ## 🧹 Estándares de código
 
@@ -108,7 +108,7 @@ Se usa la especificación de [Conventional Commits](https://www.conventionalcomm
 
 ## 🔀 Pull Requests
 
-1. Verifica que tu rama esté actualizada respecto a `main`.
+1. Verifica que tu rama esté actualizada respecto a `develop`.
 2. Abre el PR y completa la plantilla oficial.
 3. Usa un título con prefijo convencional y mantén el PR **acotado a un solo propósito**.
 4. Marca los checklist aplicables (pruebas, lint, `uv.lock`, `CONSTITUTION.md`, etc.).

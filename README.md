@@ -363,7 +363,7 @@ Una skill externa entra como herramienta de desarrollo; para usarla en el chat s
 
 ```bash
 make madurez               # informe: puntaje global, nivel por dimensión y brechas por peso
-make madurez MINIMO=60     # falla si el puntaje baja de 60 (lo usa la CI)
+make madurez MINIMO=70     # falla si el puntaje baja de 70 (lo usa la CI)
 ```
 
 El informe vigente está en [`docs/madurez.md`](docs/madurez.md).
@@ -486,9 +486,9 @@ Ver [`docs/alcance.md`](docs/alcance.md).
 
 ## Contribución
 
-Lea [`CONTRIBUTING.md`](CONTRIBUTING.md) y el [Código de conducta](CODE_OF_CONDUCT.md). Ramas
-`feat/…`, `fix/…`, `docs/…`; Conventional Commits; toda PR con la plantilla y aprobada por el Code
-Reviewer.
+Lea [`CONTRIBUTING.md`](CONTRIBUTING.md) y el [Código de conducta](CODE_OF_CONDUCT.md). Gitflow con
+solo `main` y `develop` permanentes; las ramas `feature/NNN-…` se borran al fusionar (SPEC-057).
+Conventional Commits; toda PR con su spec, la plantilla y la aprobación del otro integrante.
 
 ## Seguridad
 

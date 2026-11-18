@@ -6,7 +6,7 @@ Workflow con `GITHUB_TOKEN` (`contents: write`) y `gh api` para borrar la refere
 ## Decisiones
 - Borrar solo al fusionar (no al cerrar): un PR cerrado sin fusionar puede reabrirse.
 - Doble red: el ajuste del repo y el workflow; si uno falla, el otro limpia.
-- Puerta de madurez de la CI: de 65 a 80.
+- Puerta de madurez de la CI: de 60 a 70 (sube a 85 cuando se fusionen también los PR de Katherine, en la oleada 2).
 
 ## Contrato
 Workflow `.github/workflows/ramas.yml`: eventos `pull_request.closed`, `schedule` (lunes) y `workflow_dispatch`.

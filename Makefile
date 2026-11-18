@@ -42,7 +42,7 @@ secretos: ## Busca llaves y tokens en el árbol con gitleaks (vía pre-commit)
 
 .PHONY: madurez
 MINIMO ?= 0
-madurez: ## Auditoría de madurez (9 dimensiones). Puerta: make madurez MINIMO=60
+madurez: ## Auditoría de madurez (9 dimensiones). Puerta: make madurez MINIMO=70
 	uv run python scripts/auditar_madurez.py --path . --minimo $(MINIMO)
 
 data: ## Scraping completo: descubrir → Bronze → Silver → Gold (~4 min, respeta robots.txt)

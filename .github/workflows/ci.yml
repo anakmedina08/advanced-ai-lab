@@ -7,6 +7,10 @@ on:
     # feature/** cubre las PR apiladas (una historia que depende de otra aún sin fusionar)
     branches: [main, develop, "feature/**"]
 
+# Mínimo privilegio: ningún job escribe en el repositorio.
+permissions:
+  contents: read
+
 jobs:
   quality:
     name: Ruff + Pytest
@@ -22,7 +26,7 @@ jobs:
       # Sin red ni API: fixtures HTML locales y LLM falso (no se gasta saldo de la API de Anthropic)
       - run: uv run pytest -v --cov --cov-report=term-missing --cov-fail-under=85
       # Auditoría de madurez (SPEC-049): el puntaje no puede bajar del mínimo; sube con cada oleada.
-      - run: make madurez MINIMO=60
+      - run: make madurez MINIMO=70
 
   frontend:
     name: Frontend (tipos, Vitest y build)
@@ -74,6 +78,9 @@ jobs:
         run: |
           if [ -z "$URL" ]; then echo "Sin AGENT_EVENTS_URL: se omite"; exit 0; fi
           ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # jq arma el JSON: una rama con comillas no rompe el payload.
+          payload=$(jq -nc --arg ts "$ts" --arg rama "$REF" --argjson ok "$OK" \
+            '{ts: $ts, evento: "CI", agente: "github-actions", comando: "ruff + pytest + docker", rama: $rama, ok: $ok}')
           curl -fsS -m 10 -X POST "$URL" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-            -d "{\"ts\":\"$ts\",\"evento\":\"CI\",\"agente\":\"github-actions\",\"comando\":\"ruff + pytest + docker\",\"rama\":\"$REF\",\"ok\":$OK}" \
+            -d "$payload" \
             || echo "No se pudo publicar el evento (no bloquea la CI)"

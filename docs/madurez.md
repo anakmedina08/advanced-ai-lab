@@ -1,17 +1,17 @@
-# Informe de madurez — `advanced-ai-lab` · 2026-11-17
+# Informe de madurez — `advanced-ai-lab` · 2026-11-17 (PRs de Daniel, oleadas 0 y 1)
 
-**Puntaje global: 63.8 % · N2 Gestionado**
+**Puntaje global: 76.5 % · N3 Definido**
 
 | Dimensión | Puntaje | Nivel | |
 |---|---:|---|---|
 | 1. Fundamentos | 100.0 % | N4 Optimizado | `████████████████████` |
 | 2. Calidad de código y pruebas | 70.6 % | N3 Definido | `██████████████░░░░░░` |
-| 3. Seguridad y cadena de suministro | 31.6 % | N1 Inicial | `██████░░░░░░░░░░░░░░` |
+| 3. Seguridad y cadena de suministro | 84.2 % | N3 Definido | `█████████████████░░░` |
 | 4. CI/CD y releases | 62.5 % | N2 Gestionado | `████████████░░░░░░░░` |
 | 5. Documentación y decisiones | 85.7 % | N3 Definido | `█████████████████░░░` |
-| 6. Proceso y trazabilidad | 68.8 % | N2 Gestionado | `██████████████░░░░░░` |
+| 6. Proceso y trazabilidad | 87.5 % | N3 Definido | `██████████████████░░` |
 | 7. IA/ML responsable | 76.2 % | N3 Definido | `███████████████░░░░░` |
-| 8. Gobernanza de agentes de IA | 43.8 % | N2 Gestionado | `█████████░░░░░░░░░░░` |
+| 8. Gobernanza de agentes de IA | 81.2 % | N3 Definido | `████████████████░░░░` |
 | 9. Requisitos del curso o cliente | 25.0 % | N1 Inicial | `█████░░░░░░░░░░░░░░░` |
 
 ## Brechas priorizadas (mayor peso primero)
@@ -19,7 +19,6 @@
 | ID | Peso | Brecha | Cómo cerrarla | Guía |
 |---|---:|---|---|---|
 | C2 | 3 | Verificación de tipos (ty / mypy / pyright) en el flujo | Agregar `ty check` a make check y CI | `references/calidad.md` |
-| S3 | 3 | Escaneo de secretos (gitleaks / detect-secrets / trufflehog) | Agregar hook gitleaks | `references/seguridad.md` |
 | S5 | 3 | Auditoría de vulnerabilidades (pip-audit / osv-scanner) en CI | Workflow seguridad.yml con pip-audit | `references/seguridad.md` |
 | M5 | 3 | Puerta de regresión de evaluación en CI | Workflow evals.yml con umbral | `references/ia-ml.md` |
 | G1 | 3 | Política de uso de IA documentada | Copiar plantilla politica-uso-ia.md | `references/gobernanza-ia.md` |
@@ -27,21 +26,12 @@
 | K2 | 3 | Resumen por cada anuncio registrado | Crear los resúmenes que faltan | `references/anuncios.md` |
 | K4 | 3 | Sin herramientas no permitidas por el curso (⛔ en docs/anuncios/herramientas.md) | Migrar a la herramienta que la reemplaza y registrar un ADR | `references/anuncios.md` |
 | C5 | 2 | Pirámide de pruebas con marcadores (unit/integration/e2e) | Declarar markers en pytest | `references/calidad.md` |
-| S1 | 2 | SECURITY.md (política de reporte) | Copiar plantilla SECURITY.md | `references/seguridad.md` |
-| S6 | 2 | Análisis estático de seguridad (CodeQL / Bandit / Ruff S) | Activar CodeQL o reglas S de Ruff | `references/seguridad.md` |
-| S7 | 2 | CODEOWNERS (revisores obligatorios) | Crear .github/CODEOWNERS | `references/seguridad.md` |
 | R3 | 2 | CHANGELOG.md | Generar con git-cliff o release-please | `references/entrega.md` |
 | R4 | 2 | Releases automatizados con SemVer (release-please / semantic-release / git-cliff) | Workflow release.yml | `references/entrega.md` |
 | R8 | 2 | Entrega continua con entornos de GitHub (environment:) | Workflow deploy.yml con environment staging/produccion | `references/github-cicd.md` |
 | D6 | 2 | Runbook de operación (levantar, diagnosticar, recuperar) | docs/runbook.md | `references/documentacion.md` |
 | P5 | 2 | Definition of Done explícita | Sección DoD en CONTRIBUTING | `references/proceso.md` |
-| P9 | 2 | Solo main y develop permanentes (borrado automático de ramas fusionadas) | Workflow ramas.yml + 'Automatically delete head branches' | `references/github-cicd.md` |
 | M2 | 2 | Data card / datasheet del conjunto de datos | docs/data-card.md | `references/ia-ml.md` |
-| G3 | 2 | Atribución de IA definida explícitamente (attribution) | attribution en .claude/settings.json | `references/gobernanza-ia.md` |
-| G4 | 2 | Filtro de trailers de IA en commit-msg | scripts/limpiar_trailers_ia.py | `references/gobernanza-ia.md` |
-| G8 | 2 | Revisión humana obligatoria (CODEOWNERS o regla de aprobación) | CODEOWNERS + protección de rama | `references/gobernanza-ia.md` |
-| S9 | 1 | SBOM generado (CycloneDX / syft) | Generar SBOM en el release | `references/seguridad.md` |
-| P6 | 1 | Estrategia de ramas documentada (Gitflow / trunk) | Documentar ramas | `references/proceso.md` |
 
 ## Detalle
 
@@ -64,16 +54,16 @@
 - ✅ **C6** Pruebas de contrato o de API (TestClient / schemathesis) *(peso 2)*
 - ✅ **C7** Docstrings exigidos por el linter (pydocstyle D) *(peso 1)*
 
-### 3. Seguridad y cadena de suministro — 31.6 % (N1 Inicial)
-- ❌ **S1** SECURITY.md (política de reporte) *(peso 2)*
+### 3. Seguridad y cadena de suministro — 84.2 % (N3 Definido)
+- ✅ **S1** SECURITY.md (política de reporte) *(peso 2)*
 - ✅ **S2** Secretos fuera del repo (.env ignorado + .env.example) *(peso 3)*
-- ❌ **S3** Escaneo de secretos (gitleaks / detect-secrets / trufflehog) *(peso 3)*
+- ✅ **S3** Escaneo de secretos (gitleaks / detect-secrets / trufflehog) *(peso 3)*
 - ✅ **S4** Actualización automática de dependencias (Dependabot / Renovate) *(peso 2)*
 - ❌ **S5** Auditoría de vulnerabilidades (pip-audit / osv-scanner) en CI *(peso 3)*
-- ❌ **S6** Análisis estático de seguridad (CodeQL / Bandit / Ruff S) *(peso 2)*
-- ❌ **S7** CODEOWNERS (revisores obligatorios) *(peso 2)*
+- ✅ **S6** Análisis estático de seguridad (CodeQL / Bandit / Ruff S) *(peso 2)*
+- ✅ **S7** CODEOWNERS (revisores obligatorios) *(peso 2)*
 - ✅ **S8** Permisos mínimos en workflows (permissions:) *(peso 1)*
-- ❌ **S9** SBOM generado (CycloneDX / syft) *(peso 1)*
+- ✅ **S9** SBOM generado (CycloneDX / syft) *(peso 1)*
 
 ### 4. CI/CD y releases — 62.5 % (N2 Gestionado)
 - ✅ **R1** Workflow de CI *(peso 3)*
@@ -94,16 +84,16 @@
 - ❌ **D6** Runbook de operación (levantar, diagnosticar, recuperar) *(peso 2)*
 - ✅ **D7** AGENTS.md / CLAUDE.md para agentes *(peso 2)*
 
-### 6. Proceso y trazabilidad — 68.8 % (N2 Gestionado)
+### 6. Proceso y trazabilidad — 87.5 % (N3 Definido)
 - ✅ **P1** Plantilla de PR con checklist *(peso 2)*
 - ✅ **P2** Plantillas de issue (bug / historia / spike) *(peso 2)*
 - ✅ **P3** Desarrollo guiado por specs (openspec/ o specs/) *(peso 3)*
 - ✅ **P4** Conventional Commits validado por hook *(peso 2)*
 - ❌ **P5** Definition of Done explícita *(peso 2)*
-- ❌ **P6** Estrategia de ramas documentada (Gitflow / trunk) *(peso 1)*
+- ✅ **P6** Estrategia de ramas documentada (Gitflow / trunk) *(peso 1)*
 - ✅ **P7** Labels declarativas *(peso 1)*
 - ✅ **P8** Matriz de requisitos ↔ evidencia *(peso 1)*
-- ❌ **P9** Solo main y develop permanentes (borrado automático de ramas fusionadas) *(peso 2)*
+- ✅ **P9** Solo main y develop permanentes (borrado automático de ramas fusionadas) *(peso 2)*
 
 ### 7. IA/ML responsable — 76.2 % (N3 Definido)
 - ✅ **M1** Model card *(peso 3)*
@@ -117,15 +107,15 @@
 - ✅ **M9** Evaluación de sesgo / equidad *(peso 1)*
 - ✅ **M10** Registro de modelos con alias/versiones *(peso 1)*
 
-### 8. Gobernanza de agentes de IA — 43.8 % (N2 Gestionado)
+### 8. Gobernanza de agentes de IA — 81.2 % (N3 Definido)
 - ❌ **G1** Política de uso de IA documentada *(peso 3)*
 - ✅ **G2** Agente sin acceso a secretos ni datos (permissions.deny) *(peso 3)*
-- ❌ **G3** Atribución de IA definida explícitamente (attribution) *(peso 2)*
-- ❌ **G4** Filtro de trailers de IA en commit-msg *(peso 2)*
+- ✅ **G3** Atribución de IA definida explícitamente (attribution) *(peso 2)*
+- ✅ **G4** Filtro de trailers de IA en commit-msg *(peso 2)*
 - ✅ **G5** Skills propias con metadatos validados *(peso 2)*
 - ✅ **G6** Subagentes especializados definidos *(peso 1)*
 - ✅ **G7** Skills de terceros fijadas por hash (lockfile) *(peso 1)*
-- ❌ **G8** Revisión humana obligatoria (CODEOWNERS o regla de aprobación) *(peso 2)*
+- ✅ **G8** Revisión humana obligatoria (CODEOWNERS o regla de aprobación) *(peso 2)*
 
 ### 9. Requisitos del curso o cliente — 25.0 % (N1 Inicial)
 - ❌ **K1** Índice de anuncios del curso *(peso 3)*
