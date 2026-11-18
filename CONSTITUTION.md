@@ -71,7 +71,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **Interfaz** | Front web (consume la API), Streamlit (`app.py`) y CLI `sb` |
 | **Testing** | [`pytest`](https://docs.pytest.org/) (AAA, sin red ni API) |
 | **Linting / Formato** | [Ruff](https://docs.astral.sh/ruff/) |
-| **Pre-commit** | higiene + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + Conventional Commits |
+| **Pre-commit** | higiene + gitleaks + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + filtro de coautor de IA + Conventional Commits |
 | **Contenedor** | Docker multi-stage (CPU), `make docker-build` |
 | **CI/CD** | [GitHub Actions](.github/workflows/ci.yml) |
 | **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) |
@@ -196,6 +196,8 @@ git push
 | 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
+| 2026-11-17 | Commits y PRs sin coautor de IA: `attribution` vacío + hook `commit-msg` ([ADR-023](docs/decisiones/ADR-023-atribucion-ia.md)) | La autoría del repo es de las personas; el uso de IA se declara en la política |
+| 2026-11-17 | gitleaks en pre-commit y en la CI (historial completo) — SPEC-053 | Ninguna llave puede llegar al repo público; M4 de Gestión (credenciales) |
 
 ## 10. Notas y tareas pendientes
 
