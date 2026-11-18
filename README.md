@@ -490,6 +490,11 @@ Lea [`CONTRIBUTING.md`](CONTRIBUTING.md) y el [Código de conducta](CODE_OF_COND
 `feat/…`, `fix/…`, `docs/…`; Conventional Commits; toda PR con la plantilla y aprobada por el Code
 Reviewer.
 
+## Seguridad
+
+Reportes privados según [`SECURITY.md`](SECURITY.md). Dueños del código en
+[`.github/CODEOWNERS`](.github/CODEOWNERS): cada PR necesita la aprobación del otro integrante.
+
 ## Licencia
 
 [MIT](LICENSE) © 2026 Daniel Silva y Katherine Medina. El contenido extraído pertenece a Seguros
