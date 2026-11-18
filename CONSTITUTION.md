@@ -198,6 +198,7 @@ git push
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-17 | Commits y PRs sin coautor de IA: `attribution` vacío + hook `commit-msg` ([ADR-023](docs/decisiones/ADR-023-atribucion-ia.md)) | La autoría del repo es de las personas; el uso de IA se declara en la política |
 | 2026-11-17 | gitleaks en pre-commit y en la CI (historial completo) — SPEC-053 | Ninguna llave puede llegar al repo público; M4 de Gestión (credenciales) |
+| 2026-11-17 | `SECURITY.md` y `CODEOWNERS` con los dos integrantes — SPEC-055 | Reportes privados y revisión cruzada obligatoria |
 
 ## 10. Notas y tareas pendientes
 

@@ -1,0 +1,8 @@
+# Dueños del código (SPEC-055). Con «Require review from Code Owners», cada PR necesita la
+# aprobación del otro integrante.
+*                 @daalrasi @anakmedina08
+/.github/         @daalrasi @anakmedina08
+/.claude/         @daalrasi @anakmedina08
+/src/             @daalrasi @anakmedina08
+/pyproject.toml   @daalrasi @anakmedina08
+/uv.lock          @daalrasi @anakmedina08
