@@ -1,0 +1,38 @@
+name: Evals
+
+# Puerta de regresión del modelo: solo corre cuando cambia algo que afecta las respuestas.
+on:
+  pull_request:
+    paths:
+      - "src/**/prompts*.py"
+      - "src/**/rag/**"
+      - "src/**/agente*.py"
+      - "evaluacion/**"
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    environment: evals          # requiere aprobación humana: llama a un LLM pagado
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      UMBRAL_CAIDA: "3"         # puntos porcentuales tolerados frente a la línea base
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { enable-cache: true }
+      - run: uv sync --frozen
+      # Adaptar al comando del proyecto: debe escribir evaluacion/resultado.json con {"metrica": 0.xx}
+      - run: make eval-ci
+      - name: Comparar con la línea base
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          base = json.load(open("evaluacion/linea_base.json"))["metrica"]
+          nuevo = json.load(open("evaluacion/resultado.json"))["metrica"]
+          caida = (base - nuevo) * 100
+          print(f"línea base={base:.3f} nuevo={nuevo:.3f} caída={caida:.1f} pp")
+          sys.exit(1 if caida > float(os.environ["UMBRAL_CAIDA"]) else 0)
+          PY

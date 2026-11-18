@@ -40,6 +40,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-020](ADR-020-foto-seguro-yolo.md) | Foto → «¿qué hago?»: YOLO local + Claude con visión (FastAPI, `httpx`) | 2026-11-11 |
 | [ADR-021](ADR-021-interfaz-empresarial.md) | Interfaz en dos áreas, chat y tema corporativo neutro | 2026-11-11 |
 | [ADR-022](ADR-022-mlflow-bitacora.md) | MLflow como bitácora de experimentos | 2026-11-13 |
+| [ADR-025](ADR-025-auditor-madurez.md) | Auditor de madurez como código del proyecto y puerta en la CI | 2026-11-17 |
 
 ## Cómo registrar una decisión nueva en Engram
 

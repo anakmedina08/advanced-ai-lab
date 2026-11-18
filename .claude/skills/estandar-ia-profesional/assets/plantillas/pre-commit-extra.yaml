@@ -1,0 +1,19 @@
+# Fusionar en .pre-commit-config.yaml (no reemplazar el archivo existente)
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty (tipos)
+        entry: uv run ty check src
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: limpiar-trailers-ia
+        name: limpiar trailers de IA del mensaje
+        entry: python3 scripts/limpiar_trailers_ia.py
+        language: system
+        stages: [commit-msg]   # debe ir ANTES del hook que valida Conventional Commits

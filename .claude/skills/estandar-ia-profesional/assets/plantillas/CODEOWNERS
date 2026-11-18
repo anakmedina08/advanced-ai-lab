@@ -1,0 +1,7 @@
+# Cada ruta requiere aprobación de al menos un dueño (activar "Require review from Code Owners").
+*                      @OWNER1 @OWNER2
+/.github/              @OWNER1 @OWNER2
+/.claude/              @OWNER1 @OWNER2
+/src/                  @OWNER1 @OWNER2
+/pyproject.toml        @OWNER1 @OWNER2
+/uv.lock               @OWNER1 @OWNER2

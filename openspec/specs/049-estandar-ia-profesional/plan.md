@@ -6,7 +6,7 @@ Skill de solo instrucciones (rúbrica en `references/rubrica.md`) y auditor como
 ## Decisiones
 - Sin scripts dentro de la skill: el agente audita con sus propias herramientas y la CI depende del código del proyecto, no de la carpeta de la skill.
 - La lectura de anuncios va en otra skill, porque lee un correo personal y es propia del curso; así la de buenas prácticas se puede compartir.
-- Mínimo inicial de 65 % para no romper la CI; se sube al cerrar cada oleada.
+- Mínimo inicial de 60 % para no romper la CI (era 65; bajó al endurecer G4, M10 y K4 por la revisión de GGA); se sube al cerrar cada oleada.
 
 ## Contrato
 `make madurez MINIMO=<0-100>` · `scripts/auditar_madurez.py --path . [--json] [--salida archivo] [--minimo N]`.

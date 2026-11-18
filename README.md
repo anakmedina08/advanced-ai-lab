@@ -354,6 +354,20 @@ make skill-add REPO=anthropics/skills SKILL=skill-creator     # instala para Cla
 Una skill externa entra como herramienta de desarrollo; para usarla en el chat se marca
 `uso: asistente` en un PR revisado (ADR-014).
 
+### Estándar profesional y madurez (SPEC-049)
+
+| Skill | Para qué | Se comparte |
+|---|---|---|
+| [`estandar-ia-profesional`](.claude/skills/estandar-ia-profesional/SKILL.md) | Audita el repo en 8 dimensiones (fundamentos, calidad, seguridad, CI/CD, documentación, proceso, IA/ML responsable y gobernanza de agentes) y aplica mejoras por oleadas | Sí (solo instrucciones y plantillas) |
+| [`seguimiento-anuncios-curso`](.claude/skills/seguimiento-anuncios-curso/SKILL.md) | Lee los anuncios del profesor (solo lectura) y los contrasta con el repo en `docs/anuncios/` | No: es propia del equipo |
+
+```bash
+make madurez               # informe: puntaje global, nivel por dimensión y brechas por peso
+make madurez MINIMO=60     # falla si el puntaje baja de 60 (lo usa la CI)
+```
+
+El informe vigente está en [`docs/madurez.md`](docs/madurez.md).
+
 ## Recomendador (curso de Gestión)
 
 ```bash

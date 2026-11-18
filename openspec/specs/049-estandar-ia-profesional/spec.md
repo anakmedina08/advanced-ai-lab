@@ -26,4 +26,4 @@ La skill del curso (`jan-project-standard`) deja la base del repo, pero no mide 
 Cerrar las brechas que reporta el auditor (cada una tiene su propia spec).
 
 ## Métricas de éxito
-Auditor en la CI con mínimo 65 % (sube con cada oleada); 7 skills válidas.
+Auditor en la CI con mínimo 60 % (sube con cada oleada); 7 skills válidas.

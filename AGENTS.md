@@ -70,6 +70,8 @@ el panel de yellowdata.com.co/casos. No desactivar los hooks ni enviar datos pri
 - Solo `metadata.uso: asistente` llega al chat público; cambiar una skill a ese uso requiere PR revisado
   por `revisor` y `guardian-datos`.
 - La skill `operar-asistente` resume cómo levantar y depurar cada parte del producto.
+- Antes de proponer mejoras de proceso o calidad: `seguimiento-anuncios-curso` (si llegó un anuncio)
+  y luego `estandar-ia-profesional`, que audita con `make madurez` y propone una brecha por PR.
 
 ## Calidad
 - Python 3.13 y **solo uv** (`uv add`, `uv run`); prohibido `pip` y `requirements.txt`.
