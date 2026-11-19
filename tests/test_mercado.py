@@ -811,3 +811,18 @@ def test_la_cli_muestra_los_canales_de_una_aseguradora(capsys, monkeypatch):
     # Assert
     salida = capsys.readouterr().out
     assert codigo == 0 and "#322" in salida and "(este servicio)" in salida
+
+
+def test_el_mismo_sitio_con_o_sin_www_es_el_mismo_sitio(tmp_path):
+    # Arrange: robots.txt en www, sitemap y páginas sin www (caso real: Positiva)
+    sin_www = SITIO.replace("://www.", "://")
+    sesion = SitioFalso(
+        {
+            f"{SITIO}/robots.txt": (200, f"User-agent: *\nSitemap: {sin_www}/sitemap_index.xml"),
+            f"{sin_www}/sitemap_index.xml": (200, sitemap(f"{sin_www}/seguro-de-hogar")),
+        }
+    )
+    # Act
+    plan = mercado.descubrir_una(mercado.ClienteCortes(sesion, sleep=sin_pausa), ASEGURADORA, tmp_path)
+    # Assert
+    assert [e["url"] for e in plan["seleccionadas"]] == [f"{sin_www}/seguro-de-hogar"]

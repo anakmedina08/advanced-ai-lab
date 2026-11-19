@@ -41,6 +41,8 @@ def test_canales_de_html_lee_whatsapp_tel_y_numeros_del_texto():
     ("contexto", "servicio"),
     [
         ("Línea de asistencia para tu carro y grúa", "autos"),
+        ("Choque leve, sin heridos", "autos"),
+        ("Me chocaron en un semáforo", "autos"),
         ("SOAT: reclamaciones", "soat"),
         ("Hogar: cerrajería", "hogar"),
         ("Urgencias médicas y ambulancia", "salud"),

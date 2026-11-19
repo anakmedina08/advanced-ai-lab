@@ -91,9 +91,15 @@ class ClienteCortes:
         return r.status_code, r.content
 
 
+def _host(url_o_dominio: str) -> str:
+    """Host en minúsculas y sin «www.» (``www.positiva.gov.co`` y ``positiva.gov.co`` son el mismo sitio)."""
+    host = urlsplit(url_o_dominio).netloc if "://" in url_o_dominio else url_o_dominio
+    return host.lower().removeprefix("www.")
+
+
 def _del_sitio(url: str, a: Aseguradora) -> bool:
-    """True si la URL es del mismo host que el sitio (no basta con que empiece igual)."""
-    return urlsplit(url).netloc.lower() == a.dominio.lower()
+    """True si la URL es del mismo sitio (mismo host, con o sin «www.»; no basta con que empiece igual)."""
+    return _host(url) == _host(a.dominio)
 
 
 def _sitemaps(robots_txt: str) -> list[str]:

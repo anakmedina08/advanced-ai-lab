@@ -42,7 +42,10 @@ SERVICIOS: tuple[Servicio, ...] = (
 _REGLAS_SERVICIO: tuple[tuple[str, Servicio], ...] = (
     (r"soat", "soat"),
     (r"arl|riesgos laborales|accidente de trabajo|riesgos profesionales", "arl"),
-    (r"vehicul|autos?\b|carro|moto|grua|transito|movilidad|conductor", "autos"),
+    (
+        r"vehicul|autos?\b|carro|moto|grua|transito|movilidad|conductor|choqu|choc[oa]|colision|estrell",
+        "autos",
+    ),
     (r"hogar|vivienda|casa|cerrajer|plomer|electricist|inmueble", "hogar"),
     (r"salud|medic|ambulancia|hospital|clinic|odontolog|urgencia", "salud"),
     (r"vida|exequial|fallecimiento|funerari", "vida"),
