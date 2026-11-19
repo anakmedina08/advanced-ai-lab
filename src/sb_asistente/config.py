@@ -92,12 +92,22 @@ MERCADO_WHATSAPP_MAX: Final[int] = 2  # números de WhatsApp que se guardan por 
 # (encabezado o pie). Los que salen en una sola página pueden ser de un asesor (dato personal).
 MERCADO_WHATSAPP_MIN_FRACCION: Final[float] = 0.5
 MERCADO_POR_ASEGURADORA: Final[int] = 2  # páginas por aseguradora en una comparación (por defecto)
+# Si robots.txt no declara sitemaps (o los declarados no traen páginas), se prueban estas rutas
+# comunes en orden (WordPress, Yoast, índices genéricos) antes de rendirse (SPEC-070).
+SITEMAP_RUTAS_COMUNES: Final[tuple[str, ...]] = (
+    "/sitemap.xml",
+    "/sitemap_index.xml",
+    "/wp-sitemap.xml",
+    "/sitemap-index.xml",
+)
+MERCADO_CANALES_JSON: Final[Path] = MERCADO_GOLD_DIR / "canales.json"  # canales por aseguradora y servicio
+MERCADO_CONTEXTO_CANAL: Final[int] = 160  # caracteres alrededor de un número para saber su servicio
+MERCADO_TELEFONOS_MAX: Final[int] = 3  # teléfonos que devuelve mercado.canales por servicio
 MERCADO_ID_PRINCIPAL: Final[str] = "seguros-bolivar"  # su corpus es el del pipeline principal
 MERCADO_PLAN: Final[str] = "plan_captura.json"  # plan de captura en la carpeta de cada aseguradora
 MERCADO_CAPTURA: Final[str] = "capture.jsonl"  # registro de captura en la carpeta de cada aseguradora
 MERCADO_RESUMEN_JSON: Final[Path] = MERCADO_GOLD_DIR / "resumen.json"
 ROBOTS_RUTA: Final[str] = "/robots.txt"
-SITEMAP_RUTA: Final[str] = "/sitemap.xml"  # si robots.txt no declara sitemaps
 BRONZE_HTML_SUBDIR: Final[str] = "html"  # donde BronzeFetcher guarda el HTML crudo
 MERCADO_MAX_COMPARAR: Final[int] = 8  # aseguradoras lado a lado en una comparación
 MERCADO_MAX_POR_ASEGURADORA: Final[int] = 3  # páginas por aseguradora en una comparación

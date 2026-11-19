@@ -51,6 +51,9 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Corpus de mercado: información pública (personas + canales) de varias aseguradoras de Colombia,
   registradas en `model/mercado/aseguradoras.toml`, en un corpus aparte del principal; búsqueda por
   aseguradora, comparación y su WhatsApp oficial leído de su propio sitio (SPEC-069, ADR-028).
+- Canales por aseguradora y servicio: la persona declara su aseguradora (se guarda en su perfil,
+  sin pólizas ni documentos) y el asistente la lleva al WhatsApp o a la línea oficial de ese
+  servicio, leídos de las páginas oficiales (SPEC-070, ADR-029).
 
 ### Fuera del alcance (por ahora)
 
@@ -203,6 +206,7 @@ git push
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
+| 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
 
 ## 10. Notas y tareas pendientes
 
