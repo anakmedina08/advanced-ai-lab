@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 .PHONY: help api frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
-	data process index app eval docker-build docker-run docker-up
+	data process mercado index app eval docker-build docker-run docker-up
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -46,6 +46,11 @@ data: ## Scraping completo: descubrir → Bronze → Silver → Gold (~4 min, re
 
 process: ## Reprocesa Bronze → Silver → Gold sin volver a la web (segundos)
 	uv run python scripts/scrape_empresa.py --solo-proceso
+
+mercado: ## Corpus de mercado: varias aseguradoras (robots.txt + sitemap → Bronze → Gold; ~2 min por aseguradora)
+	uv run sb mercado verificar
+	uv run sb mercado capturar
+	uv run sb mercado procesar
 
 index: ## Fase 2: embeddings de los chunks en Qdrant (requiere: ollama pull embeddinggemma)
 	uv run sb index

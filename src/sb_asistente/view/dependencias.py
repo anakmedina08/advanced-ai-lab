@@ -7,7 +7,8 @@ Cada función devuelve la dependencia real; las pruebas las reemplazan con
 from collections.abc import Callable
 from functools import lru_cache
 
-from sb_asistente.controller import agente, assistant, chat, recomendador, vision
+from sb_asistente.config import RECO_K_FOTO
+from sb_asistente.controller import agente, assistant, chat, mercado, recomendador, vision
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 
@@ -64,6 +65,11 @@ def get_recuperador() -> Callable[[], tuple[RecuperadorHibrido, str]]:
     return _recuperador
 
 
+def get_mercado() -> Callable[[], RecuperadorHibrido]:
+    """Buscador del corpus de mercado (varias aseguradoras), para ``mercado.*`` (SPEC-069)."""
+    return mercado.recuperador_mercado
+
+
 def get_detector() -> Callable[[], vision.Detector]:
     """Fábrica del detector YOLO compartido (``POST /fotos``)."""
     return vision.detector_por_defecto
@@ -80,5 +86,5 @@ def get_interprete() -> Callable[[str], vision.Interprete]:
 
 
 def get_recomendar() -> vision.Recomendar:
-    """Recomendador por perfil de Gestión (top-3) para las fotos de bienes asegurables."""
-    return lambda perfil: recomendador.recomendar_por_perfil(perfil, 3)[0]
+    """Recomendador por perfil de Gestión (``RECO_K_FOTO`` seguros) para las fotos de bienes asegurables."""
+    return lambda perfil: recomendador.recomendar_por_perfil(perfil, RECO_K_FOTO)[0]
