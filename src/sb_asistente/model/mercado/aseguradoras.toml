@@ -1,0 +1,170 @@
+# Registro de aseguradoras del corpus de mercado (SPEC-069).
+#
+# Sumar una aseguradora = agregar un bloque [[aseguradora]] y correr `make mercado`.
+# - id: minúsculas y guiones; es la llave en Gold (`aseguradora`) y en la API.
+# - sitio: dominio público (https). El scraping respeta su robots.txt y usa su sitemap.
+# - prefijo: opcional; solo rutas que empiezan así (sitios regionales, p. ej. /colombia).
+# - alias: cómo la nombra la gente (para que el clasificador la detecte en un mensaje). Evite
+#   palabras comunes solas («positiva», «estado», «aurora», «bmi», «liberty»): darían falsos positivos.
+# - verificado: true cuando `sb mercado verificar` confirmó robots.txt y sitemap.
+# - activo: false la deja en el registro (el clasificador la reconoce) sin hacer scraping.
+# - corpus_propio: su corpus sale del pipeline principal (`make data`), no de este registro.
+# Solo información pública; nunca datos de clientes (Ley 1581).
+
+[[aseguradora]]
+id = "seguros-bolivar"
+nombre = "Seguros Bolívar"
+sitio = "https://www.segurosbolivar.com"
+alias = ["bolivar", "seguros bolivar"]
+verificado = true
+corpus_propio = true
+
+[[aseguradora]]
+id = "sura"
+nombre = "Seguros SURA"
+sitio = "https://www.segurossura.com.co"
+alias = ["sura", "suramericana", "seguros sura"]
+
+[[aseguradora]]
+id = "allianz"
+nombre = "Allianz"
+sitio = "https://www.allianz.co"
+alias = ["allianz"]
+
+[[aseguradora]]
+id = "seguros-del-estado"
+nombre = "Seguros del Estado"
+sitio = "https://www.segurosdelestado.com"
+alias = ["seguros del estado"]
+
+[[aseguradora]]
+id = "mapfre"
+nombre = "MAPFRE"
+sitio = "https://www.mapfre.com.co"
+alias = ["mapfre"]
+
+[[aseguradora]]
+id = "hdi"
+nombre = "HDI Seguros"
+sitio = "https://www.hdi.com.co"
+alias = ["hdi", "hdi seguros", "liberty seguros"]
+nota = "Liberty Seguros se fusionó con HDI Seguros (la marca Liberty dejó de usarse en 2025)."
+
+[[aseguradora]]
+id = "solidaria"
+nombre = "Aseguradora Solidaria"
+sitio = "https://www.aseguradorasolidaria.com.co"
+alias = ["aseguradora solidaria", "seguros solidaria"]
+
+[[aseguradora]]
+id = "axa-colpatria"
+nombre = "AXA Colpatria"
+sitio = "https://www.axacolpatria.co"
+alias = ["axa", "colpatria", "axa colpatria"]
+
+[[aseguradora]]
+id = "cardif"
+nombre = "BNP Paribas Cardif"
+sitio = "https://cardif.com.co"
+alias = ["cardif", "bnp paribas cardif", "bnp paribas"]
+
+[[aseguradora]]
+id = "colmena"
+nombre = "Colmena Seguros"
+sitio = "https://www.colmenaseguros.com"
+alias = ["colmena", "colmena seguros"]
+
+[[aseguradora]]
+id = "colsanitas"
+nombre = "Colsanitas"
+sitio = "https://www.colsanitas.com"
+alias = ["colsanitas", "sanitas"]
+
+[[aseguradora]]
+id = "bmi"
+nombre = "BMI Colombia"
+sitio = "https://www.bmicos.com"
+prefijo = "/colombia"
+alias = ["bmi seguros", "bmi colombia"]
+
+[[aseguradora]]
+id = "equidad"
+nombre = "La Equidad Seguros"
+sitio = "https://www.laequidadseguros.coop"
+alias = ["la equidad", "equidad seguros"]
+
+[[aseguradora]]
+id = "metlife"
+nombre = "MetLife Colombia"
+sitio = "https://www.metlife.com.co"
+alias = ["metlife"]
+
+[[aseguradora]]
+id = "positiva"
+nombre = "Positiva Compañía de Seguros"
+sitio = "https://www.positiva.gov.co"
+alias = ["arl positiva", "positiva seguros"]
+
+[[aseguradora]]
+id = "previsora"
+nombre = "La Previsora"
+sitio = "https://www.previsora.gov.co"
+alias = ["previsora", "la previsora"]
+
+[[aseguradora]]
+id = "alfa"
+nombre = "Seguros Alfa"
+sitio = "https://www.segurosalfa.com.co"
+alias = ["seguros alfa"]
+
+[[aseguradora]]
+id = "skandia"
+nombre = "Skandia"
+sitio = "https://www.skandia.co"
+alias = ["skandia"]
+
+[[aseguradora]]
+id = "zurich"
+nombre = "Zurich Colombia"
+sitio = "https://www.zurich.com.co"
+alias = ["zurich"]
+
+# --- En el registro, sin scraping todavía (sitio por confirmar o seguros solo para empresas) ---
+
+[[aseguradora]]
+id = "berkley"
+nombre = "Berkley International Seguros"
+sitio = "https://www.berkley.com.co"
+alias = ["berkley"]
+activo = false
+nota = "Sitio por confirmar; su oferta es sobre todo para empresas (cumplimiento)."
+
+[[aseguradora]]
+id = "everest"
+nombre = "Everest Seguros"
+sitio = "https://www.everestglobal.com"
+prefijo = "/co-es"
+alias = ["everest"]
+activo = false
+nota = "Seguros para empresas; sin oferta para personas."
+
+[[aseguradora]]
+id = "aurora"
+nombre = "Seguros de Vida Aurora"
+alias = ["seguros aurora", "vida aurora"]
+activo = false
+nota = "Sitio público por confirmar."
+
+[[aseguradora]]
+id = "andina-vida"
+nombre = "Andina Vida Seguros"
+alias = ["andina vida", "andina seguros"]
+activo = false
+nota = "Sitio público por confirmar."
+
+[[aseguradora]]
+id = "proagro"
+nombre = "Protección Agropecuaria Compañía de Seguros (Proagro)"
+alias = ["proagro", "pro agro"]
+activo = false
+nota = "Sitio público por confirmar."

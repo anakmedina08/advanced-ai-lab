@@ -79,6 +79,32 @@ SECTION_RULES: Final[tuple[tuple[str, str], ...]] = (
 )
 DEFAULT_SECTION: Final[str] = "otros"
 
+# --- Corpus de mercado: varias aseguradoras (SPEC-069) ----------------------------------------
+# El registro vive en model/mercado/aseguradoras.toml; aquí solo rutas y límites de cortesía.
+MERCADO_BRONZE_DIR: Final[Path] = BRONZE_DIR / "mercado"  # un subdirectorio por aseguradora
+MERCADO_SILVER_DIR: Final[Path] = SILVER_DIR / "mercado"
+MERCADO_GOLD_DIR: Final[Path] = GOLD_DIR / "mercado"
+MERCADO_CHUNKS_JSONL: Final[Path] = MERCADO_GOLD_DIR / "chunks.jsonl"
+MERCADO_MAX_PAGINAS: Final[int] = int(os.getenv("MERCADO_MAX_PAGINAS", "80"))  # por aseguradora
+MERCADO_MAX_SITEMAPS: Final[int] = 15  # sitemaps hijos por aseguradora (índices grandes)
+MERCADO_WHATSAPP_MAX: Final[int] = 2  # números de WhatsApp que se guardan por aseguradora
+# Solo el canal oficial del sitio: un número que aparece en al menos esta fracción de las páginas
+# (encabezado o pie). Los que salen en una sola página pueden ser de un asesor (dato personal).
+MERCADO_WHATSAPP_MIN_FRACCION: Final[float] = 0.5
+MERCADO_POR_ASEGURADORA: Final[int] = 2  # páginas por aseguradora en una comparación (por defecto)
+MERCADO_ID_PRINCIPAL: Final[str] = "seguros-bolivar"  # su corpus es el del pipeline principal
+MERCADO_PLAN: Final[str] = "plan_captura.json"  # plan de captura en la carpeta de cada aseguradora
+MERCADO_CAPTURA: Final[str] = "capture.jsonl"  # registro de captura en la carpeta de cada aseguradora
+MERCADO_RESUMEN_JSON: Final[Path] = MERCADO_GOLD_DIR / "resumen.json"
+ROBOTS_RUTA: Final[str] = "/robots.txt"
+SITEMAP_RUTA: Final[str] = "/sitemap.xml"  # si robots.txt no declara sitemaps
+BRONZE_HTML_SUBDIR: Final[str] = "html"  # donde BronzeFetcher guarda el HTML crudo
+MERCADO_MAX_COMPARAR: Final[int] = 8  # aseguradoras lado a lado en una comparación
+MERCADO_MAX_POR_ASEGURADORA: Final[int] = 3  # páginas por aseguradora en una comparación
+MERCADO_CANDIDATOS_POR_PAGINA: Final[int] = 4  # pasajes pedidos por página que se quiere mostrar
+MERCADO_CANDIDATOS_RELEVANCIA: Final[int] = 20  # pasajes para elegir las aseguradoras relevantes
+WHATSAPP_MAX_TEXTO: Final[int] = 1000  # caracteres del resumen en el enlace de traspaso wa.me
+
 # --- Limpieza y chunking -----------------------------------------------------------------
 BOILERPLATE_MIN_SHARE: Final[float] = 0.5  # línea en >=50 % de páginas ⇒ boilerplate
 MIN_PAGE_CHARS: Final[int] = 200  # páginas más cortas se descartan (vacías o redirecciones)
@@ -160,6 +186,18 @@ EMBEDDINGS_MODEL: Final[str] = os.getenv("EMBEDDINGS_MODEL", "nomic-embed-text")
 VOYAGE_MODEL: Final[str] = os.getenv("VOYAGE_MODEL", "voyage-multilingual-2")
 RAG_K: Final[int] = int(os.getenv("RAG_K", "6"))
 RRF_K: Final[int] = 60  # constante de Reciprocal Rank Fusion (Cormack et al., 2009)
+RAG_K_MAX: Final[int] = 20  # tope de fragmentos por búsqueda
+RAG_CANDIDATOS_POR_K: Final[int] = 4  # candidatos por lista (BM25 y vectores) antes de fusionar con RRF
+RPC_MAX_LOTE: Final[int] = 10  # llamadas por lote JSON-RPC
+RRF_DECIMALES: Final[int] = 5  # decimales del puntaje fusionado que se devuelve
+RAG_EVAL_KS: Final[tuple[int, ...]] = (3, 6)  # k por defecto de `sb rag evaluar`
+# Límites de las entradas de la API (contrato de los modelos Pydantic de view/rpc.py).
+CONSULTA_MIN: Final[int] = 2
+CONSULTA_MAX: Final[int] = 300  # búsquedas
+MENSAJE_MAX: Final[int] = 800  # mensajes de chat y del clasificador
+ID_ASEGURADORA_MAX: Final[int] = 40
+API_PORT: Final[int] = int(os.getenv("API_PORT", "8000"))
+TRAZAS_N: Final[int] = 10  # turnos que muestra `sb trazas`
 
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
@@ -178,6 +216,8 @@ RECO_DIR: Final[Path] = DATA_DIR / "recomendador"
 RECO_N_CLIENTES: Final[int] = 20_000
 RECO_SEMILLA: Final[int] = 42
 RECO_K: Final[int] = 5
+RECO_K_FOTO: Final[int] = 3  # seguros sugeridos junto al análisis de una foto
+RECO_K_MAX: Final[int] = 10  # tope de recomendaciones por llamada
 RECO_SEGMENTO: Final[tuple[str, ...]] = ("vehiculo", "vivienda", "tiene_mascota", "tiene_credito")
 RECO_MODELO_BASE: Final[str] = "intfloat/multilingual-e5-small"
 

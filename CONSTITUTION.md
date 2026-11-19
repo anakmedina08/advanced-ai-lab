@@ -48,6 +48,9 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Foto → «¿qué hago?»: YOLO difumina personas en local, Claude con visión entiende la situación
   (accidente, daño en el hogar, robo o bien a asegurar) y el asistente explica pasos o seguro con su
   fuente; la foto no se guarda (ADR-020).
+- Corpus de mercado: información pública (personas + canales) de varias aseguradoras de Colombia,
+  registradas en `model/mercado/aseguradoras.toml`, en un corpus aparte del principal; búsqueda por
+  aseguradora, comparación y su WhatsApp oficial leído de su propio sitio (SPEC-069, ADR-028).
 
 ### Fuera del alcance (por ahora)
 
@@ -94,10 +97,13 @@ advanced-ai-lab/
 │   │   ├── processing/            #   clean (Silver) · gold (Markdown, corpus, chunks)
 │   │   ├── llm/                   #   prompts · service · knowledge · keyword_search · vector_store · agent · assistants
 │   │   ├── evaluation.py          #   banco de preguntas y métricas
+│   │   ├── mercado/               #   registro de aseguradoras · alcance y secciones · WhatsApp · comparar
 │   │   └── recomendador/          #   sintético · contrato · líneas base · métricas (Gestión)
 │   ├── controller/                # C · casos de uso
 │   │   ├── pipeline.py            #   descubrir → extraer → limpiar → deduplicar → enriquecer
 │   │   ├── assistant.py           #   arma los modos completo/reducido/rag/agente, evaluación
+│   │   ├── mercado.py             #   corpus de mercado: descubrir → Bronze → Gold por aseguradora, comparar
+│   │   ├── herramientas.py        #   skills, índice y evaluación del RAG, trazas y MLflow para la vista
 │   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
 │       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
@@ -196,6 +202,7 @@ git push
 | 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
+| 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
 
 ## 10. Notas y tareas pendientes
 
