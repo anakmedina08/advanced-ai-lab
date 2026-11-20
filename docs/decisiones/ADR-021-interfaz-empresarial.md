@@ -1,5 +1,7 @@
 # ADR-021 · Interfaz Streamlit en dos áreas con un estilo corporativo neutro
 
+> **Nota (2026-11-17):** la parte de Streamlit quedó reemplazada por [ADR-024](ADR-024-sin-streamlit.md); las dos áreas y el tema siguen vigentes en el frontend React.
+
 - **Fecha:** 2026-11-11
 - **What:** la interfaz pasa de 6 pestañas a una aplicación de varias páginas (`st.navigation`) con
   dos secciones:

@@ -16,7 +16,7 @@ import Inicio from "./pages/Inicio";
 import Pipeline from "./pages/Pipeline";
 import Sustentacion from "./pages/Sustentacion";
 
-/** Layout de la versión Streamlit: barra lateral oscura con tres áreas y el contenido a la derecha. */
+/** Layout: barra lateral oscura con tres áreas y el contenido a la derecha. */
 export default function App() {
   const { estado, reintentar } = useSalud();
   const [ajustes, cambiarAjustes] = useAjustes();

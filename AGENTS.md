@@ -11,7 +11,7 @@
 Asistente de conocimiento de **Seguros Bolívar** (información pública, alcance PERSONAS +
 CANALES DE ATENCIÓN). Proyecto integrador de Técnicas Avanzadas de IA (UAO · Grupo 10).
 Fase 1: scraping Medallion → conocimiento consolidado en el system prompt → Resumen, FAQ y
-Q&A con LangChain + Streamlit. Fase 2 (producto único, ADR-009): este repositorio sirve a los cursos
+Q&A con LangChain (la interfaz Streamlit original se retiró en SPEC-052). Fase 2 (producto único, ADR-009): este repositorio sirve a los cursos
 de Técnicas (módulo de conocimiento) y de Gestión (módulo de recomendación), con API FastAPI y RAG.
 Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep Agents, `agent.py`; ADR-018).
 
@@ -30,7 +30,7 @@ Modos de Q&A: completo, reducido, rag (Qdrant, `vector_store.py`) y agente (Deep
     La foto no se guarda y las personas se difuminan antes de salir del equipo (ADR-020).
 - **Controlador** `src/sb_asistente/controller/` → `pipeline.py` (scraping), `assistant.py` (arma los modos de Q&A y orquesta la evaluación), `recomendador.py` y `mercado.py` (corpus de varias aseguradoras, SPEC-069).
 - **Vista** `src/sb_asistente/view/` → `api.py` (FastAPI) con `schemas.py` (Pydantic), `api_client.py` (httpx),
-  `anotaciones.py`, `streamlit_app.py` (navegación) con `app_pages/` y `ui.py`, y `cli.py`;
+  `anotaciones.py`, `rpc.py` y `cli.py`; la interfaz web es el frontend React en `frontend/` (sin Streamlit, SPEC-052);
   **solo llaman al controlador**, sin lógica de negocio. Toda entrada de la API es un modelo Pydantic.
 - `config.py` concentra rutas, alcance, umbrales y modelo (nada de números mágicos).
 - Dependencias por constructor (sesión HTTP, LLM, reloj, sleep) para poder probar sin red ni API.
@@ -87,7 +87,6 @@ make dev            # uv sync + hooks de pre-commit
 make data           # scraping completo (≈ 4 min, respeta robots.txt)
 make process        # Bronze → Silver → Gold sin red
 make index          # Fase 2: embeddings de los chunks en Qdrant (Ollama local)
-make app            # uv run streamlit run app.py
 make check          # ruff + formato + pytest (lo mismo que la CI)
 make docker-build   # imagen multi-stage CPU
 make api            # API FastAPI en http://127.0.0.1:8000/docs

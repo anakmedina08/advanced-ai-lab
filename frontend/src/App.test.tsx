@@ -16,7 +16,7 @@ const abrir = (ruta: string) =>
     </MemoryRouter>,
   );
 
-describe("diseño de la versión Streamlit", () => {
+describe("diseño en tres áreas", () => {
   it("la barra lateral tiene las tres áreas con sus páginas", () => {
     // Act
     abrir("/");

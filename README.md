@@ -89,8 +89,8 @@ casos de la demo están como sugerencias en el chat.
 | Mixto | «¿Qué cubre el seguro de hogar y cuántas pólizas de hogar se vendieron en 2025?» | ruta `mixto`, ambas tools |
 | Blindaje | «¿Qué dice la política de calidad del servicio?» | el documento de prueba con instrucción escondida se ignora |
 
-> Streamlit (`make app`) queda solo como herramienta interna del equipo; **no** es la interfaz del
-> producto desde el Módulo 2.
+> La única interfaz web es el frontend React desacoplado. Streamlit se retiró del proyecto
+> (SPEC-052, [ADR-024](docs/decisiones/ADR-024-sin-streamlit.md)).
 
 Para usar Claude, copie `.env.example` a `.env` y escriba su `ANTHROPIC_API_KEY` (o `LLM_PROVIDER=deepseek`
 y `DEEPSEEK_API_KEY`). Para usar el modelo
@@ -107,17 +107,9 @@ local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 |---|---|---|
 | ![Chat](docs/capturas/frontend-chat.png) | ![Estado](docs/capturas/frontend-estado.png) | ![Arquitectura](docs/capturas/arquitectura.png) |
 
-**Herramienta interna del equipo (Streamlit, Fase 1):** la interfaz tiene dos áreas ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)): **atención al
-cliente** (asistente en chat, foto «¿qué hago?» y guías) y **panel del equipo** (configuración,
-pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de Seguros Bolívar.
-
-| Asistente (chat con fuentes) | Foto: ¿qué hago? | Pipeline de datos |
-|---|---|---|
-| ![Asistente](docs/capturas/qa.png) | ![Foto](docs/capturas/foto.png) | ![Pipeline](docs/capturas/pipeline.png) |
-
-| Sustentación › Entregables por curso | Panel del equipo › Experimentos (MLflow) |
-|---|---|
-| ![Sustentación](docs/capturas/sustentacion.png) | ![Experimentos](docs/capturas/experimentos.png) |
+**Fase 1 (histórico):** las capturas `docs/capturas/qa.png`, `foto.png`, `pipeline.png`,
+`sustentacion.png` y `experimentos.png` son de la interfaz Streamlit original, que se retiró en
+SPEC-052. Las mismas áreas (atención al cliente y panel del equipo, ADR-021) viven hoy en el frontend React.
 
 ## Arquitectura
 
@@ -129,7 +121,7 @@ pipeline y evaluación). Usa un estilo corporativo neutro: no imita la marca de 
 ```mermaid
 flowchart LR
     subgraph V[Vista]
-        UI[streamlit_app.py]
+        FE[frontend React<br/>cliente desacoplado] -->|HTTP · SSE| UI[api.py · FastAPI]
         CLI[cli.py · comando sb]
     end
     subgraph C[Controlador]
@@ -162,7 +154,7 @@ La vista **solo** habla con el controlador; el controlador orquesta el modelo. D
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    participant UI as Streamlit (vista)
+    participant UI as Frontend React → API (vista)
     participant A as assistant.py (controlador)
     participant R as keyword_search / vector_store (modelo)
     participant S as service + prompts (modelo)
@@ -273,7 +265,7 @@ uv run sb ask "¿Qué cubre el SOAT?" --modo agente   # Deep Agent + subagente c
 make eval PROVIDER=anthropic MODO=rag VERSION=v3
 ```
 
-En Streamlit, el selector **Modo de contexto** ofrece: toda la base, contexto reducido, RAG y agente.
+En el frontend (Configuración), el selector **Modo de contexto** ofrece: toda la base, contexto reducido, RAG y agente.
 
 ## Foto → «¿qué hago?» (YOLO + Claude con visión)
 
@@ -304,8 +296,8 @@ curl -F "archivo=@choque.jpg" "localhost:8000/fotos?interpretar=true&responder=t
 Entender la situación usa Claude (`interpretar=true`); sin él, solo YOLO sugiere por objeto. Variables
 opcionales: `YOLO_MODEL_PATH` (por defecto `data/modelos/yolo26l.pt`, elegido por comparación; se descarga si falta),
 `YOLO_CONFIDENCE` (0,35) y `SB_API_URL` (cliente HTTP) y `FRONTEND_ORIGINS` (orígenes permitidos por CORS, separados por comas; por defecto Vite en el puerto 5173 y yellowdata.com.co). La foto se procesa en memoria y no se guarda;
-las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En Streamlit está la
-pestaña **📷 Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
+las personas se difuminan antes de salir del equipo. No suba documentos ni placas. En el frontend está la
+página **Foto → ¿qué hago?**. Sin el extra `vision`, `POST /fotos` responde 503.
 
 ## Model Card
 
@@ -463,12 +455,11 @@ Docker en cada Pull Request.
 ## Estructura
 
 ```
-app.py                         # entrada de Streamlit
 src/sb_asistente/
 ├── config.py                  # rutas, alcance, cortesía y modelo
 ├── model/                     # M · scraping · processing · llm · evaluation · recomendador
 ├── controller/                # C · pipeline.py · assistant.py · recomendador.py
-└── view/                      # V · api.py + schemas.py (FastAPI) · streamlit_app.py · cli.py
+└── view/                      # V · api.py + schemas.py (FastAPI) · rpc.py · cli.py
 scripts/                       # scrape_empresa.py · crear_kanban*.py · agent_events.py · eda_recomendador.py
 .claude/                       # agents/ (subagentes) · settings.json (hooks) · skills/
 tests/                         # pytest por capa (AAA, sin red ni API)
@@ -502,5 +493,5 @@ Bolívar S.A. y se usa solo con fines académicos; no se redistribuye (`data/` n
 - **Equipo:** Daniel Silva y Katherine Medina (Code Reviewer: Daniel Silva).
 - **Curso:** Técnicas Avanzadas de IA en Modelos de Lenguaje · Maestría en IA y Ciencia de Datos · UAO.
 - **Estándar del repositorio:** skill `jan-project-standard` de Jan Polanco Velasco.
-- **Librerías:** LangChain, trafilatura, BeautifulSoup, Streamlit, requests, uv, pytest y ruff.
+- **Librerías:** LangChain, LangGraph, FastAPI, React, trafilatura, BeautifulSoup, requests, uv, pytest y ruff.
 - **Fuente de datos:** sitio público www.segurosbolivar.com.

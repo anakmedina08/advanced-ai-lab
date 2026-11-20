@@ -1,4 +1,4 @@
-/* Tema de la versión Streamlit (.streamlit/config.toml): claro, azul marino y grises, con la barra
+/* Tema corporativo neutro: claro, azul marino y grises, con la barra
    lateral oscura. A propósito no usa los colores ni la marca de Seguros Bolívar. */
 :root {
   --fondo: #ffffff;
@@ -997,7 +997,7 @@ input[type="range"] {
   background: var(--superficie-2);
 }
 
-/* ---- Paridad con Streamlit (SPEC-046) ---- */
+/* ---- Panel del equipo (SPEC-046) ---- */
 .acciones {
   display: flex;
   flex-wrap: wrap;

@@ -30,16 +30,13 @@ RUN useradd --create-home appuser
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY app.py ./
 COPY src/ src/
 COPY scripts/ scripts/
 COPY evaluacion/ evaluacion/
-COPY .streamlit/ .streamlit/
 RUN mkdir -p data/raw data/silver data/gold && chown -R appuser data evaluacion
 
 USER appuser
-# Desde el Módulo 2 el producto es la API (el frontend React es otro servicio). Streamlit queda
-# como herramienta interna: docker run -p 8501:8501 sb-asistente streamlit run app.py --server.port=8501
+# El producto es la API; el frontend React es otro servicio (docker compose). Sin Streamlit (SPEC-052).
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"

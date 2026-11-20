@@ -1,6 +1,6 @@
 """Controlador del recomendador: generar y validar datos, comparar líneas base y recomendar.
 
-Las vistas (CLI, API y Streamlit) llaman a estas funciones; nunca construyen modelos ni leen
+Las vistas (CLI y API) llaman a estas funciones; nunca construyen modelos ni leen
 CSV por su cuenta (MVC).
 """
 

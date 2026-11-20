@@ -115,7 +115,7 @@ describe("foto", () => {
   });
 });
 
-describe("paridad con la versión Streamlit", () => {
+describe("panel del equipo (SPEC-046)", () => {
   it("con el modo «Reducido» el chat pregunta a /preguntas con la versión del prompt", async () => {
     // Arrange
     const respuesta = { texto: "Por WhatsApp.", tarea: "qa", version_prompt: "v1", latencia_s: 1.2, tokens_contexto: 900, cita_fuente: true, fuentes: ["https://www.segurosbolivar.com/canales"] };

@@ -1,4 +1,4 @@
-/** Estructura de la navegación: la misma de la versión Streamlit (tres áreas en la barra lateral). */
+/** Estructura de la navegación: tres áreas en la barra lateral. */
 
 export interface Pagina {
   ruta: string;

@@ -6,7 +6,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 `documentador` actualiza esta tabla en el mismo Pull Request. Actualizada para los anuncios 006
 (Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026; guion en
 [`sustentacion.md`](sustentacion.md). La interfaz la muestra en
-**Sustentación › Entregables por curso** (`view/app_pages/sustentacion.py`).
+**Sustentación › Entregables por curso** (`frontend/src/pages/Sustentacion.tsx`).
 
 ## Gestión de Proyectos en IA y CD
 
@@ -88,7 +88,7 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Arquitectura MVC | ✅ | `src/sb_asistente/{model,controller,view}` · ADR-007 |
 | Type hints y docstrings | ✅ | regla `ANN` y `D` de Ruff en `pyproject.toml` |
 | RPC (JSON-RPC 2.0) | ✅ | `POST /rpc`, `view/rpc.py`, `rpc.descubrir`, `make rpc-demo` · ADR-015 |
-| Interfaz web | ✅ | producto: frontend React desacoplado (Módulo 2); Streamlit solo como herramienta interna del equipo (ADR-021) |
+| Interfaz web | ✅ | frontend React desacoplado (Módulo 2); Streamlit retirado en SPEC-052 (ADR-024) |
 | LangSmith (trazas y dataset de evaluación) | ⛔ | no planeado sin clave del equipo (T-66): reemplazado por las trazas locales (SPEC-021) |
 | Ruff (lint y formato) | ✅ | `make lint`, `make format-check` |
 | pre-commit con hook de GGA | ✅ | `.pre-commit-config.yaml` (higiene, Ruff, `uv lock --check`, GGA, bloqueo de datos y secretos) |
@@ -106,4 +106,4 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Panel en vivo del desarrollo con agentes | ⛔ | no planeado (T-22): los eventos quedan en `logs/agent-events.jsonl` |
 | Diagrama del flujo de inferencia en el README | ✅ | [`README.md`](../README.md#flujo-de-inferencia) |
 | Ética de datos (robots.txt, Ley 1581, sin datos reales versionados) | ✅ | `docs/alcance.md`, `.gitignore`, hook `forbid-data-and-secrets`, validación en `schemas.py`, personas difuminadas en fotos |
-| Sin Streamlit, Gradio ni Dash en el proyecto (Técnicas 006, Gestión 007) | 🟡 | `streamlit` sigue como herramienta interna (ADR-021); se retira en SPEC-052 · catálogo en [`docs/anuncios/herramientas.md`](anuncios/herramientas.md) |
+| Sin Streamlit, Gradio ni Dash en el proyecto (Técnicas 006, Gestión 007) | ✅ | retirado en SPEC-052 ([ADR-024](decisiones/ADR-024-sin-streamlit.md)); K4 de `make madurez` lo vigila · [`docs/anuncios/herramientas.md`](anuncios/herramientas.md) |

@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { SECCIONES } from "../navegacion";
 import Icono from "./Icono";
 
-/** Barra lateral oscura con el logo, las tres áreas y el aviso académico (como en Streamlit). */
+/** Barra lateral oscura con el logo, las tres áreas y el aviso académico. */
 export default function BarraLateral({ onNavegar }: { onNavegar?: () => void }) {
   return (
     <div className="barra-contenido">

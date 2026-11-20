@@ -134,7 +134,7 @@ def test_open_client_on_disk_persists_index(tmp_path):
 
 
 def test_open_client_reuses_client_in_same_process(tmp_path):
-    # Streamlit: los modos «rag» y «agente» abren el mismo índice; Qdrant local no admite dos clientes.
+    # API: los modos «rag» y «agente» abren el mismo índice; Qdrant local no admite dos clientes.
     assert vector_store.open_client(tmp_path / "q") is vector_store.open_client(tmp_path / "q")
 
 
@@ -142,7 +142,7 @@ def test_open_client_uses_copy_when_another_process_holds_the_folder(tmp_path):
     from qdrant_client import QdrantClient
 
     path = tmp_path / "qdrant"
-    other = QdrantClient(path=str(path))  # «la app de Streamlit abierta»
+    other = QdrantClient(path=str(path))  # «otro proceso con el índice abierto»
     vector_store.build_index(CHUNKS, DeterministicFakeEmbedding(size=16), other)
     try:
         emb = CountingEmbedding(size=16)

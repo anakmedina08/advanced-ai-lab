@@ -161,7 +161,7 @@ export async function guia(tipo: "resumen" | "faq", tema: string, n: number, pro
 /** Entregables por curso (SPEC-045). */
 export const proyecto = () => obtener<ProyectoOut>("/proyecto");
 
-// ---- Paridad con Streamlit (SPEC-046) ----
+// ---- Panel del equipo (SPEC-046) ----
 export const sistema = () => obtener<SistemaOut>("/sistema");
 export const reprocesar = async () =>
   (await (await pedir("/pipeline/procesar", { method: "POST" }, { timeoutMs: 300_000 })).json()) as ProcesoOut;

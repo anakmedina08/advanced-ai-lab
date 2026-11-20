@@ -55,9 +55,6 @@ mercado: ## Corpus de mercado: varias aseguradoras (robots.txt + sitemap → Bro
 index: ## Fase 2: embeddings de los chunks en Qdrant (requiere: ollama pull embeddinggemma)
 	uv run sb index
 
-app: ## Abre la interfaz Streamlit en http://localhost:8501
-	uv run streamlit run app.py
-
 eval: ## Evalúa el banco (PROVIDER=anthropic|deepseek|ollama, VERSION=v1..v4, MODO=completo|reducido|rag|agente)
 	uv run sb eval --provider $(or $(PROVIDER),anthropic) --version $(or $(VERSION),v3) --modo $(or $(MODO),completo)
 
