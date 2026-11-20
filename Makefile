@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help api frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
+.PHONY: help api tunel frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
 	data process mercado index app eval docker-build docker-run docker-up
 
 help: ## Muestra esta ayuda
@@ -63,6 +63,11 @@ eval: ## Evalúa el banco (PROVIDER=anthropic|deepseek|ollama, VERSION=v1..v4, M
 
 api: ## Levanta la API FastAPI en http://127.0.0.1:8000/docs
 	uv run sb api
+
+tunel: ## URL pública temporal hacia la API para el webhook de WhatsApp (requiere cloudflared)
+	@command -v cloudflared >/dev/null || { echo "Instale cloudflared: brew install cloudflared"; exit 1; }
+	@echo "Copie la URL https://….trycloudflare.com y agréguele /whatsapp/webhook en Meta"
+	cloudflared tunnel --url http://127.0.0.1:8000
 
 frontend: ## Frontend propio (React + Vite) en http://localhost:5173 (requiere Node 20+)
 	cd frontend && npm install --no-audit --no-fund && npm run dev

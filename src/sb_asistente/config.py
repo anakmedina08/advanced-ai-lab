@@ -236,6 +236,18 @@ ACCESO_DB: Final[Path] = DATA_DIR / "acceso" / "codigos.sqlite"  # solo hashes, 
 ACCESO_HORAS: Final[float] = float(os.getenv("ACCESO_HORAS", "24"))  # vigencia por defecto
 ACCESO_CUPO: Final[int] = int(os.getenv("ACCESO_CUPO", "40"))  # mensajes al LLM por código
 ACCESO_HEADER: Final[str] = "X-Codigo-Acceso"
+
+# --- WhatsApp Cloud API de Meta (SPEC-073): el asistente en un número propio -----------------
+# Todo sale del .env (nunca del código). Sin WHATSAPP_VERIFY_TOKEN y WHATSAPP_APP_SECRET el
+# webhook responde 503; sin WHATSAPP_TOKEN y WHATSAPP_PHONE_NUMBER_ID no puede responder.
+WHATSAPP_VERIFY_TOKEN: Final[str] = os.getenv("WHATSAPP_VERIFY_TOKEN", "")  # lo inventa el equipo
+WHATSAPP_APP_SECRET: Final[str] = os.getenv("WHATSAPP_APP_SECRET", "")  # firma de cada evento de Meta
+WHATSAPP_TOKEN: Final[str] = os.getenv("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID: Final[str] = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_GRAPH_VERSION: Final[str] = os.getenv("WHATSAPP_GRAPH_VERSION", "v23.0")
+# El número es público: por defecto la IA solo responde con un código de acceso (SPEC-072).
+WHATSAPP_EXIGE_CODIGO: Final[bool] = os.getenv("WHATSAPP_EXIGE_CODIGO", "1") == "1"
+WHATSAPP_RECORDAR_IDS: Final[int] = 500  # ids de mensaje ya atendidos (Meta reintenta envíos)
 TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad

@@ -17,11 +17,19 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import NoReturn
 
 ALFABETO = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"  # sin 0/O, 1/I/L: se dictan sin confusión
 PREFIJO = "YELO"
 GRUPOS, LARGO_GRUPO = 2, 4
 
+_VINCULOS = """
+CREATE TABLE IF NOT EXISTS vinculos (
+    canal TEXT PRIMARY KEY,
+    hash TEXT NOT NULL,
+    creado TEXT NOT NULL
+)
+"""
 _ESQUEMA = """
 CREATE TABLE IF NOT EXISTS codigos (
     hash TEXT PRIMARY KEY,
@@ -103,6 +111,7 @@ class CodigosAcceso:
         ruta.parent.mkdir(parents=True, exist_ok=True)
         with self._conexion() as con:
             con.execute(_ESQUEMA)
+            con.execute(_VINCULOS)
 
     @contextmanager
     def _conexion(self) -> Iterator[sqlite3.Connection]:
@@ -132,23 +141,62 @@ class CodigosAcceso:
 
     def estado(self, codigo: str) -> Codigo | None:
         """Estado del código sin gastar cupo (``None`` si no existe)."""
+        return self._estado(huella(codigo))
+
+    def _estado(self, hash_: str) -> Codigo | None:
         with self._conexion() as con:
-            fila = con.execute("SELECT * FROM codigos WHERE hash = ?", (huella(codigo),)).fetchone()
+            fila = con.execute("SELECT * FROM codigos WHERE hash = ?", (hash_,)).fetchone()
         return _codigo(fila) if fila else None
 
     def consumir(self, codigo: str, ahora: datetime | None = None) -> Codigo:
         """Gasta un mensaje del cupo, o ``AccesoDenegadoError`` con el motivo."""
+        return self._consumir(huella(codigo), ahora)
+
+    # --- Vínculo de un canal (p. ej. un número de WhatsApp, ya en hash) con un código -----------
+
+    def vincular(self, canal: str, codigo: str, ahora: datetime | None = None) -> Codigo:
+        """Asocia el canal al código si este sirve ahora (no gasta cupo); ``AccesoDenegadoError`` si no."""
+        ahora = ahora or datetime.now(UTC)
+        actual = self.estado(codigo)
+        if actual is None or not actual.vigente(ahora):
+            self._motivo(actual, ahora)
+        with self._conexion() as con:
+            con.execute(
+                "INSERT INTO vinculos (canal, hash, creado) VALUES (?, ?, ?) "
+                "ON CONFLICT(canal) DO UPDATE SET hash = excluded.hash, creado = excluded.creado",
+                (canal, huella(codigo), ahora.isoformat()),
+            )
+        return actual
+
+    def consumir_canal(self, canal: str, ahora: datetime | None = None) -> Codigo:
+        """Gasta un mensaje del código vinculado al canal; ``AccesoDenegadoError`` si no tiene uno."""
+        with self._conexion() as con:
+            fila = con.execute("SELECT hash FROM vinculos WHERE canal = ?", (canal,)).fetchone()
+        if fila is None:
+            raise AccesoDenegadoError("Este número aún no tiene un código de acceso activo.")
+        return self._consumir(fila["hash"], ahora)
+
+    def desvincular(self, canal: str) -> bool:
+        """Quita el código del canal."""
+        with self._conexion() as con:
+            return con.execute("DELETE FROM vinculos WHERE canal = ?", (canal,)).rowcount == 1
+
+    def _consumir(self, hash_: str, ahora: datetime | None = None) -> Codigo:
         ahora = ahora or datetime.now(UTC)
         with self._conexion() as con:
             cambio = con.execute(
                 "UPDATE codigos SET usados = usados + 1 "
                 "WHERE hash = ? AND revocado = 0 AND expira > ? AND usados < cupo",
-                (huella(codigo), ahora.isoformat()),
+                (hash_, ahora.isoformat()),
             )
             if cambio.rowcount == 1:
-                fila = con.execute("SELECT * FROM codigos WHERE hash = ?", (huella(codigo),)).fetchone()
+                fila = con.execute("SELECT * FROM codigos WHERE hash = ?", (hash_,)).fetchone()
                 return _codigo(fila)
-        actual = self.estado(codigo)
+        self._motivo(self._estado(hash_), ahora)
+
+    @staticmethod
+    def _motivo(actual: Codigo | None, ahora: datetime) -> NoReturn:
+        """Lanza ``AccesoDenegadoError`` con la razón por la que el código no sirve."""
         if actual is None:
             raise AccesoDenegadoError("El código de acceso no existe. Revisa que esté bien escrito.")
         if actual.revocado:

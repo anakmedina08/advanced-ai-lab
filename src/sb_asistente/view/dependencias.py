@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from sb_asistente.config import RECO_K_FOTO
 from sb_asistente.controller import agente, assistant, chat, mercado, recomendador, vision
+from sb_asistente.controller import whatsapp as whatsapp_ctrl
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 
@@ -48,6 +49,11 @@ def get_chat_qa() -> Callable[[str], chat.Responder]:
 def get_asistente() -> Callable[[str], assistant.KnowledgeAssistant]:
     """Fábrica del asistente completo para resumen y FAQ."""
     return assistant.full_assistant
+
+
+def get_whatsapp() -> "whatsapp_ctrl.whatsapp.Enviador | None":
+    """Cliente de WhatsApp (Graph API) o ``None`` si faltan credenciales; las pruebas usan un doble."""
+    return whatsapp_ctrl.enviador_por_defecto()
 
 
 def get_agente() -> Callable[[str], agente.AgenteAsistente]:

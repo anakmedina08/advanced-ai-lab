@@ -16,9 +16,20 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Path, Query, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from sb_asistente.config import (
@@ -39,6 +50,7 @@ from sb_asistente.controller import experimentos as experimentos_ctrl
 from sb_asistente.controller import mercado as mercado_ctrl
 from sb_asistente.controller import proyecto as proyecto_ctrl
 from sb_asistente.controller import salud as estado_servicio
+from sb_asistente.controller import whatsapp as whatsapp_ctrl
 from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
@@ -54,6 +66,7 @@ from sb_asistente.view.dependencias import (
     get_interprete,
     get_recomendar,
     get_responder,
+    get_whatsapp,
 )
 from sb_asistente.view.schemas import (
     AgenteIn,
@@ -445,6 +458,47 @@ def estado_acceso(
 ) -> dict[str, object]:
     """¿Sirve el código de acceso? Vigencia y mensajes restantes, sin gastar cupo (SPEC-072)."""
     return acceso_ctrl.estado(codigo)
+
+
+@app.get("/whatsapp/webhook", tags=["whatsapp"], response_class=PlainTextResponse)
+def verificar_webhook(
+    modo: Annotated[str | None, Query(alias="hub.mode")] = None,
+    token: Annotated[str | None, Query(alias="hub.verify_token")] = None,
+    reto: Annotated[str | None, Query(alias="hub.challenge", max_length=200)] = None,
+) -> str:
+    """Meta verifica el webhook: devolvemos ``hub.challenge`` solo si el token coincide (SPEC-073)."""
+    if not whatsapp_ctrl.configurado():
+        raise HTTPException(503, "WhatsApp no está configurado en este servidor (.env).")
+    if not whatsapp_ctrl.suscripcion_valida(modo, token) or reto is None:
+        raise HTTPException(403, "Token de verificación inválido.")
+    return reto
+
+
+@app.post("/whatsapp/webhook", tags=["whatsapp"])
+async def recibir_whatsapp(
+    request: Request,
+    tareas: BackgroundTasks,
+    enviador: Annotated[object, Depends(get_whatsapp)],
+    fabrica: Annotated[Callable, Depends(get_agente)],
+    firma: Annotated[str | None, Header(alias="X-Hub-Signature-256")] = None,
+) -> dict[str, bool]:
+    """Mensajes de WhatsApp: se valida la firma de Meta y se responde en segundo plano (SPEC-073).
+
+    Meta espera un 200 rápido; el agente tarda unos segundos, así que la respuesta sale por la Graph
+    API después. Sin firma válida no se procesa nada.
+    """
+    if not whatsapp_ctrl.configurado():
+        raise HTTPException(503, "WhatsApp no está configurado en este servidor (.env).")
+    cuerpo = await request.body()
+    if not whatsapp_ctrl.firma_valida(cuerpo, firma):
+        raise HTTPException(403, "Firma de Meta inválida.")
+    try:
+        evento = json.loads(cuerpo)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(400, "Evento inválido.") from exc
+    if enviador is not None and isinstance(evento, dict):
+        tareas.add_task(whatsapp_ctrl.atender, evento, lambda: fabrica(LLM_PROVIDER), enviador)
+    return {"ok": True}
 
 
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])
