@@ -219,13 +219,63 @@ def test_olvidar_borra_la_conversacion_y_el_codigo():
     assert agente.olvidadas == [whatsapp.canal_de(NUMERO)] and agente.preguntas == []
 
 
-def test_un_audio_recibe_aviso_de_solo_texto():
+def test_un_audio_con_codigo_recibe_aviso_de_solo_texto():
+    # Arrange
+    codigo, _ = acceso_ctrl.crear(24, 5)
+    enviador = Enviador()
+    whatsapp_ctrl.atender(evento(codigo, "m1"), lambda: Agente(), enviador)
+    # Act
+    whatsapp_ctrl.atender(evento(None, "m2", tipo="audio"), lambda: Agente(), enviador)
+    # Assert
+    assert enviador.enviados[-1][1] == whatsapp_ctrl.SOLO_TEXTO
+
+
+def test_sin_codigo_el_aviso_se_envia_una_sola_vez_al_dia():
+    # Arrange: cada respuesta de WhatsApp cuesta, aunque no use la IA
+    enviador = Enviador()
+    # Act
+    for i in range(5):
+        whatsapp_ctrl.atender(evento(f"hola {i}", f"m{i}"), lambda: Agente(), enviador)
+    whatsapp_ctrl.atender(evento(None, "audio", tipo="audio"), lambda: Agente(), enviador)
+    # Assert
+    assert len(enviador.enviados) == 1 and "código de acceso" in enviador.enviados[0][1]
+
+
+def test_codigos_inventados_tampoco_gastan_respuestas():
     # Arrange
     enviador = Enviador()
     # Act
-    whatsapp_ctrl.atender(evento(None, tipo="audio"), lambda: Agente(), enviador)
+    for i in range(4):
+        whatsapp_ctrl.atender(evento(f"YELO-AAAA-AAA{i + 2}", f"m{i}"), lambda: Agente(), enviador)
     # Assert
-    assert enviador.enviados[0][1] == whatsapp_ctrl.SOLO_TEXTO
+    assert len(enviador.enviados) == 1
+
+
+def test_un_codigo_valido_responde_aunque_ya_se_haya_avisado():
+    # Arrange
+    codigo, _ = acceso_ctrl.crear(24, 5)
+    enviador = Enviador()
+    whatsapp_ctrl.atender(evento("hola", "m1"), lambda: Agente(), enviador)
+    # Act
+    whatsapp_ctrl.atender(evento(codigo, "m2"), lambda: Agente(), enviador)
+    # Assert
+    assert len(enviador.enviados) == 2 and enviador.enviados[1][1].startswith("Código activado")
+
+
+def test_el_aviso_vuelve_a_enviarse_despues_del_plazo(tmp_path):
+    # Arrange
+    from datetime import UTC, datetime, timedelta
+
+    from sb_asistente.model.acceso import CodigosAcceso
+
+    codigos = CodigosAcceso(tmp_path / "a.sqlite")
+    ahora = datetime(2026, 11, 20, 12, tzinfo=UTC)
+    # Act
+    primero = codigos.puede_avisar("wa-x", 24, ahora)
+    mismo_dia = codigos.puede_avisar("wa-x", 24, ahora + timedelta(hours=23))
+    otro_dia = codigos.puede_avisar("wa-x", 24, ahora + timedelta(hours=24))
+    # Assert
+    assert (primero, mismo_dia, otro_dia) == (True, False, True)
 
 
 def test_si_el_agente_falla_la_persona_recibe_un_aviso():

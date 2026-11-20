@@ -27,6 +27,9 @@ cubre mi seguro, con qué aseguradora estoy y a qué canal oficial llamar, sin e
 - **R073.5** Un mismo mensaje (Meta reintenta) NO DEBE responderse dos veces.
 - **R073.6** «olvidar» DEBE borrar la conversación y el vínculo con el código del número.
 - **R073.7** Credenciales solo en `.env`; sin ellas el webhook responde 503.
+- **R073.8** A un número sin código vigente (texto, audio o un código inválido) se le explica cómo
+  pedirlo UNA vez cada `WHATSAPP_AVISO_HORAS` (24 por defecto); los demás mensajes no se responden,
+  porque Meta cobra cada mensaje de servicio desde octubre de 2026.
 
 ## Criterios de aceptación
 - **AC1** · **Dado** el token correcto, **cuando** Meta verifica, **entonces** recibe el reto.

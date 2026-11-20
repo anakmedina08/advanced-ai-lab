@@ -248,6 +248,9 @@ WHATSAPP_GRAPH_VERSION: Final[str] = os.getenv("WHATSAPP_GRAPH_VERSION", "v23.0"
 # El número es público: por defecto la IA solo responde con un código de acceso (SPEC-072).
 WHATSAPP_EXIGE_CODIGO: Final[bool] = os.getenv("WHATSAPP_EXIGE_CODIGO", "1") == "1"
 WHATSAPP_RECORDAR_IDS: Final[int] = 500  # ids de mensaje ya atendidos (Meta reintenta envíos)
+# A quien escribe sin código se le explica cómo pedirlo una sola vez cada tantas horas: cada
+# respuesta de WhatsApp tiene costo (Meta cobra los mensajes de servicio desde octubre de 2026).
+WHATSAPP_AVISO_HORAS: Final[float] = float(os.getenv("WHATSAPP_AVISO_HORAS", "24"))
 TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad

@@ -66,6 +66,8 @@ def atender(
         except Exception:  # noqa: BLE001 - el detalle va al log; la persona recibe un aviso
             logger.exception("whatsapp: no se pudo responder un mensaje")
             texto = ERROR
+        if texto is None:  # sin código y ya avisado: no se responde (cada respuesta cuesta)
+            continue
         try:
             enviador.enviar(m.de, texto)
             respondidos += 1
@@ -74,8 +76,15 @@ def atender(
     return respondidos
 
 
-def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsistente]) -> str:
+def _sin_acceso(canal: str, motivo: str) -> str | None:
+    """El aviso de que falta un código, una sola vez por número cada ``WHATSAPP_AVISO_HORAS``."""
+    return motivo if _codigos().puede_avisar(canal, config.WHATSAPP_AVISO_HORAS) else None
+
+
+def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsistente]) -> str | None:
     if m.texto is None:
+        if config.WHATSAPP_EXIGE_CODIGO and not _codigos().tiene_vigente(canal):
+            return _sin_acceso(canal, PIDE_CODIGO)
         return SOLO_TEXTO
     texto = m.texto
     activado = ""
@@ -84,7 +93,7 @@ def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsis
         try:
             c = _codigos().vincular(canal, codigo)
         except AccesoDenegadoError as exc:
-            return str(exc)
+            return _sin_acceso(canal, str(exc))  # probar códigos inventados no gasta respuestas
         activado = f"Código activado: tienes {c.restantes} mensajes con IA hasta el {_hora(c)}."
         # «YELO-… ¿qué cubre el SOAT?»: se activa y se responde la pregunta en el mismo mensaje.
         texto = whatsapp.sin_codigo(texto)
@@ -98,7 +107,7 @@ def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsis
         try:
             _codigos().consumir_canal(canal)  # gasta el mensaje ANTES de llamar al LLM
         except AccesoDenegadoError as exc:
-            return PIDE_CODIGO if "aún no tiene" in str(exc) else f"{exc} {PIDE_CODIGO}"
+            return _sin_acceso(canal, PIDE_CODIGO if "aún no tiene" in str(exc) else f"{exc} {PIDE_CODIGO}")
     turno = agente().responder(texto, canal, canal)
     respuesta = whatsapp.para_whatsapp(turno.salida.respuesta, turno.salida.fuentes)
     return f"{activado}\n\n{respuesta}" if activado else respuesta

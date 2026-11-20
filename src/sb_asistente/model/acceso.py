@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS vinculos (
     creado TEXT NOT NULL
 )
 """
+_AVISOS = """
+CREATE TABLE IF NOT EXISTS avisos (
+    canal TEXT PRIMARY KEY,
+    ultimo TEXT NOT NULL
+)
+"""
 _ESQUEMA = """
 CREATE TABLE IF NOT EXISTS codigos (
     hash TEXT PRIMARY KEY,
@@ -112,6 +118,7 @@ class CodigosAcceso:
         with self._conexion() as con:
             con.execute(_ESQUEMA)
             con.execute(_VINCULOS)
+            con.execute(_AVISOS)
 
     @contextmanager
     def _conexion(self) -> Iterator[sqlite3.Connection]:
@@ -175,6 +182,30 @@ class CodigosAcceso:
         if fila is None:
             raise AccesoDenegadoError("Este número aún no tiene un código de acceso activo.")
         return self._consumir(fila["hash"], ahora)
+
+    def tiene_vigente(self, canal: str, ahora: datetime | None = None) -> bool:
+        """True si el canal tiene un código vinculado que sirve ahora (sin gastar cupo)."""
+        ahora = ahora or datetime.now(UTC)
+        with self._conexion() as con:
+            fila = con.execute("SELECT hash FROM vinculos WHERE canal = ?", (canal,)).fetchone()
+        actual = self._estado(fila["hash"]) if fila else None
+        return actual is not None and actual.vigente(ahora)
+
+    def puede_avisar(self, canal: str, horas: float, ahora: datetime | None = None) -> bool:
+        """True (y lo anota) si no se le ha avisado al canal en las últimas ``horas``.
+
+        Sirve para no responder una y otra vez a quien escribe sin código: cada respuesta de
+        WhatsApp tiene costo, aunque no use la IA. Es atómico: dos mensajes seguidos dan un solo aviso.
+        """
+        ahora = ahora or datetime.now(UTC)
+        limite = (ahora - timedelta(hours=horas)).isoformat()
+        with self._conexion() as con:
+            cambio = con.execute(
+                "INSERT INTO avisos (canal, ultimo) VALUES (?, ?) "
+                "ON CONFLICT(canal) DO UPDATE SET ultimo = excluded.ultimo WHERE avisos.ultimo <= ?",
+                (canal, ahora.isoformat(), limite),
+            )
+        return cambio.rowcount == 1
 
     def desvincular(self, canal: str) -> bool:
         """Quita el código del canal."""
