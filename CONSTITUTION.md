@@ -57,6 +57,8 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Identificar la aseguradora de la persona: pistas escritas o su recibo/carátula leído en memoria
   con OCR local (sin LLM); solo sale el nombre del registro, nunca el texto. El agente compara y
   atiende con todas las aseguradoras (SPEC-071, ADR-030).
+- Códigos de acceso: en el sitio público el chat con IA exige un código (`sb acceso crear`) que
+  vence y trae un cupo de mensajes; se guarda solo su hash (SPEC-072, ADR-031).
 
 ### Fuera del alcance (por ahora)
 
@@ -212,6 +214,7 @@ git push
 | 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
 | 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
 | 2026-11-19 | PDF del documento: capa de texto con `pypdf` y, si es escaneado, páginas a imagen con `pypdfium2` + Tesseract (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Los comprobantes PSE y las carátulas llegan casi siempre en PDF; sin LLM y sin escribir en disco |
+| 2026-11-19 | Códigos de acceso con vencimiento y cupo para lo que llama al LLM en el sitio público (SPEC-072, [ADR-031](docs/decisiones/ADR-031-codigos-acceso.md)) | Controlar el gasto de tokens sin cuentas de usuario; lo local sigue libre |
 
 ## 10. Notas y tareas pendientes
 
