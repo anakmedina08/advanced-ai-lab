@@ -54,6 +54,9 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Canales por aseguradora y servicio: la persona declara su aseguradora (se guarda en su perfil,
   sin pólizas ni documentos) y el asistente la lleva al WhatsApp o a la línea oficial de ese
   servicio, leídos de las páginas oficiales (SPEC-070, ADR-029).
+- Identificar la aseguradora de la persona: pistas escritas o su recibo/carátula leído en memoria
+  con OCR local (sin LLM); solo sale el nombre del registro, nunca el texto. El agente compara y
+  atiende con todas las aseguradoras (SPEC-071, ADR-030).
 
 ### Fuera del alcance (por ahora)
 
@@ -207,6 +210,7 @@ git push
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
 | 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
+| 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
 
 ## 10. Notas y tareas pendientes
 
