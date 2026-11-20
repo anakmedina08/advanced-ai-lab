@@ -59,6 +59,8 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
   atiende con todas las aseguradoras (SPEC-071, ADR-030).
 - Códigos de acceso: en el sitio público el chat con IA exige un código (`sb acceso crear`) que
   vence y trae un cupo de mensajes; se guarda solo su hash (SPEC-072, ADR-031).
+- WhatsApp: número propio con la Cloud API de Meta; el webhook valida la firma de Meta, exige un
+  código de acceso por número y guarda solo el hash del número (SPEC-073, ADR-032).
 
 ### Fuera del alcance (por ahora)
 
@@ -215,6 +217,7 @@ git push
 | 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
 | 2026-11-19 | PDF del documento: capa de texto con `pypdf` y, si es escaneado, páginas a imagen con `pypdfium2` + Tesseract (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Los comprobantes PSE y las carátulas llegan casi siempre en PDF; sin LLM y sin escribir en disco |
 | 2026-11-19 | Códigos de acceso con vencimiento y cupo para lo que llama al LLM en el sitio público (SPEC-072, [ADR-031](docs/decisiones/ADR-031-codigos-acceso.md)) | Controlar el gasto de tokens sin cuentas de usuario; lo local sigue libre |
+| 2026-11-19 | Asistente por WhatsApp con la Cloud API de Meta: firma obligatoria, códigos de acceso por número y sin el número en claro (SPEC-073, [ADR-032](docs/decisiones/ADR-032-whatsapp-cloud-api.md)) | Atender donde la gente ya resuelve sus trámites, con el gasto de tokens controlado |
 
 ## 10. Notas y tareas pendientes
 
