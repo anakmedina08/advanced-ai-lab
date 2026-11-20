@@ -4,7 +4,8 @@ Cada requisito de los dos cursos con su evidencia en este repositorio. Estados:
 **✅ cumplido** · **🟡 en curso** · **⏳ pendiente** · **⛔ no planeado** (cerrado como *not planned* con su motivo).
 La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia, el subagente
 `documentador` actualiza esta tabla en el mismo Pull Request. Actualizada para los anuncios 006
-(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026; guion en
+(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026, y 008 (Gestión, Módulo 4)
+del 19 de noviembre de 2026; guion en
 [`sustentacion.md`](sustentacion.md). La interfaz la muestra en
 **Sustentación › Entregables por curso** (`view/app_pages/sustentacion.py`).
 
@@ -106,4 +107,10 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Panel en vivo del desarrollo con agentes | ⛔ | no planeado (T-22): los eventos quedan en `logs/agent-events.jsonl` |
 | Diagrama del flujo de inferencia en el README | ✅ | [`README.md`](../README.md#flujo-de-inferencia) |
 | Ética de datos (robots.txt, Ley 1581, sin datos reales versionados) | ✅ | `docs/alcance.md`, `.gitignore`, hook `forbid-data-and-secrets`, validación en `schemas.py`, personas difuminadas en fotos |
+| M4 · Proyecto en GitLab con `.gitlab-ci.yml` (lint → test → build → deploy) (Gestión 008) | ⏳ | historias M4-01 y M4-02 · [resumen del anuncio](anuncios/551475-anuncio-008.md) |
+| M4 · Imagen publicada en el Container Registry o Docker Hub con tag trazable | ⏳ | historia M4-02 |
+| M4 · Droplet/VPS con Docker, firewall y proxy inverso con HTTPS | ⏳ | historias M4-03 y M4-04 |
+| M4 · Deploy en vivo por SSH con healthcheck *healthy* y sin caída | ⏳ | historia M4-05; `HEALTHCHECK` ya en el `Dockerfile` |
+| M4 · Secretos solo en variables de CI enmascaradas | 🟡 | `.env` fuera de Git y hook `forbid-data-and-secrets`; faltan las variables de CI (M4-06) |
+| M4 · GitLab MCP conectado en OpenCode y `glab` autenticado | ⏳ | historia M4-07 |
 | Sin Streamlit, Gradio ni Dash en el proyecto (Técnicas 006, Gestión 007) | 🟡 | `streamlit` sigue como herramienta interna (ADR-021); se retira en SPEC-052 · catálogo en [`docs/anuncios/herramientas.md`](anuncios/herramientas.md) |

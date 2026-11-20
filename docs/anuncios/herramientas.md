@@ -70,3 +70,15 @@ auditor (K4) falla si el proyecto usa una herramienta ⛔.
 | ADR por decisión, AGENTS.md + GGA | — | ⚠️ deseable | 007 | — | ✅ |
 | HF Spaces o Docker multi-stage | — | ⚠️ deseable | 007 | — | ✅ multi-stage |
 | Logs estructurados + latencia | — | ⚠️ deseable | 007 | — | 🟡 |
+| GitLab (proyecto + `.gitlab-ci.yml` lint → test → build → deploy) | — | ✅ exigida | 008 | GitHub Actions se acepta para el pipeline, pero la demo abre GitLab | ❌ |
+| GitLab Container Registry / Docker Hub (imagen con tags) | — | ✅ exigida | 008 | — | ❌ (`push: false`) |
+| Droplet / VPS con Docker y firewall | — | ✅ exigida | 008 | DigitalOcean en el laboratorio | ❌ |
+| Proxy inverso con HTTPS (Nginx, Caddy o Traefik) | — | ✅ exigida | 008 | — | ❌ |
+| Deploy por SSH con healthcheck | — | ✅ exigida | 008 | — | ❌ (el HEALTHCHECK del Dockerfile ya existe) |
+| Variables de CI enmascaradas (`SSH_KEY`, `REGISTRY_USER`/`REGISTRY_PASS`, `CI_JOB_TOKEN`) | — | ✅ exigida | 008 | — | ❌ |
+| GitLab MCP en OpenCode | — | ✅ exigida | 008 | `opencode mcp list` → *connected* | ❌ |
+| GitLab CLI | `glab` | ✅ exigida | 008 | `glab auth status`, `glab pipeline status` | ❌ |
+| Docker-in-Docker en CI | — | ✅ exigida | 008 | build de la imagen en el pipeline | ❌ |
+| GitLab Generic Packages (modelo) | — | ⚠️ si aplica | 008 | Nuestro modelo viene de Hugging Face (MaaS) | ❓ |
+| VS Code | — | ✅ exigida | 008 | Abierto en la raíz con terminal | ❓ el equipo usa Antigravity |
+| Videos, diapositivas, capturas como evidencia | — | ⛔ no permitida | 008 | Demo en vivo | no |
