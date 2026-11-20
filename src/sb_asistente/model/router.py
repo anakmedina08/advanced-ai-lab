@@ -66,7 +66,8 @@ _PERSONAL: Final[tuple[str, ...]] = (
     r"\bque (sabes|recuerdas) de mi\b",
     r"^(muchas )?gracias\b",
 )
-_SEPARADORES = re.compile(r"\b(y|con|frente a|versus|vs|ademas|tambien)\b|[,;]")
+_SEPARADORES = re.compile(r"\b(y|con|frente a|versus|vs|ademas|tambien)\b")
+_PUNTUACION = re.compile(r"[,;]")
 
 
 @dataclass(slots=True)
@@ -121,8 +122,12 @@ def enrutar(mensaje: str) -> Decision:
         return _decision("fuera_de_alcance", intencion.confianza, intencion.senales)
     if _hay(texto, _FUERA) and not _hay(texto, _DOMINIO):  # «recomiéndame una película»
         return _decision("fuera_de_alcance", 0.85, ["tema ajeno sin vocabulario de seguros"])
+    # Se parte por «,» y «;» antes de normalizar: normalizar() borra los signos de puntuación.
     clausulas = [
-        c.strip() for c in _SEPARADORES.split(texto) if c and c.strip() and not _SEPARADORES.fullmatch(c)
+        c.strip()
+        for parte in _PUNTUACION.split(mensaje)
+        for c in _SEPARADORES.split(normalizar(parte))
+        if c and c.strip() and not _SEPARADORES.fullmatch(c)
     ]
     datos = [c for c in clausulas if _es_datos(c)]
     if datos:
