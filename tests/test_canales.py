@@ -22,6 +22,9 @@ PAGINA = """<html><body>
 <section><h2>Salud</h2><p>Ambulancias y citas: (601) 418 8800</p></section>
 <section><h2>Ventas</h2><p>Cotiza tu seguro: <a href="tel:6013078000">601 307 8000</a></p></section>
 <script>var x = "#999";</script>
+<!-- HFCM by 99 Robots - Snippet # 376: Organization -->
+<!-- Snippet #377 -->
+<p>Pedido &#123; y referencia #a12</p>
 </body></html>"""
 
 
@@ -35,6 +38,8 @@ def test_canales_de_html_lee_whatsapp_tel_y_numeros_del_texto():
     assert encontrados[("fijo", "576014188800")] == "salud"
     assert encontrados[("fijo", "576013078000")] == "ventas"
     assert ("linea_corta", "#999") not in encontrados  # el texto de los scripts no cuenta
+    assert ("linea_corta", "#376") not in encontrados  # ni los comentarios HTML (caso real: MAPFRE)
+    assert ("linea_corta", "#377") not in encontrados
 
 
 @pytest.mark.parametrize(

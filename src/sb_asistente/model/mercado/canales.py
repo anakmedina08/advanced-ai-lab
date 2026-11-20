@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Literal, cast
 from urllib.parse import unquote, urlsplit
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Comment, Doctype, ProcessingInstruction, Tag
 
 from sb_asistente.config import MERCADO_CONTEXTO_CANAL, MERCADO_WHATSAPP_MIN_FRACCION
 from sb_asistente.model.mercado.contactos import normalizar_numero
@@ -53,7 +53,8 @@ _REGLAS_SERVICIO: tuple[tuple[str, Servicio], ...] = (
     (r"venta|cotiz|asesor comercial|compra", "ventas"),
 )
 
-_LINEA_CORTA = re.compile(r"(?<![\w#])#\s?(\d{3,4})\b")
+_LINEA_CORTA = re.compile(r"(?<![\w#&])#(\d{3,4})\b")  # «#624» pegado: «# 376» suele ser otra cosa
+_NO_VISIBLE: frozenset[str] = frozenset({"script", "style", "noscript", "template", "head", "title"})
 _LINEA_NACIONAL = re.compile(r"\b01\s*-?\s*8000\s*-?\s*(\d{3})\s*-?\s*(\d{3,4})\b")
 _FIJO = re.compile(r"\(?\b(60\d)\)?\s*-?\s*(\d{3})\s*-?\s*(\d{4})\b")
 
@@ -146,7 +147,10 @@ def canales_de_html(html: str, url: str) -> list[Canal]:
             agregar("whatsapp", numero, _contexto(a))
     for nodo in soup.find_all(string=True):
         texto = str(nodo)
-        if not re.search(r"\d", texto) or getattr(nodo.parent, "name", "") in {"script", "style"}:
+        # Solo texto visible: fuera comentarios HTML («Snippet # 376»), scripts, estilos y plantillas.
+        if isinstance(nodo, (Comment, Doctype, ProcessingInstruction)) or not re.search(r"\d", texto):
+            continue
+        if getattr(nodo.parent, "name", "") in _NO_VISIBLE:
             continue
         contexto = _contexto(nodo.parent) if isinstance(nodo.parent, Tag) else texto
         for m in _LINEA_CORTA.finditer(texto):
