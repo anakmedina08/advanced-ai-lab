@@ -671,7 +671,8 @@ def test_un_sitemap_de_robots_en_otro_dominio_no_se_pide(tmp_path):
     # Act
     plan = mercado.descubrir_una(mercado.ClienteCortes(sesion, sleep=sin_pausa), ASEGURADORA, tmp_path)
     # Assert
-    assert sesion.pedidas == [f"{SITIO}/robots.txt"]
+    assert "https://otro-sitio.com/mapa.xml" not in sesion.pedidas
+    assert all(u.startswith(SITIO) for u in sesion.pedidas)
     assert plan["estado"] == "sin sitemap con páginas del sitio"
 
 
@@ -751,3 +752,77 @@ def test_la_cli_de_mercado_convierte_un_valor_invalido_en_mensaje(capsys, monkey
     codigo = cli.main(["mercado", "comparar", "hogar", "--aseguradoras", *ids])
     # Assert
     assert codigo == 1 and "como máximo" in capsys.readouterr().out
+
+
+def test_si_robots_no_declara_sitemap_se_prueban_las_rutas_comunes(tmp_path):
+    # Arrange: un WordPress sin sitemap.xml pero con wp-sitemap.xml
+    sesion = SitioFalso(
+        {
+            f"{SITIO}/robots.txt": (200, "User-agent: *\nDisallow: /wp-admin/"),
+            f"{SITIO}/wp-sitemap.xml": (200, sitemap(f"{SITIO}/seguro-de-hogar")),
+        }
+    )
+    # Act
+    plan = mercado.descubrir_una(mercado.ClienteCortes(sesion, sleep=sin_pausa), ASEGURADORA, tmp_path)
+    # Assert
+    assert [e["url"] for e in plan["seleccionadas"]] == [f"{SITIO}/seguro-de-hogar"]
+    assert sesion.pedidas == [
+        f"{SITIO}/robots.txt",
+        f"{SITIO}/sitemap.xml",
+        f"{SITIO}/sitemap_index.xml",
+        f"{SITIO}/wp-sitemap.xml",
+        f"{SITIO}/sitemap-index.xml",
+    ]
+
+
+def test_las_rutas_comunes_no_se_prueban_si_lo_declarado_ya_trajo_paginas(tmp_path):
+    # Arrange / Act
+    sesion = sitio_completo()
+    mercado.descubrir_una(mercado.ClienteCortes(sesion, sleep=sin_pausa), ASEGURADORA, tmp_path)
+    # Assert
+    assert sesion.pedidas == [f"{SITIO}/robots.txt", f"{SITIO}/mapa.xml"]
+
+
+def test_procesar_deja_el_directorio_de_canales(tmp_path):
+    # Arrange
+    sesion = sitio_completo()
+    bronze, silver, gold_dir = tmp_path / "raw", tmp_path / "silver", tmp_path / "gold"
+    mercado.descubrir(sesion, [ASEGURADORA], out_dir=bronze, sleep=sin_pausa)
+    mercado.capturar(sesion, [ASEGURADORA], out_dir=bronze, sleep=sin_pausa)
+    # Act
+    resumen = mercado.procesar(
+        [ASEGURADORA], bronze, silver, gold_dir, principal_capture=tmp_path / "no.jsonl"
+    )
+    # Assert
+    directorio = json.loads((gold_dir / "canales.json").read_text())
+    assert resumen["prueba"]["canales"] == 1
+    assert directorio["prueba"][0]["valor"] == "573001234567"
+
+
+def test_la_cli_muestra_los_canales_de_una_aseguradora(capsys, monkeypatch):
+    # Arrange
+    from sb_asistente.model.mercado.canales import CanalAgregado
+    from sb_asistente.view import cli
+
+    datos = {"mapfre": [CanalAgregado("linea_corta", "#322", {"autos"}, ["https://mapfre.co/autos"], 2)]}
+    monkeypatch.setattr(mercado, "leer_canales", lambda ruta=None: datos)
+    # Act
+    codigo = cli.main(["mercado", "canales", "mapfre", "--servicio", "autos"])
+    # Assert
+    salida = capsys.readouterr().out
+    assert codigo == 0 and "#322" in salida and "(este servicio)" in salida
+
+
+def test_el_mismo_sitio_con_o_sin_www_es_el_mismo_sitio(tmp_path):
+    # Arrange: robots.txt en www, sitemap y páginas sin www (caso real: Positiva)
+    sin_www = SITIO.replace("://www.", "://")
+    sesion = SitioFalso(
+        {
+            f"{SITIO}/robots.txt": (200, f"User-agent: *\nSitemap: {sin_www}/sitemap_index.xml"),
+            f"{sin_www}/sitemap_index.xml": (200, sitemap(f"{sin_www}/seguro-de-hogar")),
+        }
+    )
+    # Act
+    plan = mercado.descubrir_una(mercado.ClienteCortes(sesion, sleep=sin_pausa), ASEGURADORA, tmp_path)
+    # Assert
+    assert [e["url"] for e in plan["seleccionadas"]] == [f"{sin_www}/seguro-de-hogar"]

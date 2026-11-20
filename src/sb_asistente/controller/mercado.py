@@ -19,8 +19,10 @@ from urllib.parse import urlsplit
 
 from sb_asistente.config import (
     BRONZE_HTML_SUBDIR,
+    CAPTURE_LOG,
     CHUNKS_JSONL,
     MERCADO_BRONZE_DIR,
+    MERCADO_CANALES_JSON,
     MERCADO_CANDIDATOS_RELEVANCIA,
     MERCADO_CAPTURA,
     MERCADO_CHUNKS_JSONL,
@@ -33,16 +35,17 @@ from sb_asistente.config import (
     MERCADO_POR_ASEGURADORA,
     MERCADO_RESUMEN_JSON,
     MERCADO_SILVER_DIR,
+    MERCADO_TELEFONOS_MAX,
     MERCADO_WHATSAPP_MAX,
     MIN_PAGE_CHARS,
     REQUEST_DELAY_S,
     REQUEST_TIMEOUT_S,
     ROBOTS_RUTA,
     SECTION_RULES,
-    SITEMAP_RUTA,
+    SITEMAP_RUTAS_COMUNES,
     USER_AGENT,
 )
-from sb_asistente.model.mercado import contactos, secciones
+from sb_asistente.model.mercado import canales, contactos, secciones
 from sb_asistente.model.mercado.comparar import Oferta, comparar
 from sb_asistente.model.mercado.registro import Aseguradora, cargar_registro, detectar, por_id
 from sb_asistente.model.processing import clean, gold
@@ -88,19 +91,29 @@ class ClienteCortes:
         return r.status_code, r.content
 
 
+def _host(url_o_dominio: str) -> str:
+    """Host en minúsculas y sin «www.» (``www.positiva.gov.co`` y ``positiva.gov.co`` son el mismo sitio)."""
+    host = urlsplit(url_o_dominio).netloc if "://" in url_o_dominio else url_o_dominio
+    return host.lower().removeprefix("www.")
+
+
 def _del_sitio(url: str, a: Aseguradora) -> bool:
-    """True si la URL es del mismo host que el sitio (no basta con que empiece igual)."""
-    return urlsplit(url).netloc.lower() == a.dominio.lower()
+    """True si la URL es del mismo sitio (mismo host, con o sin «www.»; no basta con que empiece igual)."""
+    return _host(url) == _host(a.dominio)
 
 
-def _sitemaps(robots_txt: str, aseguradora: Aseguradora) -> list[str]:
-    """Sitemaps declarados en robots.txt; si no declara ninguno, ``/sitemap.xml``."""
-    declarados = [
+def _sitemaps(robots_txt: str) -> list[str]:
+    """Sitemaps declarados en robots.txt (puede no haber ninguno)."""
+    return [
         linea.split(":", 1)[1].strip()
         for linea in robots_txt.splitlines()
         if linea.lower().startswith("sitemap:")
     ]
-    return declarados or [f"{aseguradora.sitio}{SITEMAP_RUTA}"]
+
+
+def _sitemaps_comunes(a: Aseguradora) -> list[str]:
+    """Rutas habituales de sitemap (WordPress, Yoast, índices) para cuando robots.txt no ayuda."""
+    return [f"{a.sitio}{ruta}" for ruta in SITEMAP_RUTAS_COMUNES]
 
 
 def _guardar_plan(plan: dict[str, object], carpeta: Path) -> dict[str, object]:
@@ -129,11 +142,26 @@ def descubrir_una(cliente: ClienteCortes, a: Aseguradora, out_dir: Path) -> dict
     (carpeta / ROBOTS_RUTA.lstrip("/")).write_text(robots_txt, encoding="utf-8")
     entradas: list[SitemapEntry] = []
     # Igual que los hijos: un sitemap declarado en robots.txt solo se pide si es del mismo sitio.
-    pendientes = [u for u in _sitemaps(robots_txt, a) if _del_sitio(u, a)]
-    visitados = 0
-    while pendientes and visitados < MERCADO_MAX_SITEMAPS:
+
+    def permitido(u: str) -> bool:
+        """Mismo sitio y permitido por robots.txt (vale para sitemaps declarados, hijos y comunes)."""
+        return _del_sitio(u, a) and robots.can_fetch(USER_AGENT, u)
+
+    pendientes = [u for u in _sitemaps(robots_txt) if permitido(u)]
+    comunes_probadas = False
+    visitados: set[str] = set()
+    while len(visitados) < MERCADO_MAX_SITEMAPS:
+        if not pendientes:
+            if entradas or comunes_probadas:
+                break
+            # Lo declarado no trajo páginas: se prueban las rutas comunes una sola vez.
+            comunes_probadas = True
+            pendientes = [u for u in _sitemaps_comunes(a) if u not in visitados and permitido(u)]
+            continue
         url = pendientes.pop(0)
-        visitados += 1
+        if url in visitados:
+            continue
+        visitados.add(url)
         codigo, xml = cliente.get(url)
         if codigo != 200 or not xml:
             continue
@@ -143,7 +171,7 @@ def descubrir_una(cliente: ClienteCortes, a: Aseguradora, out_dir: Path) -> dict
             continue
         entradas.extend(e for e in nuevas if _del_sitio(e.url, a))
         # Un sitemap hijo solo se pide si es del mismo sitio y robots.txt lo permite.
-        pendientes.extend(h for h in hijos if _del_sitio(h, a) and robots.can_fetch(USER_AGENT, h))
+        pendientes.extend(h for h in hijos if permitido(h))
     if not entradas:
         return _guardar_plan(plan | {"estado": "sin sitemap con páginas del sitio"}, carpeta)
     excluir = list(secciones.EXCLUIR_GENERICO)
@@ -282,13 +310,24 @@ def procesar_una(
     return chunks, resumen
 
 
+def canales_de_bronze(carpeta: Path, capture_log: Path) -> list[canales.CanalAgregado]:
+    """Canales de atención de todas las páginas capturadas de un sitio (con la regla de privacidad)."""
+    capturas = [r for r in load_captured(capture_log).values() if r.status == 200 and r.file]
+    por_pagina = []
+    for rec in capturas:
+        html = (carpeta / BRONZE_HTML_SUBDIR / str(rec.file)).read_text(encoding="utf-8", errors="replace")
+        por_pagina.append(canales.canales_de_html(html, rec.url))
+    return canales.agregar_canales(por_pagina)
+
+
 def procesar(
     registro: Iterable[Aseguradora],
     bronze_dir: Path = MERCADO_BRONZE_DIR,
     silver_dir: Path = MERCADO_SILVER_DIR,
     gold_dir: Path = MERCADO_GOLD_DIR,
+    principal_capture: Path = CAPTURE_LOG,
 ) -> dict[str, dict[str, object]]:
-    """Regenera Silver y Gold de todas las aseguradoras capturadas (sin volver a la web)."""
+    """Regenera Silver, Gold y el directorio de canales de las aseguradoras capturadas (sin red)."""
     todos: list[dict[str, object]] = []
     resumen: dict[str, dict[str, object]] = {}
     for a in activas(registro):
@@ -297,6 +336,24 @@ def procesar(
         chunks, resumen[a.id] = procesar_una(a, bronze_dir, silver_dir)
         todos.extend(chunks)
     gold_dir.mkdir(parents=True, exist_ok=True)
+    directorio = {
+        a.id: [
+            canales.como_dict(c)
+            for c in canales_de_bronze(bronze_dir / a.id, bronze_dir / a.id / MERCADO_CAPTURA)
+        ]
+        for a in activas(registro)
+        if (bronze_dir / a.id / MERCADO_CAPTURA).is_file()
+    }
+    # Seguros Bolívar: sus canales salen del Bronze del pipeline principal.
+    if principal_capture.is_file():
+        directorio[MERCADO_ID_PRINCIPAL] = [
+            canales.como_dict(c) for c in canales_de_bronze(principal_capture.parent, principal_capture)
+        ]
+    for ident, lista in directorio.items():
+        resumen.setdefault(ident, {})["canales"] = len(lista)
+    (gold_dir / MERCADO_CANALES_JSON.name).write_text(
+        json.dumps(directorio, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     (gold_dir / MERCADO_CHUNKS_JSONL.name).write_text(
         "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in todos), encoding="utf-8"
     )
@@ -443,3 +500,66 @@ def validar_seccion(seccion: str) -> str:
     if seccion not in SECCIONES_VALIDAS:
         raise ValueError(f"Sección desconocida: «{seccion}». Válidas: {', '.join(sorted(SECCIONES_VALIDAS))}")
     return seccion
+
+
+def leer_canales(ruta: Path = MERCADO_CANALES_JSON) -> dict[str, list[canales.CanalAgregado]]:
+    """Directorio de canales que dejó ``procesar`` (vacío si aún no se generó)."""
+    if not ruta.is_file():
+        return {}
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    return {ident: [canales.desde_dict(d) for d in lista] for ident, lista in datos.items()}
+
+
+def canales_para(
+    aseguradora: str,
+    servicio: canales.Servicio | None = None,
+    resumen: str = "",
+    ruta: Path = MERCADO_CANALES_JSON,
+) -> dict[str, object]:
+    """A dónde llevar a una persona según su aseguradora y lo que necesita.
+
+    Devuelve el WhatsApp oficial (con el enlace de traspaso ``wa.me`` y el resumen del caso ya
+    escrito), los teléfonos para ese servicio (con su enlace ``tel:``) y la página oficial de donde
+    salió cada dato. Si la aseguradora no publica un canal para ese servicio, devuelve su línea
+    general; si no hay nada, listas vacías (la interfaz muestra la página de contacto).
+    """
+    elegida = aseguradoras([aseguradora])[0]  # KeyError si no está registrada
+    if servicio is None:  # sin servicio explícito, se deduce del resumen del caso
+        servicio = canales.servicio_de(resumen)
+    whatsapp, telefonos = canales.elegir(
+        leer_canales(ruta).get(elegida.id, []), servicio, MERCADO_TELEFONOS_MAX
+    )
+
+    def especifico(c: canales.CanalAgregado) -> bool:
+        return servicio in c.servicios
+
+    return {
+        "aseguradora": elegida.id,
+        "nombre": elegida.nombre,
+        "servicio": servicio,
+        "whatsapp": None
+        if whatsapp is None
+        else {
+            "numero": whatsapp.valor,
+            "enlace": contactos.enlace_whatsapp(whatsapp.valor, resumen)
+            if resumen
+            else f"https://wa.me/{whatsapp.valor}",
+            "especifico": especifico(whatsapp),
+            "fuente": whatsapp.fuentes[0] if whatsapp.fuentes else None,
+        },
+        "telefonos": [
+            {
+                "tipo": t.tipo,
+                "valor": t.valor,
+                "marcar": canales.enlace_telefono(t),
+                "especifico": especifico(t),
+                "fuente": t.fuentes[0] if t.fuentes else None,
+            }
+            for t in telefonos
+        ],
+        "sitio": elegida.sitio or None,
+    }
+
+
+# Servicios que la persona puede pedir (``ventas`` existe en los datos, pero no se usa para atender).
+SERVICIOS_ATENCION: tuple[str, ...] = tuple(s for s in canales.SERVICIOS if s != "ventas")

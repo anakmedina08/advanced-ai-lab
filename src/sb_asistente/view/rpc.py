@@ -48,6 +48,7 @@ from sb_asistente.config import (
     RECO_K,
     RECO_K_MAX,
     RPC_MAX_LOTE,
+    WHATSAPP_MAX_TEXTO,
 )
 from sb_asistente.controller import chat, herramientas, recomendador
 from sb_asistente.controller import mercado as mercado_ctrl
@@ -144,6 +145,7 @@ class PerfilParams(_Params):
     k: Annotated[int, Field(ge=1, le=RECO_K_MAX)] = RECO_K
 
 
+ServicioCanal = Literal["autos", "soat", "hogar", "salud", "vida", "arl", "pqr", "general"]
 SeccionMercado = Annotated[
     str, AfterValidator(mercado_ctrl.validar_seccion), Field(examples=["hogar_y_mascotas", "movilidad"])
 ]
@@ -176,6 +178,19 @@ class CompararParams(_Params):
     @classmethod
     def _sin_datos_personales(cls, valor: str) -> str:
         return rechazar_datos_personales(valor)
+
+
+class CanalesParams(_Params):
+    """``mercado.canales``: a dónde llevar a la persona según su aseguradora y lo que necesita."""
+
+    aseguradora: IdAseguradora
+    servicio: ServicioCanal | None = None
+    resumen: Annotated[str, Field(max_length=WHATSAPP_MAX_TEXTO)] = ""
+
+    @field_validator("resumen")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor) if valor else valor
 
 
 class ClasificarParams(_Params):
@@ -235,6 +250,11 @@ def _mercado_buscar(p: MercadoBuscarParams, ctx: Contexto) -> dict[str, object]:
         mercado_ctrl.aseguradoras([p.aseguradora])  # KeyError (-32001) si no está registrada
     fragmentos = ctx.mercado().buscar(p.consulta, k=p.k, seccion=p.seccion, aseguradora=p.aseguradora)
     return {"fragmentos": [_fragmento(f) for f in fragmentos]}
+
+
+def _mercado_canales(p: CanalesParams, ctx: Contexto) -> dict[str, object]:
+    """WhatsApp y teléfonos oficiales de la aseguradora para el servicio que necesita la persona."""
+    return mercado_ctrl.canales_para(p.aseguradora, p.servicio, p.resumen)
 
 
 def _mercado_comparar(p: CompararParams, ctx: Contexto) -> dict[str, object]:
@@ -353,6 +373,9 @@ METODOS: dict[str, Metodo] = {
     ),
     "mercado.buscar": Metodo(
         MercadoBuscarParams, _mercado_buscar, "Búsqueda en la información pública de varias aseguradoras."
+    ),
+    "mercado.canales": Metodo(
+        CanalesParams, _mercado_canales, "WhatsApp y teléfonos oficiales de una aseguradora para un servicio."
     ),
     "mercado.comparar": Metodo(
         CompararParams, _mercado_comparar, "La misma consulta en varias aseguradoras, lado a lado."

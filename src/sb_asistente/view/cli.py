@@ -135,6 +135,14 @@ def build_parser() -> argparse.ArgumentParser:
     mcmp = mer_sub.add_parser("comparar", help="La misma consulta en varias aseguradoras")
     mcmp.add_argument("consulta")
     mcmp.add_argument("--aseguradoras", nargs="+", required=True, metavar="ID")
+    mcan = mer_sub.add_parser(
+        "canales", help="WhatsApp y teléfonos oficiales de una aseguradora para un servicio"
+    )
+    mcan.add_argument("aseguradora")
+    mcan.add_argument("--servicio", choices=mercado.SERVICIOS_ATENCION, default=None)
+    mcan.add_argument(
+        "--resumen", default="", help="Resumen del caso (deduce el servicio y va en el WhatsApp)"
+    )
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
@@ -405,6 +413,17 @@ def _mercado_comando(args: argparse.Namespace) -> int:
                 print("  (no publica información sobre esto)")
             for f in oferta.fragmentos:
                 print(f"  · {f.titulo} — {f.url}")
+    elif args.mercado_command == "canales":
+        r = mercado.canales_para(args.aseguradora, args.servicio, args.resumen)
+        print(f"{r['nombre']} · servicio: {r['servicio']}")
+        wa = r["whatsapp"]
+        print(f"  WhatsApp: {wa['enlace']}" if isinstance(wa, dict) else "  WhatsApp: no publicado")
+        telefonos = r["telefonos"] if isinstance(r["telefonos"], list) else []
+        for t in telefonos:
+            alcance = "(este servicio)" if t["especifico"] else "(línea general)"
+            print(f"  Tel. {t['valor']:<16} {alcance}  {t['fuente']}")
+        if not telefonos:
+            print(f"  Sin teléfonos publicados: ver {r['sitio']}")
     return 0
 
 

@@ -420,3 +420,50 @@ def test_mercado_buscar_rechaza_una_seccion_desconocida(client_mercado):
     r = llamar(client_mercado, "mercado.buscar", {"consulta": "agua", "seccion": "criptomonedas"})
     # Assert
     assert r["error"]["code"] == -32602
+
+
+@pytest.fixture
+def directorio_canales(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Directorio de canales en memoria para mercado.canales (sin data/)."""
+    from sb_asistente.controller import mercado as mercado_ctrl
+    from sb_asistente.model.mercado.canales import CanalAgregado
+
+    datos = {
+        "mapfre": [
+            CanalAgregado("whatsapp", "573001234567", {"general"}, ["https://mapfre.co/contacto"], 3),
+            CanalAgregado("linea_corta", "#322", {"autos"}, ["https://mapfre.co/autos"], 2),
+        ]
+    }
+    monkeypatch.setattr(mercado_ctrl, "leer_canales", lambda ruta=None: datos)
+
+
+def test_mercado_canales_lleva_al_whatsapp_y_a_la_linea_del_servicio(client_mercado, directorio_canales):
+    # Arrange
+    params = {"aseguradora": "mapfre", "servicio": "autos", "resumen": "Choque leve"}
+    # Act
+    r = llamar(client_mercado, "mercado.canales", params)["result"]
+    # Assert
+    assert r["whatsapp"]["enlace"] == "https://wa.me/573001234567?text=Choque%20leve"
+    assert r["telefonos"][0]["marcar"] == "tel:%23322" and r["telefonos"][0]["especifico"]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"aseguradora": "mapfre", "servicio": "ventas"},
+        {"aseguradora": "mapfre", "resumen": "mi cédula es 1012345678"},
+        {"aseguradora": "Mapfre"},
+    ],
+)
+def test_mercado_canales_valida_parametros(client_mercado, directorio_canales, params):
+    # Arrange / Act
+    r = llamar(client_mercado, "mercado.canales", params)
+    # Assert
+    assert r["error"]["code"] == -32602
+
+
+def test_mercado_canales_con_aseguradora_desconocida_es_no_encontrado(client_mercado, directorio_canales):
+    # Arrange / Act
+    r = llamar(client_mercado, "mercado.canales", {"aseguradora": "no-existe"})
+    # Assert
+    assert r["error"]["code"] == -32001
