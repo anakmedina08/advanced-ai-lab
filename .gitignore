@@ -68,3 +68,7 @@ docs/arquitectura.*.json
 
 # Exportación temporal de make auditar-deps
 .requisitos-auditoria.txt
+
+# Guiones internos de las sustentaciones (uno por módulo): copia local de cada integrante (SPEC-058)
+docs/sustentacion.md
+docs/sustentacion/

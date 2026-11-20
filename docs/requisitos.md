@@ -4,8 +4,8 @@ Cada requisito de los dos cursos con su evidencia en este repositorio. Estados:
 **✅ cumplido** · **🟡 en curso** · **⏳ pendiente** · **⛔ no planeado** (cerrado como *not planned* con su motivo).
 La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia, el subagente
 `documentador` actualiza esta tabla en el mismo Pull Request. Actualizada para los anuncios 006
-(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026; guion en
-[`sustentacion.md`](sustentacion.md). La interfaz la muestra en
+(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026, y para los anuncios
+registrados en [`anuncios/`](anuncios/README.md). La interfaz la muestra en
 **Sustentación › Entregables por curso** (`frontend/src/pages/Sustentacion.tsx`).
 
 ## Gestión de Proyectos en IA y CD

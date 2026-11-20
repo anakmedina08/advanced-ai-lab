@@ -23,7 +23,6 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 | Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
 | Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
 | Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
-| Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 
 > 📘 La fuente única de verdad del proyecto es [`CONSTITUTION.md`](CONSTITUTION.md).
 
