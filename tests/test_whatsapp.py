@@ -163,6 +163,19 @@ def test_con_codigo_activado_responde_el_agente_y_gasta_cupo():
     assert acceso_ctrl._codigos().estado(codigo).restantes == 1
 
 
+def test_codigo_y_pregunta_en_el_mismo_mensaje_activa_y_responde():
+    # Arrange: así escribió la primera persona que lo probó
+    codigo, _ = acceso_ctrl.crear(24, 3)
+    agente, enviador = Agente(), Enviador()
+    # Act
+    whatsapp_ctrl.atender(evento(f"{codigo} que cubre el soat ?"), lambda: agente, enviador)
+    # Assert
+    assert agente.preguntas == [("que cubre el soat ?", whatsapp.canal_de(NUMERO))]
+    texto = enviador.enviados[0][1]
+    assert texto.startswith("Código activado: tienes 3 mensajes") and "*Cubre* gastos médicos" in texto
+    assert acceso_ctrl._codigos().estado(codigo).restantes == 2
+
+
 def test_con_cupo_agotado_no_llama_al_llm():
     # Arrange
     codigo, _ = acceso_ctrl.crear(24, 1)

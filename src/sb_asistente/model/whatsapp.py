@@ -83,6 +83,20 @@ def codigo_en(texto: str) -> str | None:
     return encontrado.group(0) if encontrado else None
 
 
+# Lo que la gente escribe alrededor del código y que no es una pregunta.
+_RELLENO = frozenset(
+    {"hola", "buenas", "buenos", "dias", "días", "tardes", "noches", "mi", "el", "este", "es", "aqui",
+     "aquí", "tengo", "codigo", "código", "de", "acceso", "gracias"}
+)  # fmt: skip
+
+
+def sin_codigo(texto: str) -> str:
+    """La pregunta que viene junto al código; vacío si solo hay código y saludo («Hola, mi código es…»)."""
+    resto = _CODIGO.sub(" ", texto).strip(" \t\n,.;:-")
+    palabras = re.findall(r"\w+", resto.lower())
+    return resto if any(p not in _RELLENO for p in palabras) else ""
+
+
 def para_whatsapp(respuesta: str, fuentes: list[str]) -> str:
     """Markdown del agente → texto de WhatsApp, con hasta dos fuentes al final y dentro del límite."""
     texto = _TITULO.sub("", _NEGRITA.sub(r"*\1*", respuesta)).strip()

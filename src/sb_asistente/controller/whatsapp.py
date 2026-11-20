@@ -77,14 +77,20 @@ def atender(
 def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsistente]) -> str:
     if m.texto is None:
         return SOLO_TEXTO
-    codigo = whatsapp.codigo_en(m.texto)
+    texto = m.texto
+    activado = ""
+    codigo = whatsapp.codigo_en(texto)
     if codigo:
         try:
             c = _codigos().vincular(canal, codigo)
         except AccesoDenegadoError as exc:
             return str(exc)
-        return f"Código activado: tienes {c.restantes} mensajes con IA hasta el {_hora(c)}. ¿Qué necesitas?"
-    if m.texto.strip().lower() in {"olvidar", "olvidame", "olvídame", "borrar"}:
+        activado = f"Código activado: tienes {c.restantes} mensajes con IA hasta el {_hora(c)}."
+        # «YELO-… ¿qué cubre el SOAT?»: se activa y se responde la pregunta en el mismo mensaje.
+        texto = whatsapp.sin_codigo(texto)
+        if not texto:
+            return f"{activado} ¿Qué necesitas?"
+    if texto.strip().lower() in {"olvidar", "olvidame", "olvídame", "borrar"}:
         agente().olvidar(canal)
         _codigos().desvincular(canal)
         return OLVIDADO
@@ -93,8 +99,9 @@ def _respuesta(m: whatsapp.Entrante, canal: str, agente: Callable[[], AgenteAsis
             _codigos().consumir_canal(canal)  # gasta el mensaje ANTES de llamar al LLM
         except AccesoDenegadoError as exc:
             return PIDE_CODIGO if "aún no tiene" in str(exc) else f"{exc} {PIDE_CODIGO}"
-    turno = agente().responder(m.texto, canal, canal)
-    return whatsapp.para_whatsapp(turno.salida.respuesta, turno.salida.fuentes)
+    turno = agente().responder(texto, canal, canal)
+    respuesta = whatsapp.para_whatsapp(turno.salida.respuesta, turno.salida.fuentes)
+    return f"{activado}\n\n{respuesta}" if activado else respuesta
 
 
 def enviador_por_defecto() -> whatsapp.Enviador | None:
