@@ -211,6 +211,7 @@ git push
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
 | 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
 | 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
+| 2026-11-19 | PDF del documento: capa de texto con `pypdf` y, si es escaneado, páginas a imagen con `pypdfium2` + Tesseract (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Los comprobantes PSE y las carátulas llegan casi siempre en PDF; sin LLM y sin escribir en disco |
 
 ## 10. Notas y tareas pendientes
 

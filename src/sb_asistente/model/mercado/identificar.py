@@ -27,6 +27,7 @@ AMBIGUAS_EN_DOCUMENTO: frozenset[str] = frozenset({"bolivar"})
 
 _DOMINIO = re.compile(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", re.IGNORECASE)
 PESO: dict[Senal, float] = {"nombre": 1.0, "dominio": 1.5}
+MENCIONES_ALTA = 2  # el nombre repetido en el documento (encabezado y pie) también es confianza alta
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,7 +87,7 @@ def _confianza(candidatas: Sequence[Candidata]) -> Confianza:
     primera = candidatas[0]
     if len(candidatas) > 1 and candidatas[1].puntaje >= primera.puntaje:
         return "baja"  # empate: el recibo nombra a dos (p. ej. el banco y la aseguradora con el mismo peso)
-    if "dominio" in primera.senales or primera.menciones >= 2:  # noqa: PLR2004 - dos menciones
+    if "dominio" in primera.senales or primera.menciones >= MENCIONES_ALTA:
         return "alta"
     return "media"
 

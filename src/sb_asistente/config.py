@@ -115,8 +115,9 @@ MERCADO_CANDIDATOS_POR_PAGINA: Final[int] = 4  # pasajes pedidos por página que
 MERCADO_CANDIDATOS_RELEVANCIA: Final[int] = 20  # pasajes para elegir las aseguradoras relevantes
 
 # --- ¿Con qué aseguradora está la persona? (SPEC-071): pistas y OCR local, sin LLM ---------
-# El documento (recibo, carátula, extracto) se lee en memoria con Tesseract y se descarta: solo
-# sale el nombre de la aseguradora del registro. Tesseract es un binario del sistema (opcional):
+# El documento (recibo, carátula, extracto) se lee en memoria y se descarta: solo sale el nombre
+# de la aseguradora del registro. PDF digital con pypdf; imagen o PDF escaneado con Tesseract,
+# un binario del sistema:
 #   macOS: brew install tesseract tesseract-lang   ·   Debian: apt-get install tesseract-ocr-spa
 IDENTIFICAR_MAX_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por documento
 IDENTIFICAR_PISTAS_MAX: Final[int] = 1000  # caracteres de pistas escritas
@@ -124,6 +125,8 @@ IDENTIFICAR_OCR_IDIOMAS: Final[str] = os.getenv("OCR_IDIOMAS", "spa+eng")  # se 
 IDENTIFICAR_OCR_TIMEOUT_S: Final[int] = 30
 IDENTIFICAR_LADO_MIN: Final[int] = 1600  # px: las fotos pequeñas se amplían para que Tesseract lea mejor
 IDENTIFICAR_PDF_PAGINAS: Final[int] = 3  # páginas de un PDF que se leen (el recibo cabe en la primera)
+IDENTIFICAR_PDF_MIN_CARACTERES: Final[int] = 40  # menos texto que esto: PDF escaneado → OCR
+IDENTIFICAR_PDF_ESCALA: Final[float] = 2.0  # ~144 ppp al pasar una página escaneada a imagen
 WHATSAPP_MAX_TEXTO: Final[int] = 1000  # caracteres del resumen en el enlace de traspaso wa.me
 
 # --- Limpieza y chunking -----------------------------------------------------------------

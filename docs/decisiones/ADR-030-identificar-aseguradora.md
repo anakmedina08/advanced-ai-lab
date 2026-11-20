@@ -19,10 +19,19 @@
   - **Señales simples e interpretables** (nombre y dominio) en lugar de un modelo: se pueden
     explicar a la persona («encontré el dominio mapfre.com.co») y probar caso por caso.
   - **No adivinar:** con empate o sin señales, el asistente pregunta en vez de elegir.
+  - **PDF como primera clase:** los comprobantes PSE y las carátulas casi siempre llegan en PDF.
+    Si el PDF tiene capa de texto se lee con `pypdf` (exacto y sin OCR); si casi no tiene texto
+    (escaneado), sus primeras 3 páginas se convierten en imagen con `pypdfium2` (rueda con
+    PDFium, sin binarios del sistema) y pasan por Tesseract. Todo en memoria.
+  - **Entrada de archivo:** `POST /aseguradoras/identificar` recibe `UploadFile` (multipart), como
+    `POST /fotos`; un archivo no se modela como Pydantic. Se valida por los primeros bytes y el
+    tamaño, y la salida sí es un modelo (`IdentificacionOut`).
 - **Alternativas descartadas:**
   - Claude Vision sobre el documento: más preciso con fotos malas, pero manda un documento con
     datos personales a un tercero y gasta tokens en cada consulta pública.
   - Consultar el RUNT o a la aseguradora con la cédula: datos personales y captcha.
+  - `pdfplumber` o `PyMuPDF` para los PDF: el primero es más lento y el segundo tiene licencia
+    AGPL, incompatible con la licencia MIT del proyecto.
   - Mapear bancos a aseguradoras («si lo compró en el banco X es la aseguradora Y»): las alianzas
     cambian y un banco vende seguros de varias compañías.
 - **Where:**

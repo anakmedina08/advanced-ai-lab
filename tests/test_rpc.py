@@ -467,3 +467,26 @@ def test_mercado_canales_con_aseguradora_desconocida_es_no_encontrado(client_mer
     r = llamar(client_mercado, "mercado.canales", {"aseguradora": "no-existe"})
     # Assert
     assert r["error"]["code"] == -32001
+
+
+def test_mercado_identificar_por_pistas(client_mercado):
+    # Arrange / Act
+    r = llamar(client_mercado, "mercado.identificar", {"pistas": "los correos me llegan de mapfre.com.co"})
+    # Assert
+    assert r["result"]["aseguradora"] == "mapfre" and r["result"]["confianza"] == "alta"
+    assert r["result"]["candidatas"][0]["senales"] == ["nombre", "dominio"]
+
+
+def test_mercado_identificar_sin_pistas_utiles_no_adivina(client_mercado):
+    # Arrange / Act
+    r = llamar(client_mercado, "mercado.identificar", {"pistas": "lo pago cada mes en el banco"})
+    # Assert
+    assert r["result"]["aseguradora"] is None and r["result"]["confianza"] == "ninguna"
+
+
+@pytest.mark.parametrize("pistas", ["x", "me escriben a ana@correo.com", "mi cédula es 1234567890"])
+def test_mercado_identificar_rechaza_datos_personales_y_vacios(client_mercado, pistas):
+    # Arrange / Act
+    r = llamar(client_mercado, "mercado.identificar", {"pistas": pistas})
+    # Assert
+    assert r["error"]["code"] == -32602

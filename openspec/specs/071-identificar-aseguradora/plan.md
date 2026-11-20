@@ -6,7 +6,8 @@
    documentos (`AMBIGUAS_EN_DOCUMENTO`).
 2. **Lectura** `model/mercado/lectura.py`: tipo por los primeros bytes; imagen → escala de grises,
    orientación EXIF, tamaño mínimo → Tesseract por `stdin`/`stdout` con los idiomas instalados;
-   PDF → `pypdf` si está (opcional). Nada en disco.
+   PDF digital → su capa de texto con `pypdf`; PDF escaneado (casi sin texto) → páginas a imagen
+   con `pypdfium2` y el mismo OCR. Nada en disco.
 3. **Controlador** `controller/mercado.py`: `identificar_por_pistas`, `identificar_documento`
    (devuelve solo datos del registro), `resolver_aseguradora` y `fragmentos_comparados`.
 4. **Vista**: `mercado.identificar` (JSON-RPC, rechaza correos y números), `POST

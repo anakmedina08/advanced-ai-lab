@@ -441,6 +441,9 @@ async def identificar_aseguradora(
     OCR local (Tesseract) o texto del PDF, sin LLM ni tokens. Devuelve solo aseguradoras del
     registro y la señal que coincidió (nombre o dominio); nunca el texto leído, que puede traer
     cédula, póliza o dirección. Nada se guarda ni se registra en logs.
+
+    La entrada es un archivo (``UploadFile``, como ``POST /fotos``): se valida por sus primeros
+    bytes y su tamaño; la salida es el modelo ``IdentificacionOut`` (ADR-030).
     """
     datos = await archivo.read()
     try:
@@ -475,8 +478,12 @@ async def analizar_foto(
     1. YOLO (local) detecta objetos y **difumina a las personas** antes de que la foto salga.
     2. Con ``interpretar=true``, Claude entiende la situación (accidente, daño en el hogar, robo o
        un bien que asegurar). Si ve un documento, no se procesa.
-    3. Con ``responder=true``, el asistente explica los pasos o el seguro citando la página oficial;
-       para bienes asegurables, el recomendador de Gestión sugiere qué más contratan perfiles similares.
+    3. Con ``responder=true``, el asistente explica los pasos o el seguro citando la página oficial.
+    4. Para bienes asegurables, el recomendador de Gestión (modelo local, sin tokens) sugiere qué más
+       contratan perfiles similares, siempre: no depende de ``responder``.
+
+    Con ``interpretar=false`` y ``responder=false`` el análisis es gratis (solo YOLO y el
+    recomendador, en local): así lo usa la página pública.
     """
     if not (archivo.content_type or "").startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen (JPG o PNG).")
@@ -486,7 +493,7 @@ async def analizar_foto(
         interprete = fabrica_interprete(llm) if interpretar else None
         asistente = fabrica_qa(llm) if responder else None
         analisis = await run_in_threadpool(
-            vision.analizar_foto, datos, detector(), asistente, interprete, recomendar if responder else None
+            vision.analizar_foto, datos, detector(), asistente, interprete, recomendar
         )
     except vision.ImagenInvalidaError as exc:
         raise HTTPException(422, str(exc)) from exc

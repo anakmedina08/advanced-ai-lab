@@ -169,7 +169,7 @@ def test_texto_de_imagen_usa_los_idiomas_instalados_y_no_escribe_en_disco():
     # Arrange
     llamadas: list[list[str]] = []
 
-    def ejecutar(args, **kwargs):  # noqa: ANN001, ANN003, ANN202 - doble de subprocess.run
+    def ejecutar(args, **kwargs):  # doble de subprocess.run
         llamadas.append(args)
         if "--list-langs" in args:
             return subprocess.CompletedProcess(args, 0, stdout="List of available languages (2):\neng\nosd\n")
@@ -209,7 +209,84 @@ def test_ocr_real_encuentra_la_aseguradora_en_un_pantallazo():
     assert r["aseguradora"] == "mapfre"
 
 
-# --- Vista: REST y JSON-RPC ---------------------------------------------------------------------
+def _pdf_digital(texto: str) -> bytes:
+    """PDF mínimo con capa de texto (como un comprobante PSE descargado)."""
+    flujo = f"BT /F1 14 Tf 40 760 Td ({texto}) Tj ET".encode("latin-1")
+    objetos = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+        b"/Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length " + str(len(flujo)).encode() + b" >>\nstream\n" + flujo + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    salida = BytesIO()
+    salida.write(b"%PDF-1.4\n")
+    posiciones = []
+    for i, cuerpo in enumerate(objetos, start=1):
+        posiciones.append(salida.tell())
+        salida.write(f"{i} 0 obj\n".encode() + cuerpo + b"\nendobj\n")
+    xref = salida.tell()
+    salida.write(f"xref\n0 {len(objetos) + 1}\n0000000000 65535 f \n".encode())
+    salida.write(b"".join(f"{p:010d} 00000 n \n".encode() for p in posiciones))
+    salida.write(f"trailer\n<< /Size {len(objetos) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode())
+    return salida.getvalue()
+
+
+def _pdf_escaneado(png: bytes) -> bytes:
+    """PDF sin capa de texto: una imagen pegada en una página (como un documento escaneado)."""
+    salida = BytesIO()
+    Image.open(BytesIO(png)).convert("RGB").save(salida, format="PDF")
+    return salida.getvalue()
+
+
+def test_pdf_digital_usa_su_capa_de_texto_sin_ocr():
+    # Arrange
+    datos = _pdf_digital("Pago a MAPFRE SEGUROS GENERALES DE COLOMBIA - www.mapfre.com.co")
+
+    def sin_ocr(_: bytes) -> str:
+        raise AssertionError("un PDF digital no debe pasar por el OCR")
+
+    # Act
+    texto = lectura.texto_de_pdf(datos, ocr=sin_ocr)
+    # Assert
+    assert "MAPFRE" in texto
+    assert mercado.identificar_documento(datos, leer=lectura.leer_documento)["aseguradora"] == "mapfre"
+
+
+def test_pdf_escaneado_pasa_cada_pagina_por_el_ocr():
+    # Arrange
+    datos = _pdf_escaneado(_png("MAPFRE"))
+    vistas: list[bytes] = []
+
+    def ocr(png: bytes) -> str:
+        vistas.append(png)
+        return "MAPFRE SEGUROS"
+
+    # Act
+    texto = lectura.texto_de_pdf(datos, ocr=ocr)
+    # Assert
+    assert "MAPFRE SEGUROS" in texto
+    assert len(vistas) == 1 and vistas[0].startswith(b"\x89PNG")
+
+
+def test_pdf_danado_es_documento_invalido():
+    # Arrange / Act / Assert
+    with pytest.raises(lectura.DocumentoInvalidoError):
+        lectura.texto_de_pdf(b"%PDF-1.4 esto no es un pdf")
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract no está instalado")
+def test_ocr_real_en_un_pdf_escaneado():
+    # Arrange
+    datos = _pdf_escaneado(_png("Pago a MAPFRE Seguros Generales", ancho=900))
+    # Act
+    r = mercado.identificar_documento(datos)
+    # Assert
+    assert r["aseguradora"] == "mapfre"
+
+
+# --- Vista: REST (los casos JSON-RPC están en tests/test_rpc.py) ----------------------------------
 
 
 @pytest.fixture
@@ -245,26 +322,6 @@ def test_post_identificar_sin_lector_es_503(client, monkeypatch):
     r = client.post("/aseguradoras/identificar", files={"archivo": ("r.png", _png(), "image/png")})
     # Assert
     assert r.status_code == 503
-
-
-def _rpc(client: TestClient, params: dict) -> dict:
-    cuerpo = {"jsonrpc": "2.0", "method": "mercado.identificar", "params": params, "id": 1}
-    return client.post("/rpc", json=cuerpo).json()
-
-
-def test_rpc_mercado_identificar_por_pistas(client):
-    # Arrange / Act
-    r = _rpc(client, {"pistas": "los correos me llegan de mapfre.com.co"})
-    # Assert
-    assert r["result"]["aseguradora"] == "mapfre" and r["result"]["confianza"] == "alta"
-
-
-@pytest.mark.parametrize("pistas", ["x", "me escriben a ana@correo.com", "mi cédula es 1234567890"])
-def test_rpc_mercado_identificar_rechaza_datos_personales_y_vacios(client, pistas):
-    # Arrange / Act
-    r = _rpc(client, {"pistas": pistas})
-    # Assert
-    assert r["error"]["code"] == -32602
 
 
 # --- Tools del agente ---------------------------------------------------------------------------
@@ -338,7 +395,7 @@ def test_la_ruta_rag_habilita_las_tools_de_mercado_y_sus_urls_cuentan_como_fuent
 
 def test_cli_identificar_por_pistas(capsys):
     # Arrange
-    from sb_asistente.view import cli  # noqa: PLC0415 - la CLI importa muchas dependencias
+    from sb_asistente.view import cli  # la CLI importa muchas dependencias: solo en esta prueba
 
     # Act
     codigo = cli.main(["mercado", "identificar", "--pistas", "pago en la app de MAPFRE"])
