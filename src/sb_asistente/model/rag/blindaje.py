@@ -55,8 +55,9 @@ def formatear_pasajes(fragmentos: Sequence[Fragmento]) -> tuple[str, int]:
     for f in fragmentos:
         marca = es_sospechoso(f.texto) or es_sospechoso(f.titulo)
         sospechosos += marca
+        aseguradora = f' aseguradora="{_atributo(f.aseguradora)}"' if f.aseguradora else ""
         partes.append(
-            f'<documento id="{_atributo(f.chunk_id)}" titulo="{_atributo(f.titulo)}" '
+            f'<documento id="{_atributo(f.chunk_id)}"{aseguradora} titulo="{_atributo(f.titulo)}" '
             f'fuente="{_atributo(f.url)}" sospechoso="{"si" if marca else "no"}">\n'
             f"{_escapar(f.texto)}\n</documento>"
         )

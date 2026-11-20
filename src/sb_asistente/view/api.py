@@ -34,6 +34,7 @@ from sb_asistente.config import (
 from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import experimentos as experimentos_ctrl
+from sb_asistente.controller import mercado as mercado_ctrl
 from sb_asistente.controller import proyecto as proyecto_ctrl
 from sb_asistente.controller import salud as estado_servicio
 from sb_asistente.controller.agente import AgenteAsistente
@@ -70,6 +71,7 @@ from sb_asistente.view.schemas import (
     ExperimentosOut,
     FotoOut,
     HealthOut,
+    IdentificacionOut,
     PerfilOut,
     PlanOut,
     PreguntaIn,
@@ -426,6 +428,30 @@ def listar_skills() -> list[SkillOut]:
         SkillOut(nombre=s.nombre, descripcion=s.descripcion, licencia=s.licencia)
         for s in skills.skills_asistente()
     ]
+
+
+@app.post("/aseguradoras/identificar", response_model=IdentificacionOut, tags=["mercado"])
+async def identificar_aseguradora(
+    archivo: Annotated[
+        UploadFile, File(description="Recibo, carátula, extracto o certificado (JPG, PNG o PDF; máx. 8 MB)")
+    ],
+) -> IdentificacionOut:
+    """¿Con qué aseguradora está la persona? Lee su documento en memoria y lo descarta (SPEC-071).
+
+    OCR local (Tesseract) o texto del PDF, sin LLM ni tokens. Devuelve solo aseguradoras del
+    registro y la señal que coincidió (nombre o dominio); nunca el texto leído, que puede traer
+    cédula, póliza o dirección. Nada se guarda ni se registra en logs.
+    """
+    datos = await archivo.read()
+    try:
+        resultado = await run_in_threadpool(mercado_ctrl.identificar_documento, datos)
+    except mercado_ctrl.DocumentoInvalidoError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except mercado_ctrl.LectorNoDisponibleError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    finally:
+        del datos
+    return IdentificacionOut.model_validate(resultado)
 
 
 @app.post("/fotos", response_model=FotoOut, tags=["vision"])

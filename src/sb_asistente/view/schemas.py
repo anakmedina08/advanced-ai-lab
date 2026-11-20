@@ -197,6 +197,26 @@ class SalidaAgenteOut(BaseModel):
     confianza: Literal["alta", "media", "baja"]
     productos_recomendados: list[str] = []
     requiere_asesor: bool = False
+    aseguradora: str | None = None  # id del registro si el agente la sabe (SPEC-071)
+
+
+class CandidataOut(BaseModel):
+    """Aseguradora del registro que aparece en las pistas o en el documento."""
+
+    id: str
+    nombre: str
+    sitio: str | None = None
+    senales: list[Literal["nombre", "dominio"]]
+
+
+class IdentificacionOut(BaseModel):
+    """¿Con qué aseguradora está la persona? Solo datos del registro: nunca el texto leído."""
+
+    aseguradora: str | None
+    confianza: Literal["alta", "media", "baja", "ninguna"]
+    servicio: str | None
+    candidatas: list[CandidataOut]
+    leido: bool = True
 
 
 class AgenteOut(BaseModel):
