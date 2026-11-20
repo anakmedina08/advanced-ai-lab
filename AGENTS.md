@@ -98,6 +98,10 @@ uv run sb ask "¿Qué cubre el SOAT?" --modo rag    # completo | reducido | rag 
 ## Búsqueda de código
 Si `tgrep` está instalado, úsalo en lugar de `grep` (ver `.opencode/rules/tgrep.md`).
 
+## Política de uso de IA
+Límites del agente, aprobación humana y atribución: [`docs/politica-uso-ia.md`](docs/politica-uso-ia.md).
+Nunca leer `.env` ni `data/`; `git push`, `gh pr create` y `gh pr merge` solo con aprobación en el momento.
+
 ## Git
 Gitflow (`main`, `develop`, `feature/*`), Conventional Commits, una PR por propósito con revisión
 cruzada (Code Reviewer: Daniel Silva). Decisiones técnicas: registrar en **Engram** y espejo en
