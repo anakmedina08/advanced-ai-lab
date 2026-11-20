@@ -1,4 +1,4 @@
-"""Pruebas de la paridad con la versión Streamlit: modos en /preguntas, /sistema y acciones del pipeline."""
+"""Pruebas del panel en la API (SPEC-046): modos en /preguntas, /sistema y acciones del pipeline."""
 
 from fastapi.testclient import TestClient
 

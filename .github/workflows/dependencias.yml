@@ -1,0 +1,56 @@
+name: Dependencias y código
+
+# SPEC-054: vulnerabilidades en dependencias (pip-audit), análisis estático (CodeQL) y SBOM.
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "41 6 * * 1"   # cada lunes: aparecen CVE nuevas aunque no cambie el código
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencias:
+    name: Vulnerabilidades en dependencias (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: make auditar-deps
+
+  codeql:
+    name: CodeQL (${{ matrix.lenguaje }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.lenguaje }}
+      - uses: github/codeql-action/analyze@v3
+
+  sbom:
+    name: SBOM (CycloneDX)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --frozen
+      # Versión fija: una herramienta de seguridad no se actualiza sola (cadena de suministro).
+      - run: uvx --from cyclonedx-bom==8.0.1 cyclonedx-py environment .venv --output-file sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json

@@ -12,7 +12,7 @@ auditor (K4) falla si el proyecto usa una herramienta ⛔.
 
 | Herramienta | Paquete | Estado | Desde | Reemplazo / nota | En el proyecto |
 |---|---|---|---|---|---|
-| streamlit | `streamlit` | ⛔ no permitida | 006 | Frontend propio (React, Next.js, Vue, Svelte) + backend/API | ❌ **está en `pyproject.toml`, `app.py` y `make app`** |
+| streamlit | `streamlit` | ⛔ no permitida | 006 | Frontend propio (React, Next.js, Vue, Svelte) + backend/API | ✅ retirado (SPEC-052) |
 | gradio | `gradio` | ⛔ no permitida | 006 | Frontend propio | no |
 | pip / requirements.txt | — | ⛔ no permitida | 001 | uv (Python 3.13) | no |
 | Notebooks como entrega | — | ⛔ no permitida | 001 | Scripts `.py` modularizados | no (`*.ipynb` ignorado) |
@@ -50,7 +50,7 @@ auditor (K4) falla si el proyecto usa una herramienta ⛔.
 
 | Herramienta | Paquete | Estado | Desde | Reemplazo / nota | En el proyecto |
 |---|---|---|---|---|---|
-| streamlit, gradio, dash | `streamlit`, `gradio`, `dash` | ⛔ no permitida | 007 | Cliente desacoplado (React, Next, Vue, Svelte, Angular, Astro, HTML/JS) | ❌ **streamlit en el repo** |
+| streamlit, gradio, dash | `streamlit`, `gradio`, `dash` | ⛔ no permitida | 007 | Cliente desacoplado (React, Next, Vue, Svelte, Angular, Astro, HTML/JS) | ✅ retirado (SPEC-052) |
 | Notebooks / Colab / Kaggle | — | ⛔ no permitida | 007 | `.py` en `src/` y `tests/` | no |
 | pip / requirements.txt | — | ⛔ no permitida | 007 | uv | no |
 | Pesos binarios en git (.pt, .h5, .onnx, .joblib) | — | ⛔ no permitida | 007 | Script de descarga, Git LFS o DVC | no (ignorados) |

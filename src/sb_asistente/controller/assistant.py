@@ -1,6 +1,6 @@
 """Controlador del asistente: arma cada modo de Q&A y orquesta Resumen, FAQ y Evaluación.
 
-Las vistas (Streamlit y CLI) solo hablan con este módulo y con ``pipeline``; nunca construyen
+Las vistas (API y CLI) solo hablan con este módulo y con ``pipeline``; nunca construyen
 modelos ni prompts por su cuenta (MVC: la vista no conoce al modelo). Aquí se conectan las piezas
 del modelo con la configuración y los archivos de Gold; la lógica vive en ``model/llm``.
 

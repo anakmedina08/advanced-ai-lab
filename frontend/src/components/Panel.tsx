@@ -29,7 +29,7 @@ export function useDatos<T>(cargar: () => Promise<T>) {
   return { datos, error, cargando, recargar };
 }
 
-/** Tarjeta de métrica como `st.metric(border=True)` de la versión Streamlit. */
+/** Tarjeta de métrica con borde. */
 export function Metrica({ titulo, valor, icono, nota }: { titulo: string; valor: string | number; icono: string; nota?: string }) {
   return (
     <div className="metrica">
@@ -56,7 +56,7 @@ export function EstadoCarga({ cargando, error, onReintentar }: { cargando: boole
   );
 }
 
-/** Barra horizontal de 0 a 1 con su valor (reemplaza las gráficas de barras de Streamlit). */
+/** Barra horizontal de 0 a 1 con su valor. */
 export function Barra({ etiqueta, valor, maximo = 1, formato }: { etiqueta: string; valor: number; maximo?: number; formato?: (v: number) => string }) {
   const ancho = Math.max(0, Math.min(100, (valor / maximo) * 100));
   return (

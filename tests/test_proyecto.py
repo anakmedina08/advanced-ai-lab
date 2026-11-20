@@ -1,16 +1,9 @@
-"""Pruebas de la página de sustentación y de la de experimentos (sin red, sin API y sin MLflow)."""
+"""Pruebas de la matriz de requisitos y de los contadores del proyecto (sin red ni API)."""
 
 from pathlib import Path
 
-import pytest
-from streamlit.testing.v1 import AppTest
-
-from sb_asistente.controller import experimentos as ctrl_experimentos
 from sb_asistente.controller import proyecto
 from sb_asistente.model import proyecto as modelo
-
-APP = Path(__file__).resolve().parents[1] / "app.py"
-PAGINA = "src/sb_asistente/view/app_pages/{}.py"
 
 MATRIZ = """# Matriz
 
@@ -75,66 +68,6 @@ def test_la_matriz_real_tiene_los_tres_grupos_y_cumple_el_minimo_de_pruebas():
         secciones
     )
     assert proyecto.contadores().funciones_de_prueba >= 120
-
-
-# --- Páginas ------------------------------------------------------------------------------------
-def app() -> AppTest:
-    return AppTest.from_file(str(APP), default_timeout=120).run()
-
-
-def test_sustentacion_muestra_las_cifras_y_una_pestana_por_curso():
-    at = app().switch_page(PAGINA.format("sustentacion")).run()
-    assert not at.exception
-    assert [m.label for m in at.metric][:3] == ["Pruebas automatizadas", "Specs (SDD)", "Decisiones (ADR)"]
-    assert len(at.tabs) == 3 and "Gestión" in at.tabs[0].label
-
-
-def test_sustentacion_filtra_por_estado():
-    at = app().switch_page(PAGINA.format("sustentacion")).run()
-    todos = len(at.tabs[0].caption)  # una evidencia (caption) por tarjeta
-    # «en curso» siempre tiene requisitos en Gestión; «pendiente» puede quedar vacío al cerrar el tablero
-    at.tabs[0].get("button_group")[0].set_value(["en curso"]).run()
-    assert 0 < len(at.tabs[0].caption) < todos
-
-
-def test_experimentos_sin_mlflow_explica_como_activarlo():
-    at = app().switch_page(PAGINA.format("experimentos")).run()
-    assert not at.exception and "uv sync --extra mlflow" in at.info[0].value
-
-
-class FakeBitacora:
-    def registrar(self, corrida):
-        return None
-
-    def existe(self, experimento, etiqueta, valor):
-        return False
-
-    def corridas(self, experimento):
-        if experimento != "asistente-qa":
-            return []
-        return [
-            {"nombre": f"anthropic · completo · {v}", "fecha": 1_731_500_000_000, "commit": "abc1234",
-             "parametros": {"proveedor": "anthropic", "modo": "completo", "version_prompt": v},
-             "metricas": {"tasa_cita_fuente": cita, "tasa_fallback_correcto": 0.9, "keyword_hit_promedio": 1.0}}  # noqa: E501
-            for v, cita in (("v1", 0.2), ("v3", 1.0))
-        ]  # fmt: skip
-
-
-@pytest.fixture
-def con_bitacora(monkeypatch):
-    monkeypatch.setattr(ctrl_experimentos, "bitacora", lambda: FakeBitacora())
-
-
-def test_experimentos_compara_las_corridas_con_nombres_cortos(con_bitacora):
-    at = app().switch_page(PAGINA.format("experimentos")).run()
-    assert not at.exception and at.metric[0].value == "2"
-    assert list(at.dataframe[0].value["corrida"]) == ["completo · v1", "completo · v3"]
-
-
-def test_experimento_sin_corridas_lo_dice(con_bitacora):
-    at = app().switch_page(PAGINA.format("experimentos")).run()
-    at.get("button_group")[0].set_value("recomendador").run()
-    assert "aún no tiene corridas" in at.info[0].value
 
 
 def test_estado_no_planeado_se_lee_de_la_matriz(tmp_path):

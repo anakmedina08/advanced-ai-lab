@@ -5,7 +5,7 @@
 ```mermaid
 flowchart LR
     subgraph V[Vista]
-        UI[streamlit_app.py]
+        FE[frontend React<br/>cliente desacoplado] -->|HTTP · SSE| UI[api.py · FastAPI]
         CLI[cli.py · comando sb]
     end
     subgraph C[Controlador]
@@ -51,7 +51,7 @@ importa una superior.
 | Modelo | `model/evaluation.py` | Banco de preguntas y métricas | respuestas ➔ CSV y resumen |
 | Controlador | `controller/pipeline.py` | Etapas del scraping y su reporte | — ➔ métricas por etapa y tabla del corpus |
 | Controlador | `controller/assistant.py` | Arma cada modo (completo, reducido, rag, agente) con la configuración y orquesta la evaluación | proveedor + modo ➔ asistente; banco ➔ métricas |
-| Vista | `view/streamlit_app.py`, `view/app_pages/`, `view/ui.py`, `app.py` | Interfaz web en dos áreas: atención al cliente y panel del equipo (ADR-021) | clics ➔ llamadas al controlador |
+| Vista | `view/api.py`, `view/schemas.py`, `view/rpc.py` + `frontend/` (React) | API REST/JSON-RPC y cliente web desacoplado en dos áreas: atención al cliente y panel del equipo (ADR-021, ADR-024) | HTTP ➔ llamadas al controlador |
 | Vista | `view/cli.py` | Comando `sb` | argumentos ➔ llamadas al controlador |
 
 ## Flujo de inferencia
@@ -59,7 +59,7 @@ importa una superior.
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    participant UI as Streamlit (vista)
+    participant UI as Frontend React → API (vista)
     participant A as assistant.py (controlador)
     participant R as keyword_search / vector_store (modelo)
     participant S as service + prompts (modelo)

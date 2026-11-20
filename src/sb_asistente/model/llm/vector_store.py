@@ -42,7 +42,7 @@ def build_embeddings(model: str = EMBEDDING_MODEL) -> Embeddings:
 
 
 # Qdrant local bloquea su carpeta para UN cliente: se reutiliza el mismo dentro del proceso
-# (en Streamlit, los modos «rag» y «agente» comparten el índice).
+# (en la API, los modos «rag» y «agente» comparten el índice).
 _CLIENTS: dict[Path, QdrantClient] = {}
 
 
@@ -56,7 +56,7 @@ def _open_on_disk(path: Path) -> QdrantClient:
 def open_client(path: Path | None = None) -> QdrantClient:
     """Cliente Qdrant local: en disco si se da ``path``; si no, en memoria (pruebas).
 
-    Si otro proceso tiene la carpeta tomada (p. ej., la app de Streamlit abierta mientras se usa la
+    Si otro proceso tiene la carpeta tomada (p. ej., la API abierta mientras se usa la
     CLI), se abre una copia temporal del índice: las búsquedas funcionan igual y el original no se
     toca.
     """

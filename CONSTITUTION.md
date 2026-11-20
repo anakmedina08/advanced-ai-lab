@@ -43,7 +43,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Páginas públicas de **personas** y **canales de atención** de www.segurosbolivar.com.
 - Pipeline Medallion (Bronze → Silver → Gold) con metadatos: URL, título, sección, fecha y hash.
 - Q&A, Resumen y FAQ con LangChain (Claude por API u Ollama local), con cita de la fuente.
-- Interfaz Streamlit con el proceso de scraping visible y pestaña de evaluación.
+- Interfaz web propia (React, desacoplada de la API) con el proceso de scraping visible y página de evaluación.
 - Fase 2: RAG con embeddings locales (Ollama) en Qdrant y un Deep Agent con subagentes sobre `chunks.jsonl`.
 - Foto → «¿qué hago?»: YOLO difumina personas en local, Claude con visión entiende la situación
   (accidente, daño en el hogar, robo o bien a asegurar) y el asistente explica pasos o seguro con su
@@ -71,13 +71,13 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **LLM** | LangChain · Claude Haiku (API de Anthropic) · DeepSeek (alterno) · Ollama `llama3.2:3b` (local) |
 | **API** | FastAPI + Pydantic v2 (`view/api.py`, `view/schemas.py`), `uv run sb api` |
 | **Recomendador** | pandas + numpy (datos sintéticos, líneas base); M3: multilingual-e5-small + LightGBM + MLflow |
-| **Interfaz** | Front web (consume la API), Streamlit (`app.py`) y CLI `sb` |
+| **Interfaz** | Frontend React desacoplado (consume la API) y CLI `sb`; sin Streamlit, Gradio ni Dash (SPEC-052) |
 | **Testing** | [`pytest`](https://docs.pytest.org/) (AAA, sin red ni API) |
 | **Linting / Formato** | [Ruff](https://docs.astral.sh/ruff/) |
 | **Pre-commit** | higiene + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + Conventional Commits |
 | **Contenedor** | Docker multi-stage (CPU), `make docker-build` |
 | **CI/CD** | [GitHub Actions](.github/workflows/ci.yml) |
-| **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) |
+| **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) + pip-audit, CodeQL y SBOM ([ADR-027](docs/decisiones/ADR-027-auditoria-dependencias.md)) |
 | **Especificación** | OpenSpec (`openspec/`: `spec.md`, `plan.md`, `tasks.md`) |
 | **Memoria del agente** | Engram (espejo versionado en `docs/decisiones/`) |
 | **Agentes** | Claude Code con 7 subagentes (`.claude/agents/`) y hooks de telemetría (`.claude/settings.json`) |
@@ -89,7 +89,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 
 ```text
 advanced-ai-lab/
-├── app.py                         # entrada de Streamlit: uv run streamlit run app.py
+├── frontend/                      # interfaz web: React + Vite + TypeScript (consume la API)
 ├── src/sb_asistente/
 │   ├── config.py                  # rutas, alcance, cortesía del scraper y modelo (sin números mágicos)
 │   ├── model/                     # M · lógica de negocio
@@ -107,9 +107,7 @@ advanced-ai-lab/
 │   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
 │       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
-│       ├── streamlit_app.py       #   interfaz web: navegación en dos áreas (cliente / equipo)
-│       ├── app_pages/             #   una página por archivo (asistente, foto, guías, configuración…)
-│       ├── ui.py                  #   recursos cacheados y ajustes compartidos por las páginas
+│       ├── rpc.py                 #   JSON-RPC 2.0 sobre FastAPI
 │       └── cli.py                 #   comando `sb`
 ├── scripts/                       # scrape_empresa.py, crear_kanban.py, check_commit_msg.py, auditar_madurez.py
 ├── tests/                         # pytest por capa (AAA, fixtures HTML, LLM falso)
@@ -199,7 +197,7 @@ git push
 | 2026-11-10 | Claude sin `temperature` (la API la rechaza con 400) y con esfuerzo `low` ([ADR-019](docs/decisiones/ADR-019-claude-sin-temperatura.md)) | Los modelos actuales de Claude eliminaron los parámetros de muestreo |
 | 2026-11-10 | Fase 2: RAG con Ollama + Qdrant y Deep Agent, adaptado de `ejercicio_langchain` ([ADR-018](docs/decisiones/ADR-018-rag-qdrant-deep-agents.md)) | Contexto ~2K tokens en vez de ~36K; embeddings locales |
 | 2026-11-11 | Foto → «¿qué hago?» con YOLO local, Claude con visión y FastAPI, adaptado de `ejercicio_gestion_fastapi` ([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)) | YOLO solo daba una tabla obvia; la situación es lo que la persona necesita resolver |
-| 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
+| 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)); el 2026-11-17 Streamlit se retiró y la única interfaz web es el frontend React ([ADR-024](docs/decisiones/ADR-024-sin-streamlit.md), SPEC-052) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía; Streamlit prohibido por los anuncios 006 y 007 |
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |

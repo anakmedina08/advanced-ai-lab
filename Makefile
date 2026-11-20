@@ -55,9 +55,6 @@ mercado: ## Corpus de mercado: varias aseguradoras (robots.txt + sitemap → Bro
 index: ## Fase 2: embeddings de los chunks en Qdrant (requiere: ollama pull embeddinggemma)
 	uv run sb index
 
-app: ## Abre la interfaz Streamlit en http://localhost:8501
-	uv run streamlit run app.py
-
 eval: ## Evalúa el banco (PROVIDER=anthropic|deepseek|ollama, VERSION=v1..v4, MODO=completo|reducido|rag|agente)
 	uv run sb eval --provider $(or $(PROVIDER),anthropic) --version $(or $(VERSION),v3) --modo $(or $(MODO),completo)
 
@@ -147,3 +144,10 @@ build: ## Construye el paquete (sdist + wheel)
 clean: ## Limpia cachés y artefactos
 	rm -rf .pytest_cache .ruff_cache .mypy_cache dist build htmlcov .coverage
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
+
+.PHONY: auditar-deps
+auditar-deps: ## Vulnerabilidades conocidas en uv.lock (pip-audit; aceptadas en seguridad/)
+	@uv export --frozen --no-hashes --no-emit-project > .requisitos-auditoria.txt
+	uvx pip-audit@2.10.1 -r .requisitos-auditoria.txt --no-deps --disable-pip --progress-spinner off \
+		$$(grep -oE '^[A-Z]+-[0-9A-Za-z-]+' seguridad/vulnerabilidades-aceptadas.txt | sed 's/^/--ignore-vuln /'); \
+		s=$$?; rm -f .requisitos-auditoria.txt; exit $$s

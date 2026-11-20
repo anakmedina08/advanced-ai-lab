@@ -39,7 +39,7 @@ function leer(): Ajustes {
   }
 }
 
-/** Ajustes de la sesión (como en la página Configuración de Streamlit), recordados en el navegador. */
+/** Ajustes de la sesión (página Configuración), recordados en el navegador. */
 export function useAjustes(): [Ajustes, (cambio: Partial<Ajustes>) => void] {
   const [ajustes, setAjustes] = useState<Ajustes>(leer);
   const cambiar = (cambio: Partial<Ajustes>) =>

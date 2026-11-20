@@ -304,7 +304,7 @@ class ProyectoOut(BaseModel):
 
 
 class SistemaOut(BaseModel):
-    """Estado del sistema para el panel: insignias y métricas del corpus (como la versión Streamlit)."""
+    """Estado del sistema para el panel del equipo: insignias y métricas del corpus."""
 
     base_lista: bool
     vision_instalada: bool
