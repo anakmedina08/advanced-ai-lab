@@ -291,3 +291,38 @@ def test_post_firmado_responde_200_y_contesta_en_segundo_plano(client):
     # Assert: TestClient ejecuta las tareas en segundo plano antes de volver
     assert r.status_code == 200 and r.json() == {"ok": True}
     assert enviador.enviados and "código de acceso" in enviador.enviados[0][1]
+
+
+# --- Logs: el token de verificación nunca queda escrito -------------------------------------------
+
+
+def test_el_log_de_acceso_oculta_el_token_de_verificacion():
+    # Arrange
+    import logging
+
+    from sb_asistente.view.observabilidad import SinSecretos
+
+    ruta = (
+        "/whatsapp/webhook?hub.mode=subscribe&hub.challenge=1"
+        f"&hub.verify_token={VERIFICAR}&hub_verify_token={VERIFICAR}"
+    )
+    registro = logging.LogRecord(
+        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s"', ("1.2.3.4", "GET", ruta), None
+    )
+    # Act
+    SinSecretos().filter(registro)
+    # Assert
+    assert VERIFICAR not in registro.getMessage() and "hub.verify_token=***" in registro.getMessage()
+    assert "hub.challenge=1" in registro.getMessage()
+
+
+def test_la_api_instala_el_filtro_en_uvicorn():
+    # Arrange
+    import logging
+
+    from sb_asistente.view.observabilidad import SinSecretos
+
+    # Act
+    filtros = logging.getLogger("uvicorn.access").filters
+    # Assert
+    assert any(isinstance(f, SinSecretos) for f in filtros)
