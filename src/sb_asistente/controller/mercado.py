@@ -45,7 +45,7 @@ from sb_asistente.config import (
     SITEMAP_RUTAS_COMUNES,
     USER_AGENT,
 )
-from sb_asistente.model.mercado import canales, contactos, secciones
+from sb_asistente.model.mercado import canales, contactos, identificar, lectura, secciones
 from sb_asistente.model.mercado.comparar import Oferta, comparar
 from sb_asistente.model.mercado.registro import Aseguradora, cargar_registro, detectar, por_id
 from sb_asistente.model.processing import clean, gold
@@ -457,6 +457,23 @@ def aseguradoras(ids: Iterable[str] = ()) -> list[Aseguradora]:
     return [a for a in registro if a.corpus_propio or a.hace_scraping]
 
 
+def resolver_aseguradora(texto: str) -> str:
+    """Id del registro a partir de un id o de un nombre («MAPFRE», «Seguros SURA»); ``KeyError`` si no."""
+    registro = cargar_registro()
+    if texto in por_id(registro):
+        return texto
+    encontradas = detectar(texto, registro)
+    if not encontradas:
+        raise KeyError(f"Aseguradora no registrada: {texto}")
+    return encontradas[0]
+
+
+def fragmentos_comparados(consulta: str) -> list:
+    """Un pasaje por aseguradora relevante, todos en una lista (lo que ve el agente)."""
+    ofertas = comparar_aseguradoras(recuperador_mercado(), consulta, por_aseguradora=1)
+    return [f for o in ofertas for f in o.fragmentos]
+
+
 def detectar_aseguradoras(mensaje: str) -> list[str]:
     """Ids de las aseguradoras del registro que nombra un mensaje (para el clasificador)."""
     return detectar(mensaje, cargar_registro())
@@ -563,3 +580,44 @@ def canales_para(
 
 # Servicios que la persona puede pedir (``ventas`` existe en los datos, pero no se usa para atender).
 SERVICIOS_ATENCION: tuple[str, ...] = tuple(s for s in canales.SERVICIOS if s != "ventas")
+
+
+# Errores de lectura que la vista traduce a HTTP (422 documento inválido, 503 sin lector).
+DocumentoInvalidoError = lectura.DocumentoInvalidoError
+LectorNoDisponibleError = lectura.LectorNoDisponibleError
+
+
+def _identificacion_json(r: identificar.Identificacion) -> dict[str, object]:
+    """Solo datos del registro: nunca el texto leído ni lo que escribió la persona."""
+    return {
+        "aseguradora": r.aseguradora.id if r.aseguradora else None,
+        "confianza": r.confianza,
+        "servicio": r.servicio,
+        "candidatas": [
+            {"id": c.id, "nombre": c.nombre, "sitio": c.sitio or None, "senales": list(c.senales)}
+            for c in r.candidatas[:MERCADO_MAX_COMPARAR]
+        ],
+    }
+
+
+def identificar_por_pistas(pistas: str) -> dict[str, object]:
+    """Aseguradora que sugieren las pistas que escribió la persona («pago en la app de MAPFRE»)."""
+    if not pistas.strip():
+        raise ValueError(
+            "Cuéntame alguna pista: dónde pagas, de quién te llegan los correos o qué dice el recibo."
+        )
+    return _identificacion_json(identificar.identificar(pistas, cargar_registro()))
+
+
+def identificar_documento(
+    datos: bytes, leer: Callable[[bytes], str] = lectura.leer_documento
+) -> dict[str, object]:
+    """Aseguradora que aparece en un documento (recibo, carátula, extracto, certificado).
+
+    El texto se lee en memoria y se descarta al salir de esta función: lo único que se devuelve
+    son aseguradoras del registro y si se pudo leer algo (``leido``), para pedir otra foto.
+    """
+    texto = leer(datos)
+    resultado = _identificacion_json(identificar.identificar(texto, cargar_registro(), documento=True))
+    resultado["leido"] = bool(texto.strip())
+    return resultado

@@ -143,6 +143,12 @@ def build_parser() -> argparse.ArgumentParser:
     mcan.add_argument(
         "--resumen", default="", help="Resumen del caso (deduce el servicio y va en el WhatsApp)"
     )
+    mid = mer_sub.add_parser(
+        "identificar", help="Con qué aseguradora está la persona (pistas o recibo/carátula, OCR local)"
+    )
+    fuente = mid.add_mutually_exclusive_group(required=True)
+    fuente.add_argument("--pistas", help="Dónde paga, de qué dominio le llegan correos, qué app usa…")
+    fuente.add_argument("--archivo", type=Path, help="Foto, pantallazo o PDF (se lee en memoria)")
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
@@ -378,7 +384,7 @@ def _mercado(args: argparse.Namespace) -> int:
     """Subcomandos de ``sb mercado``; los errores (id desconocido, corpus sin generar) salen como mensaje."""
     try:
         return _mercado_comando(args)
-    except (KeyError, FileNotFoundError, ValueError) as exc:
+    except (KeyError, FileNotFoundError, ValueError, mercado.LectorNoDisponibleError) as exc:
         print(f"No se pudo: {exc.args[0] if exc.args else exc}")
         return 1
 
@@ -424,6 +430,18 @@ def _mercado_comando(args: argparse.Namespace) -> int:
             print(f"  Tel. {t['valor']:<16} {alcance}  {t['fuente']}")
         if not telefonos:
             print(f"  Sin teléfonos publicados: ver {r['sitio']}")
+    elif args.mercado_command == "identificar":
+        r = (
+            mercado.identificar_documento(args.archivo.read_bytes())
+            if args.archivo
+            else mercado.identificar_por_pistas(args.pistas)
+        )
+        print(f"Aseguradora: {r['aseguradora'] or 'sin identificar'} · confianza {r['confianza']}")
+        candidatas = r["candidatas"] if isinstance(r["candidatas"], list) else []
+        for c in candidatas:
+            print(f"  · {c['nombre']} ({c['id']}) por {', '.join(c['senales'])}")
+        if r.get("leido") is False:
+            print("  No se pudo leer texto: pruebe con una foto más nítida o un pantallazo.")
     return 0
 
 

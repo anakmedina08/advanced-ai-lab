@@ -113,6 +113,17 @@ MERCADO_MAX_COMPARAR: Final[int] = 8  # aseguradoras lado a lado en una comparac
 MERCADO_MAX_POR_ASEGURADORA: Final[int] = 3  # páginas por aseguradora en una comparación
 MERCADO_CANDIDATOS_POR_PAGINA: Final[int] = 4  # pasajes pedidos por página que se quiere mostrar
 MERCADO_CANDIDATOS_RELEVANCIA: Final[int] = 20  # pasajes para elegir las aseguradoras relevantes
+
+# --- ¿Con qué aseguradora está la persona? (SPEC-071): pistas y OCR local, sin LLM ---------
+# El documento (recibo, carátula, extracto) se lee en memoria con Tesseract y se descarta: solo
+# sale el nombre de la aseguradora del registro. Tesseract es un binario del sistema (opcional):
+#   macOS: brew install tesseract tesseract-lang   ·   Debian: apt-get install tesseract-ocr-spa
+IDENTIFICAR_MAX_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por documento
+IDENTIFICAR_PISTAS_MAX: Final[int] = 1000  # caracteres de pistas escritas
+IDENTIFICAR_OCR_IDIOMAS: Final[str] = os.getenv("OCR_IDIOMAS", "spa+eng")  # se usan los instalados
+IDENTIFICAR_OCR_TIMEOUT_S: Final[int] = 30
+IDENTIFICAR_LADO_MIN: Final[int] = 1600  # px: las fotos pequeñas se amplían para que Tesseract lea mejor
+IDENTIFICAR_PDF_PAGINAS: Final[int] = 3  # páginas de un PDF que se leen (el recibo cabe en la primera)
 WHATSAPP_MAX_TEXTO: Final[int] = 1000  # caracteres del resumen en el enlace de traspaso wa.me
 
 # --- Limpieza y chunking -----------------------------------------------------------------

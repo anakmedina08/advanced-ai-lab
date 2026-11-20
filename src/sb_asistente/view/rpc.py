@@ -37,6 +37,7 @@ from sb_asistente.config import (
     CONSULTA_MAX,
     CONSULTA_MIN,
     ID_ASEGURADORA_MAX,
+    IDENTIFICAR_PISTAS_MAX,
     LLM_PROVIDER,
     MENSAJE_MAX,
     MERCADO_MAX_COMPARAR,
@@ -193,6 +194,17 @@ class CanalesParams(_Params):
         return rechazar_datos_personales(valor) if valor else valor
 
 
+class IdentificarParams(_Params):
+    """``mercado.identificar``: pistas que escribió la persona sobre su aseguradora (SPEC-071)."""
+
+    pistas: Annotated[str, Field(min_length=2, max_length=IDENTIFICAR_PISTAS_MAX)]
+
+    @field_validator("pistas")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+
 class ClasificarParams(_Params):
     """``clasificador.clasificar``."""
 
@@ -255,6 +267,11 @@ def _mercado_buscar(p: MercadoBuscarParams, ctx: Contexto) -> dict[str, object]:
 def _mercado_canales(p: CanalesParams, ctx: Contexto) -> dict[str, object]:
     """WhatsApp y teléfonos oficiales de la aseguradora para el servicio que necesita la persona."""
     return mercado_ctrl.canales_para(p.aseguradora, p.servicio, p.resumen)
+
+
+def _mercado_identificar(p: IdentificarParams, ctx: Contexto) -> dict[str, object]:
+    """Aseguradoras del registro que sugieren las pistas (sin LLM; el texto no se guarda)."""
+    return mercado_ctrl.identificar_por_pistas(p.pistas)
 
 
 def _mercado_comparar(p: CompararParams, ctx: Contexto) -> dict[str, object]:
@@ -376,6 +393,9 @@ METODOS: dict[str, Metodo] = {
     ),
     "mercado.canales": Metodo(
         CanalesParams, _mercado_canales, "WhatsApp y teléfonos oficiales de una aseguradora para un servicio."
+    ),
+    "mercado.identificar": Metodo(
+        IdentificarParams, _mercado_identificar, "Con qué aseguradora está la persona, según sus pistas."
     ),
     "mercado.comparar": Metodo(
         CompararParams, _mercado_comparar, "La misma consulta en varias aseguradoras, lado a lado."
