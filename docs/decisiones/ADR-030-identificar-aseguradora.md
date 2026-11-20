@@ -19,6 +19,12 @@
   - **Señales simples e interpretables** (nombre y dominio) en lugar de un modelo: se pueden
     explicar a la persona («encontré el dominio mapfre.com.co») y probar caso por caso.
   - **No adivinar:** con empate o sin señales, el asistente pregunta en vez de elegir.
+  - **Coincidencia por palabras, no razones sociales escritas a mano:** la razón social cambia
+    («Seguros Comerciales Bolívar S.A.», «Bolívar Seguros Generales»), pero conserva la palabra que
+    distingue a la compañía. Esas palabras se calculan del registro (las del nombre y los alias que
+    no son genéricas ni compartidas) y cuentan si están cerca de una palabra de seguros («seguros»,
+    «compañía», «póliza», «NIT»), con tolerancia a errores del OCR. Una sola coincidencia se le
+    muestra a la persona para que confirme; dos o más (encabezado y pie) bastan para elegirla.
   - **PDF como primera clase:** los comprobantes PSE y las carátulas casi siempre llegan en PDF.
     Si el PDF tiene capa de texto se lee con `pypdf` (exacto y sin OCR); si casi no tiene texto
     (escaneado), sus primeras 3 páginas se convierten en imagen con `pypdfium2` (rueda con

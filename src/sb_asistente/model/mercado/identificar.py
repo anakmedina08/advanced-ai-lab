@@ -9,15 +9,17 @@ devuelve, ni se guarda, ni se registra en logs (Ley 1581).
 """
 
 import re
+from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from typing import Literal
 
 from sb_asistente.model.llm.retrieval import normalize_words
 from sb_asistente.model.mercado.canales import Servicio, servicio_de
 from sb_asistente.model.mercado.registro import Aseguradora
 
-Senal = Literal["nombre", "dominio"]
+Senal = Literal["nombre", "dominio", "coincidencia"]
 Confianza = Literal["alta", "media", "baja", "ninguna"]
 
 # Alias de una palabra que en un documento suelen ser otra cosa: «Bolívar» es un departamento, una
@@ -26,7 +28,34 @@ Confianza = Literal["alta", "media", "baja", "ninguna"]
 AMBIGUAS_EN_DOCUMENTO: frozenset[str] = frozenset({"bolivar"})
 
 _DOMINIO = re.compile(r"(?:[a-z0-9-]+\.)+[a-z]{2,}", re.IGNORECASE)
-PESO: dict[Senal, float] = {"nombre": 1.0, "dominio": 1.5}
+PESO: dict[Senal, float] = {"nombre": 1.0, "dominio": 1.5, "coincidencia": 0.75}
+
+# --- Coincidencia por palabras (no depende de la razón social exacta) ---------------------------
+# Una razón social cambia («Seguros Comerciales Bolívar S.A.», «Bolívar Seguros Generales»), pero
+# conserva la palabra que distingue a la compañía. Esa palabra cuenta si aparece cerca de una
+# palabra de seguros: «Seguros Comerciales Bolívar» sí; «Av. Simón Bolívar» no. También tolera
+# errores del OCR («MAPFKE», «B0LIVAR») con una similitud mínima.
+GENERICAS: frozenset[str] = frozenset(
+    {"seguros", "seguro", "compania", "cia", "aseguradora", "colombia", "generales", "vida", "arl",
+     "international", "internacional", "comerciales", "grupo", "colombiana", "nacional", "proteccion"}
+)  # fmt: skip
+CONTEXTO: frozenset[str] = frozenset(
+    {
+        "seguros",
+        "seguro",
+        "aseguradora",
+        "compania",
+        "cia",
+        "poliza",
+        "polizas",
+        "generales",
+        "nit",
+        "asegurado",
+    }
+)
+VENTANA_CONTEXTO = 4  # palabras antes o después
+SIMILITUD_MINIMA = 0.8  # parecido entre palabras para tolerar errores del OCR
+LARGO_MINIMO_DIFUSO = 5  # palabras más cortas solo cuentan si son idénticas
 MENCIONES_ALTA = 2  # el nombre repetido en el documento (encabezado y pie) también es confianza alta
 
 
@@ -71,6 +100,42 @@ def _frases(a: Aseguradora, documento: bool) -> list[tuple[str, ...]]:
     return sorted((f for f in formas if f), key=len, reverse=True)
 
 
+def distintivas(registro: Sequence[Aseguradora]) -> dict[str, frozenset[str]]:
+    """Palabras que distinguen a cada aseguradora, calculadas desde el registro.
+
+    Son las de su nombre y alias que no son genéricas ni se repiten en otra compañía: al agregar una
+    aseguradora al TOML, sus palabras distintivas salen solas.
+    """
+    por_id = {
+        a.id: {w for x in (a.nombre, *a.alias) for w in normalize_words(x) if w not in GENERICAS}
+        for a in registro
+    }
+    veces = Counter(w for palabras in por_id.values() for w in palabras)
+    return {ident: frozenset(w for w in palabras if veces[w] == 1) for ident, palabras in por_id.items()}
+
+
+def _parecida(palabra: str, objetivos: frozenset[str]) -> bool:
+    if palabra in objetivos:
+        return True
+    if len(palabra) < LARGO_MINIMO_DIFUSO:
+        return False
+    return any(
+        abs(len(palabra) - len(o)) <= 2 and SequenceMatcher(None, palabra, o).ratio() >= SIMILITUD_MINIMA
+        for o in objetivos
+    )
+
+
+def _coincidencias(palabras: Sequence[str], objetivos: frozenset[str]) -> int:
+    """Veces que una palabra distintiva (o una muy parecida) aparece cerca de una palabra de seguros."""
+    total = 0
+    for i, palabra in enumerate(palabras):
+        if not _parecida(palabra, objetivos):
+            continue
+        vecinas = palabras[max(0, i - VENTANA_CONTEXTO) : i] + palabras[i + 1 : i + 1 + VENTANA_CONTEXTO]
+        total += any(v in CONTEXTO for v in vecinas)
+    return total
+
+
 def _menciones(palabras: Sequence[str], frase: tuple[str, ...]) -> int:
     n = len(frase)
     return sum(1 for i in range(len(palabras) - n + 1) if tuple(palabras[i : i + n]) == frase)
@@ -87,6 +152,10 @@ def _confianza(candidatas: Sequence[Candidata]) -> Confianza:
     primera = candidatas[0]
     if len(candidatas) > 1 and candidatas[1].puntaje >= primera.puntaje:
         return "baja"  # empate: el recibo nombra a dos (p. ej. el banco y la aseguradora con el mismo peso)
+    if primera.senales == ("coincidencia",):
+        # Solo por palabras parecidas: un documento real repite la razón social (encabezado y pie);
+        # una sola coincidencia («seguros… estado civil») se le muestra a la persona para que confirme.
+        return "media" if primera.menciones >= MENCIONES_ALTA else "baja"
     if "dominio" in primera.senales or primera.menciones >= MENCIONES_ALTA:
         return "alta"
     return "media"
@@ -101,8 +170,10 @@ def identificar(texto: str, registro: Iterable[Aseguradora], documento: bool = F
         documento: True si el texto viene de un documento (descarta alias ambiguos como «Bolívar»).
 
     """
+    registro = list(registro)
     palabras = normalize_words(texto)
     dominios = _dominios(texto)
+    propias = distintivas(registro)
     candidatas: list[Candidata] = []
     for a in registro:
         senales: list[Senal] = []
@@ -113,6 +184,11 @@ def identificar(texto: str, registro: Iterable[Aseguradora], documento: bool = F
                 menciones = max(menciones, veces)
                 if "nombre" not in senales:
                     senales.append("nombre")
+        if not senales and propias[a.id]:
+            veces = _coincidencias(palabras, propias[a.id])
+            if veces:
+                senales.append("coincidencia")
+                menciones = veces
         propio = _host(a.sitio) if a.sitio else ""
         if propio and any(d == propio or d.endswith("." + propio) for d in dominios):
             senales.append("dominio")

@@ -206,7 +206,7 @@ class CandidataOut(BaseModel):
     id: str
     nombre: str
     sitio: str | None = None
-    senales: list[Literal["nombre", "dominio"]]
+    senales: list[Literal["nombre", "dominio", "coincidencia"]]
 
 
 class IdentificacionOut(BaseModel):

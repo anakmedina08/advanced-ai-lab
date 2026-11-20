@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 from sb_asistente.controller import mercado
 from sb_asistente.model.agente import TOOLS_CON_FUENTES, HerramientasMercado, crear_tools_mercado
 from sb_asistente.model.mercado import lectura
-from sb_asistente.model.mercado.identificar import identificar
+from sb_asistente.model.mercado.identificar import distintivas, identificar
 from sb_asistente.model.mercado.registro import Aseguradora, cargar_registro
 from sb_asistente.model.rag.hibrido import CorpusVacioError, Fragmento
 from sb_asistente.model.router import MERCADO, TOOLS_POR_RUTA
@@ -92,6 +92,45 @@ def test_el_registro_real_reconoce_razones_sociales():
     r = identificar("Pago a SEGUROS GENERALES SURAMERICANA S.A.", registro, documento=True)
     # Assert
     assert r.aseguradora is not None and r.aseguradora.id == "sura"
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "FIRMA Y SELLO SEGUROS COMERCIALES BOLIVAR S.A. ... SEGUROS COMERCIALES BOLIVAR SA NIT",
+        "Bolívar Seguros Generales S.A. — Bolívar Compañía Aseguradora",
+        "SEGUROS COMERCIALES B0LIVAR SA · poliza hogar · SEGUROS COMERCIALES BOLlVAR",  # errores del OCR
+    ],
+)
+def test_coincidencia_reconoce_razones_sociales_que_no_estan_en_el_registro(texto):
+    # Arrange / Act: ninguna de estas frases está escrita tal cual en aseguradoras.toml
+    r = identificar(texto, cargar_registro(), documento=True)
+    # Assert
+    assert r.aseguradora is not None and r.aseguradora.id == "seguros-bolivar"
+    assert r.candidatas[0].senales == ("coincidencia",) and r.confianza == "media"
+
+
+def test_coincidencia_tolera_un_error_del_ocr_pero_pide_confirmar_si_aparece_una_vez():
+    # Arrange / Act
+    r = identificar("Pago a MAPFKE SEGUROS", cargar_registro(), documento=True)
+    # Assert: es candidata, pero con una sola mención la persona confirma
+    assert r.candidatas[0].id == "mapfre" and r.confianza == "baja" and r.aseguradora is None
+
+
+@pytest.mark.parametrize("texto", ["Av. Simón Bolívar # 10-20, Bogotá", "mi estado de cuenta del banco"])
+def test_la_palabra_distintiva_sin_contexto_de_seguros_no_cuenta(texto):
+    # Arrange / Act
+    r = identificar(texto, cargar_registro(), documento=True)
+    # Assert
+    assert r.candidatas == ()
+
+
+def test_las_palabras_distintivas_salen_del_registro():
+    # Arrange / Act
+    d = distintivas(cargar_registro())
+    # Assert: «seguros» y «vida» son genéricas o compartidas; la marca no
+    assert d["seguros-bolivar"] == {"bolivar"} and "seguros" not in d["sura"]
+    assert "vida" not in d["aurora"] and "vida" not in d["andina-vida"]
 
 
 # --- Controlador: el texto leído nunca sale ----------------------------------------------------
