@@ -111,6 +111,12 @@ local: instale [Ollama](https://ollama.com) y ejecute `ollama pull llama3.2:3b`.
 `sustentacion.png` y `experimentos.png` son de la interfaz Streamlit original, que se retiró en
 SPEC-052. Las mismas áreas (atención al cliente y panel del equipo, ADR-021) viven hoy en el frontend React.
 
+## Uso de IA
+
+El producto usa IA (LLM, RAG, agente y visión) y el equipo desarrolla con agentes (Claude Code, OpenCode,
+subagentes y skills). Qué puede hacer un agente, qué requiere aprobación y cómo se atribuye está en la
+[política de uso de IA](docs/politica-uso-ia.md).
+
 ## Arquitectura
 
 - Diagrama interactivo de runtime: [`docs/arquitectura.html`](docs/arquitectura.html) (fuente [`docs/arquitectura.json`](docs/arquitectura.json), formato Archify).
