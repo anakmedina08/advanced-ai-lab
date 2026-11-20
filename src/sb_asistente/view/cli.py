@@ -28,6 +28,7 @@ from sb_asistente.config import (
     TRAZAS_N,
 )
 from sb_asistente.controller import (
+    acceso,
     assistant,
     chat,
     experimentos,
@@ -118,6 +119,15 @@ def build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
     ag.add_argument("--usuario", default=None, help="Id del usuario (memoria de largo plazo en el Store)")
+    acc = sub.add_parser("acceso", help="Códigos de acceso para el chat con IA del sitio público (SPEC-072)")
+    acc_sub = acc.add_subparsers(dest="acceso_command", required=True)
+    acc_crear = acc_sub.add_parser("crear", help="Genera un código (se muestra una sola vez)")
+    acc_crear.add_argument("--horas", type=float, default=None, help="Vigencia (por defecto ACCESO_HORAS)")
+    acc_crear.add_argument("--mensajes", type=int, default=None, help="Cupo de mensajes al LLM")
+    acc_crear.add_argument("--nota", default="", help="Para quién es (p. ej. «jurado sustentación»)")
+    acc_sub.add_parser("listar", help="Códigos creados: vigencia y mensajes usados")
+    acc_rev = acc_sub.add_parser("revocar", help="Desactiva un código")
+    acc_rev.add_argument("codigo")
     mer = sub.add_parser("mercado", help="Corpus de mercado: varias aseguradoras (SPEC-069)")
     mer_sub = mer.add_subparsers(dest="mercado_command", required=True)
     mer_sub.add_parser("listar", help="Aseguradoras del registro y su estado")
@@ -380,6 +390,29 @@ def _chat(args: argparse.Namespace) -> int:
     return 0
 
 
+def _acceso(args: argparse.Namespace) -> int:
+    """Subcomandos de ``sb acceso``: crear, listar y revocar códigos."""
+    if args.acceso_command == "crear":
+        try:
+            codigo, info = acceso.crear(args.horas, args.mensajes, args.nota)
+        except ValueError as exc:
+            print(f"No se pudo: {exc}")
+            return 1
+        print(f"Código: {codigo}")
+        print(f"  Vence: {info['expira']} · {info['cupo']} mensajes · {info['nota'] or 'sin nota'}")
+        print("  Guárdalo ahora: no se vuelve a mostrar (solo se guarda su hash).")
+    elif args.acceso_command == "listar":
+        for c in acceso.listar():
+            estado = "revocado" if c["revocado"] else f"{c['restantes']} de {c['cupo']} mensajes"
+            print(f"…{c['pista']}  vence {c['expira']}  {estado}  {c['nota']}")
+    elif args.acceso_command == "revocar":
+        if not acceso.revocar(args.codigo):
+            print("Ese código no existe.")
+            return 1
+        print("Código desactivado.")
+    return 0
+
+
 def _mercado(args: argparse.Namespace) -> int:
     """Subcomandos de ``sb mercado``; los errores (id desconocido, corpus sin generar) salen como mensaje."""
     try:
@@ -467,6 +500,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _mlflow(args)
     if args.command == "mercado":
         return _mercado(args)
+    if args.command == "acceso":
+        return _acceso(args)
     if args.command == "api":
         import uvicorn
 

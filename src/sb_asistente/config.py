@@ -226,6 +226,16 @@ TRAZAS_N: Final[int] = 10  # turnos que muestra `sb trazas`
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
 MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
+
+# --- Códigos de acceso para lo que gasta tokens (SPEC-072) ------------------------------------
+# En el sitio público (yellowdata) el chat y el agente exigen un código que genera un administrador
+# (`sb acceso crear`); lo que corre en local (YOLO, OCR, canales, comparar) sigue gratis y abierto.
+# Apagado por defecto: el frontend del curso y las pruebas no lo necesitan.
+ACCESO_CODIGO_OBLIGATORIO: Final[bool] = os.getenv("ACCESO_CODIGO_OBLIGATORIO", "0") == "1"
+ACCESO_DB: Final[Path] = DATA_DIR / "acceso" / "codigos.sqlite"  # solo hashes, nunca los códigos
+ACCESO_HORAS: Final[float] = float(os.getenv("ACCESO_HORAS", "24"))  # vigencia por defecto
+ACCESO_CUPO: Final[int] = int(os.getenv("ACCESO_CUPO", "40"))  # mensajes al LLM por código
+ACCESO_HEADER: Final[str] = "X-Codigo-Acceso"
 TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad

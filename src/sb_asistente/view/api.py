@@ -16,12 +16,13 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, HTTPException, Path, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Path, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from sb_asistente.config import (
+    ACCESO_HEADER,
     BASE_URL,
     CHUNKS_JSONL,
     FRONTEND_ORIGINS,
@@ -31,6 +32,7 @@ from sb_asistente.config import (
     RECO_DIR,
     RECO_K,
 )
+from sb_asistente.controller import acceso as acceso_ctrl
 from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import experimentos as experimentos_ctrl
@@ -92,6 +94,22 @@ from sb_asistente.view.schemas import (
 logger = logging.getLogger(__name__)
 
 
+def _exigir_codigo(codigo: str | None) -> None:
+    """403 si el acceso es obligatorio y el código falta, venció o no tiene cupo (SPEC-072)."""
+    try:
+        acceso_ctrl.exigir(codigo)
+    except acceso_ctrl.AccesoDenegadoError as exc:
+        raise HTTPException(403, str(exc)) from exc
+
+
+def requiere_codigo(codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None) -> None:
+    """Dependencia de las rutas que llaman al LLM: gasta un mensaje del código de acceso."""
+    _exigir_codigo(codigo)
+
+
+ConCodigo = Depends(requiere_codigo)
+
+
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Precarga YOLO al arrancar (si está el extra ``vision``) para que la primera foto no espere."""
@@ -119,7 +137,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(FRONTEND_ORIGINS),
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Content-Type", "X-Request-ID", ACCESO_HEADER],
     expose_headers=["X-Request-ID", "X-Process-Time-ms"],
 )
 
@@ -281,7 +299,7 @@ def proyecto_entregables() -> ProyectoOut:
     )
 
 
-@app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def preguntar(entrada: PreguntaIn, responder: Annotated[Responder, Depends(get_responder)]) -> RespuestaOut:
     """Q&A: responde citando la página oficial de donde sale el dato."""
     try:
@@ -291,13 +309,13 @@ def preguntar(entrada: PreguntaIn, responder: Annotated[Responder, Depends(get_r
     return _salida(ans)
 
 
-@app.post("/resumen", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/resumen", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def resumir(entrada: TemaIn, fabrica: Annotated[Callable, Depends(get_asistente)]) -> RespuestaOut:
     """Resumen de un tema para un cliente nuevo."""
     return _salida(fabrica(entrada.proveedor or LLM_PROVIDER).summarize(entrada.tema))
 
 
-@app.post("/faq", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/faq", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def preguntas_frecuentes(
     entrada: TemaIn, fabrica: Annotated[Callable, Depends(get_asistente)]
 ) -> RespuestaOut:
@@ -317,7 +335,7 @@ def recomendaciones(cliente_id: str, k: Annotated[int, Query(ge=1, le=10)] = REC
     return RecomendacionesOut(cliente_id=cliente_id, k=k, recomendaciones=items)
 
 
-@app.post("/chat", response_model=ChatOut, tags=["chat"])
+@app.post("/chat", response_model=ChatOut, tags=["chat"], dependencies=[ConCodigo])
 def conversar(
     entrada: ChatIn, fabrica: Annotated[Callable[[str], chat.Responder], Depends(get_chat_qa)]
 ) -> dict[str, object]:
@@ -342,7 +360,7 @@ def conversar(
     return turno.a_dict()
 
 
-@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"])
+@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"], dependencies=[ConCodigo])
 def agente_mensaje(
     entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
 ) -> dict[str, object]:
@@ -363,7 +381,7 @@ def agente_mensaje(
     return turno.a_dict()
 
 
-@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse)
+@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse, dependencies=[ConCodigo])
 def agente_stream(
     entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
 ) -> StreamingResponse:
@@ -421,6 +439,14 @@ def borrar_perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> None:
     fabrica(LLM_PROVIDER).olvidar_perfil(usuario_id)
 
 
+@app.get("/acceso/estado", tags=["acceso"])
+def estado_acceso(
+    codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None,
+) -> dict[str, object]:
+    """¿Sirve el código de acceso? Vigencia y mensajes restantes, sin gastar cupo (SPEC-072)."""
+    return acceso_ctrl.estado(codigo)
+
+
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])
 def listar_skills() -> list[SkillOut]:
     """Skills que el chat puede aplicar (``metadata.uso: asistente``)."""
@@ -472,6 +498,7 @@ async def analizar_foto(
     devolver_imagen: Annotated[
         bool, Query(description="Incluir la imagen difuminada (JPEG base64) para mostrarla en el frontend")
     ] = False,
+    codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None,
 ) -> FotoOut:
     """Foto → ¿qué hago?: privacidad local, situación, respuesta con fuente y recomendaciones.
 
@@ -487,6 +514,8 @@ async def analizar_foto(
     """
     if not (archivo.content_type or "").startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen (JPG o PNG).")
+    if interpretar or responder:  # Claude o el LLM de respuesta: gastan tokens (SPEC-072)
+        _exigir_codigo(codigo)
     datos = await archivo.read()
     llm = proveedor or LLM_PROVIDER
     try:
