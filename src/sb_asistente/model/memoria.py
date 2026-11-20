@@ -53,7 +53,9 @@ def extraer_hechos(mensaje: str) -> dict[str, str]:
         encontrado = patron.search(mensaje)
         if encontrado:
             valor = encontrado.group(1).strip(" .")
-            if valor and not _DATO_SENSIBLE.search(valor):
+            # «ana@correo.com» o «ana123456»: el patrón se corta antes; se revisa la palabra completa.
+            cola = re.match(r"\S*", mensaje[encontrado.end(1) :]).group()
+            if valor and not _DATO_SENSIBLE.search(valor + cola):
                 hechos[clave] = valor[:1].upper() + valor[1:]
     for clave, valor in extraer_perfil(mensaje).conocido().items():
         hechos[clave] = "sí" if valor is True else "no" if valor is False else str(valor)
