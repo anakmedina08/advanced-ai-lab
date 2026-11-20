@@ -27,5 +27,6 @@ dice explícitamente.
 | 551475 | 005 | clase | Grabación Clase 3 — Consolas Agénticas (OpenCode) | 2026-10-22 | — | [resumen](551475-anuncio-005.md) | — |
 | 551475 | 006 | entrega | Sustentación M1 + documento del M2 | 2026-10-29 | 2026-10-31 | ⏳ por resumir | — |
 | 551475 | 007 | entrega | Sustentación del Módulo 3 | 2026-11-13 | 2026-11-14 | [resumen](551475-anuncio-007.md) | ⛔ Streamlit; piso de 8 PR y 8 specs por persona |
+| 551475 | 008 | clase + entrega | Clase 13: GitLab CI/CD (Parte 2) y Sustentación del Módulo 4 | 2026-11-19 | 2026-11-28 | [resumen](551475-anuncio-008.md) | GitLab + Registry, Droplet con HTTPS, deploy por SSH, GitLab MCP y `glab` |
 
 Catálogo de herramientas (exigidas, permitidas y no permitidas): [`herramientas.md`](herramientas.md).
