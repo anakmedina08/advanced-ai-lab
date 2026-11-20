@@ -1,0 +1,9 @@
+# Vulnerabilidades aceptadas por pip-audit (SPEC-054). Una por línea: ID  # motivo · revisar AAAA-MM-DD
+# Se revisan en la fecha indicada o cuando salga una versión corregida. Agregar una requiere PR revisado.
+#
+# chromadb 1.5.9 — sin versión corregida. Afectan al modo servidor de Chroma (API HTTP, autenticación y
+# RBAC entre tenants). El proyecto usa Chroma embebido (PersistentClient), sin servidor ni puertos expuestos.
+PYSEC-2026-311   # chromadb · ejecución remota en el servidor HTTP · no aplica (embebido) · revisar 2026-12-15
+PYSEC-2026-3814  # chromadb · ejecución remota (autenticado) en el servidor HTTP · no aplica · revisar 2026-12-15
+PYSEC-2026-3815  # chromadb · RBAC entre tenants del servidor · no aplica · revisar 2026-12-15
+PYSEC-2026-3813  # chromadb · autorización entre tenants del servidor · no aplica · revisar 2026-12-15

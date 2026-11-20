@@ -77,7 +77,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **Pre-commit** | higiene + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + Conventional Commits |
 | **Contenedor** | Docker multi-stage (CPU), `make docker-build` |
 | **CI/CD** | [GitHub Actions](.github/workflows/ci.yml) |
-| **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) |
+| **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) + pip-audit, CodeQL y SBOM ([ADR-027](docs/decisiones/ADR-027-auditoria-dependencias.md)) |
 | **Especificación** | OpenSpec (`openspec/`: `spec.md`, `plan.md`, `tasks.md`) |
 | **Memoria del agente** | Engram (espejo versionado en `docs/decisiones/`) |
 | **Agentes** | Claude Code con 7 subagentes (`.claude/agents/`) y hooks de telemetría (`.claude/settings.json`) |
