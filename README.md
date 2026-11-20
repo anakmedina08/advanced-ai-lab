@@ -194,6 +194,7 @@ make mercado                  # corpus de mercado: varias aseguradoras (registro
 uv run sb mercado comparar "seguro de hogar humedad" --aseguradoras sura allianz mapfre
 uv run sb mercado canales mapfre --resumen "choque leve, sin heridos"   # WhatsApp y línea del servicio
 uv run sb mercado identificar --pistas "los correos me llegan de mapfre.com.co"  # ¿con qué aseguradora está?
+uv run sb acceso crear --horas 24 --mensajes 40 --nota "jurado"   # código para el chat con IA
 uv run sb stats               # resumen del corpus Gold
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"

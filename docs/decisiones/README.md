@@ -44,6 +44,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-028](ADR-028-corpus-mercado-aseguradoras.md) | Corpus de mercado: varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial | 2026-11-18 |
 | [ADR-029](ADR-029-canales-por-aseguradora.md) | Canales por aseguradora: afiliación declarada y canales leídos de los sitios oficiales | 2026-11-19 |
 | [ADR-030](ADR-030-identificar-aseguradora.md) | Identificar la aseguradora con pistas y documentos leídos en memoria, sin LLM | 2026-11-19 |
+| [ADR-031](ADR-031-codigos-acceso.md) | Códigos de acceso con vencimiento y cupo para lo que gasta tokens | 2026-11-19 |
 
 ## Cómo registrar una decisión nueva en Engram
 
