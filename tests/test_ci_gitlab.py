@@ -30,10 +30,11 @@ def test_el_pipeline_usa_uv_ruff_y_pytest_con_el_mismo_minimo_de_cobertura_que_g
     # Act
     pruebas = " ".join(ci["test"]["script"])
     # Assert
-    assert ci["default"]["before_script"] == ["uv sync --frozen"]
+    assert ci[".uv"]["before_script"] == ["uv sync --frozen"]
+    assert ci["lint"]["extends"] == ci["test"]["extends"] == ".uv"
     assert "uv run ruff check ." in ci["lint"]["script"]
     assert "--cov-fail-under=85" in pruebas and "--cov-fail-under=85" in github
-    assert ci["default"]["image"].startswith("ghcr.io/astral-sh/uv:python3.13")
+    assert ci[".uv"]["image"].startswith("ghcr.io/astral-sh/uv:python3.13")
 
 
 def test_el_espejo_solo_copia_develop_y_main_y_verifica_la_huella_de_gitlab():
@@ -45,6 +46,13 @@ def test_el_espejo_solo_copia_develop_y_main_y_verifica_la_huella_de_gitlab():
     assert espejo["permissions"] == {"contents": "read"}
     assert paso["env"]["LLAVE"] == "${{ secrets.GITLAB_ESPEJO_KEY }}"
     assert paso["env"]["HUELLA"].startswith("SHA256:") and "ssh-keygen -lf" in paso["run"]
+
+
+def test_la_deteccion_de_secretos_no_hereda_uv_ni_su_cache():
+    # Arrange / Act
+    base = _yaml(".gitlab-ci.yml")["default"]
+    # Assert: el job de la plantilla usa su propia imagen, donde uv no existe
+    assert not {"before_script", "image", "cache"} & set(base)
 
 
 def test_ningun_yaml_de_ci_trae_una_llave_privada():
