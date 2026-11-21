@@ -1,0 +1,24 @@
+# Proxy inverso con HTTPS automático (Let's Encrypt) · SPEC-075, ADR-034.
+# DOMINIO llega como variable de entorno: por defecto <ip-con-guiones>.sslip.io (no requiere DNS);
+# con un subdominio propio basta cambiar la variable de CI DOMINIO.
+
+{$DOMINIO} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy frontend:80
+}
+
+api.{$DOMINIO} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+	reverse_proxy api:8000
+}

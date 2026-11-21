@@ -1,0 +1,56 @@
+# Producción en el Droplet · Gestión, Módulo 4, Parte 2 (SPEC-075, ADR-034).
+#
+#   Internet ──443──▶ caddy ──▶ frontend:80   (https://$DOMINIO)
+#                         └──▶ api:8000       (https://api.$DOMINIO)
+#
+# Solo Caddy publica puertos (80 y 443); la API y el frontend quedan en la red interna de Docker.
+# Las imágenes vienen del Container Registry de GitLab con el tag del commit (trazable).
+# El job `deploy` exporta IMAGEN_API, IMAGEN_FRONTEND y DOMINIO; los secretos van en app.env
+# (variable de CI tipo archivo ENV_PRODUCCION), nunca en este archivo ni en el repositorio.
+name: advanced-ai-lab
+
+services:
+  api:
+    image: ${IMAGEN_API:?falta IMAGEN_API}
+    restart: unless-stopped
+    command: ["sb", "api", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - app.env
+    environment:
+      FRONTEND_ORIGINS: "https://${DOMINIO:?falta DOMINIO}"
+      SB_MLFLOW: "0"  # sin servidor MLflow en producción
+    volumes:
+      - ./data:/app/data  # datos públicos del corpus, subidos una vez con rsync
+    expose:
+      - "8000"
+    mem_limit: 1400m
+
+  frontend:
+    image: ${IMAGEN_FRONTEND:?falta IMAGEN_FRONTEND}
+    restart: unless-stopped
+    expose:
+      - "80"
+    mem_limit: 128m
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: "${DOMINIO}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data  # certificados de Let's Encrypt (no se piden de nuevo en cada deploy)
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+
+volumes:
+  caddy_datos:
+  caddy_config:
