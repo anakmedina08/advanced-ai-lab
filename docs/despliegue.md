@@ -1,7 +1,8 @@
 # Despliegue en el Droplet (SPEC-075)
 
 Flujo: push a `main` en GitHub → espejo a GitLab → `lint` → `test` → `build_api` / `build_frontend`
-(Container Registry) → `deploy` (SSH al Droplet) → `https://<DOMINIO>` y `https://api.<DOMINIO>`.
+(Container Registry) → `deploy` (SSH al Droplet) → `https://<DOMINIO>` (Yellowdata),
+`https://app.<DOMINIO>` (panel del equipo) y `https://api.<DOMINIO>` (API).
 Decisión: [ADR-034](decisiones/ADR-034-despliegue-droplet-caddy.md).
 
 ## 1. Preparar el servidor (una vez)
@@ -37,19 +38,29 @@ rsync -az -e "ssh -i ~/.ssh/gitlab_deploy" data/gold data/recomendador deploy@<I
 Las llaves de API van solo en `ENV_PRODUCCION`. `CI_REGISTRY_USER`, `CI_REGISTRY_PASSWORD` y
 `CI_JOB_TOKEN` los crea GitLab en cada job.
 
-## 3. Desplegar
+## 3. Yellowdata (SPEC-076)
+Yellowdata vive en su propio proyecto, `gitlab.com/daalrasi/yellowdata`, cuyo pipeline publica
+`registry.gitlab.com/daalrasi/yellowdata:latest`. El deploy de este repositorio la descarga.
+
+1. En el proyecto `yellowdata`: **Settings → CI/CD → Job token permissions → Add** →
+   `daalrasi/advanced-ai-lab` (sin esto el `pull` falla con *denied*).
+2. Variables opcionales de Yellowdata en el servidor: `/opt/advanced-ai-lab/yellowdata.env`.
+3. Un cambio solo en Yellowdata se publica con su pipeline y luego ▶ `deploy` aquí.
+4. cPanel (`www.yellowdata.com.co`): `ASSISTANT_API_URL=https://api.<DOMINIO>`.
+
+## 4. Desplegar
 - `main`: automático al terminar `build`.
 - `develop`: botón ▶ del job `deploy` en **Build → Pipelines** (manual).
 - Imágenes: **Deploy → Container Registry** (`api` y `frontend`, tags SHA, rama y `latest`).
 - Entornos: **Operate → Environments → produccion** muestra el commit desplegado.
 
-## 4. Herramientas de la sustentación
+## 5. Herramientas de la sustentación
 ```bash
 # GitLab CLI
 brew install glab
-glab auth login            # gitlab.com, navegador
+glab auth login --hostname gitlab.com --web   # el remoto es GitHub: indicar el host
 glab auth status
-glab ci status             # pipeline de la rama actual
+glab ci status -R daalrasi/advanced-ai-lab -b develop
 glab ci view               # vista interactiva de los jobs
 
 # GitLab MCP en OpenCode (ya declarado en opencode.json)
@@ -57,7 +68,7 @@ opencode mcp auth gitlab   # aprueba en el navegador
 opencode mcp list          # gitlab → connected
 ```
 
-## 5. Operación y costo
+## 6. Operación y costo
 ```bash
 ssh -i ~/.ssh/gitlab_deploy deploy@<IP>
 cd /opt/advanced-ai-lab && docker compose -f docker-compose.prod.yml ps
