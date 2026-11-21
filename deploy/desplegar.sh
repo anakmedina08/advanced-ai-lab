@@ -23,6 +23,15 @@ docker logout "$REGISTRO"
 # 2. Reemplazo de los contenedores que cambiaron (Caddy y sus certificados se conservan).
 $COMPOSE up -d --remove-orphans
 
+# Compose no recrea un contenedor cuando solo cambia un archivo montado: si el Caddyfile cambió,
+# se recrea Caddy para que lo lea (los certificados viven en el volumen caddy_datos).
+huella=$(sha256sum Caddyfile | cut -d' ' -f1)
+if [ "$(cat .caddyfile.sha256 2>/dev/null || true)" != "$huella" ]; then
+  echo "Caddyfile nuevo: recreando caddy"
+  $COMPOSE up -d --no-deps --force-recreate caddy
+  echo "$huella" > .caddyfile.sha256
+fi
+
 # 3. Healthcheck: espera a que Docker marque la API como healthy.
 contenedor=$($COMPOSE ps -q api)
 transcurrido=0
