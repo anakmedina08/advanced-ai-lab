@@ -66,3 +66,4 @@ logs/
 .archify/
 docs/arquitectura.*.json
 data/acceso/
+deploy/app.env
