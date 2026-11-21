@@ -65,3 +65,4 @@ logs/
 .claude/skills/archify
 .archify/
 docs/arquitectura.*.json
+data/acceso/
