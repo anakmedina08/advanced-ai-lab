@@ -203,6 +203,7 @@ git push
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
+| 2026-11-21 | GitHub como repositorio principal y GitLab como espejo para el pipeline del Módulo 4 (SPEC-074, [ADR-033](docs/decisiones/ADR-033-espejo-gitlab.md)) | El M4 se demuestra en GitLab sin perder PR, revisiones ni Kanban de GitHub |
 
 ## 10. Notas y tareas pendientes
 

@@ -42,6 +42,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-022](ADR-022-mlflow-bitacora.md) | MLflow como bitácora de experimentos | 2026-11-13 |
 | [ADR-025](ADR-025-auditor-madurez.md) | Auditor de madurez como código del proyecto y puerta en la CI | 2026-11-17 |
 | [ADR-028](ADR-028-corpus-mercado-aseguradoras.md) | Corpus de mercado: varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial | 2026-11-18 |
+| [ADR-033](ADR-033-espejo-gitlab.md) | GitHub como repositorio principal y GitLab como espejo para CI/CD y despliegue | 2026-11-21 |
 
 ## Cómo registrar una decisión nueva en Engram
 
