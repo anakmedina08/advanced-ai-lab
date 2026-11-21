@@ -122,3 +122,17 @@ def test_ningun_archivo_de_despliegue_trae_secretos():
     for linea in plantilla.splitlines():
         if linea.split("=")[0].endswith("_KEY"):
             assert linea.endswith("="), linea
+
+
+def test_yellowdata_es_el_sitio_publico_y_llama_a_la_api_por_la_red_interna():
+    # Arrange
+    compose = _yaml(DEPLOY / "docker-compose.prod.yml")["services"]
+    caddy = (DEPLOY / "Caddyfile").read_text(encoding="utf-8")
+    # Act
+    yellowdata = compose["yellowdata"]
+    # Assert
+    assert yellowdata["image"].endswith("registry.gitlab.com/daalrasi/yellowdata:latest}")
+    assert yellowdata["environment"]["ASSISTANT_API_URL"] == "http://api:8000"
+    assert "ports" not in yellowdata
+    assert "app.{$DOMINIO} {" in caddy and "reverse_proxy yellowdata:3000" in caddy
+    assert "https://app." in compose["api"]["environment"]["FRONTEND_ORIGINS"]

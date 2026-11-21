@@ -10,6 +10,8 @@
 #   SSH_KNOWN_HOSTS  protegida        · salida de `ssh-keyscan -t ed25519 <IP>`
 #   ENV_PRODUCCION   File, protegida  · .env de producción (plantilla: deploy/app.env.example)
 #   DEPLOY_HOST      IP del Droplet  · DEPLOY_USER `deploy` · DOMINIO <ip-con-guiones>.sslip.io
+# Yellowdata (SPEC-076) se publica desde su propio proyecto (daalrasi/yellowdata); este deploy
+# descarga su :latest, por eso ese proyecto debe permitir el CI_JOB_TOKEN de advanced-ai-lab.
 # El Registry usa CI_REGISTRY_USER / CI_REGISTRY_PASSWORD / CI_JOB_TOKEN, que GitLab crea por job.
 
 stages:
@@ -151,5 +153,6 @@ deploy:
     # Verificación desde fuera: HTTPS válido y API respondiendo
     - curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors "https://api.$DOMINIO/health"
     - curl --fail --silent --show-error --retry 5 --retry-delay 6 --retry-all-errors -o /dev/null "https://$DOMINIO/"
+    - curl --fail --silent --show-error --retry 5 --retry-delay 6 --retry-all-errors -o /dev/null "https://app.$DOMINIO/"
   after_script:
     - rm -f ~/.ssh/id_ed25519
