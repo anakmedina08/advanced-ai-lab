@@ -24,8 +24,12 @@ variables:
   UV_PYTHON_DOWNLOADS: never  # la imagen ya trae Python 3.13
 
 default:
-  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
   interruptible: true
+
+# Base de los jobs de Python. No va en `default`: el job `secret_detection` de la plantilla
+# usa su propia imagen (sin uv) y heredaría el `before_script`, fallando con «uv: not found».
+.uv:
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
   cache:
     key:
       files: [uv.lock]
@@ -34,12 +38,14 @@ default:
     - uv sync --frozen
 
 lint:
+  extends: .uv
   stage: lint
   script:
     - uv run ruff check .
     - uv run ruff format --check .
 
 test:
+  extends: .uv
   stage: test
   # Sin red ni API: fixtures locales y LLM falso (no se gasta saldo de ninguna API).
   script:
