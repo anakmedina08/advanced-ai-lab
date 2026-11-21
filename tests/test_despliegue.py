@@ -58,6 +58,8 @@ def test_el_deploy_lee_los_secretos_solo_de_variables_de_ci():
     for variable in ("$SSH_KEY", "$SSH_KNOWN_HOSTS", "$ENV_PRODUCCION", "$CI_JOB_TOKEN"):
         assert variable in pasos, variable
     assert "StrictHostKeyChecking=no" not in pasos
+    assert 'install -m 600 "$SSH_KEY"' not in pasos  # el contenido terminaría impreso en el log
+    assert 'test -f "$ENV_PRODUCCION"' in pasos
     assert "curl --fail" in pasos and "/health" in pasos
 
 
