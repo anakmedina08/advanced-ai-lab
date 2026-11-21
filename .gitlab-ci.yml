@@ -130,12 +130,17 @@ deploy:
   before_script:
     - apk add --no-cache openssh-client curl
     - install -m 700 -d ~/.ssh
-    - install -m 600 "$SSH_KEY" ~/.ssh/id_ed25519
+    # SSH_KEY debe ser tipo File (GitLab pasa la ruta). Si se creó como Variable, se escribe su
+    # contenido sin pasarlo como argumento a ningún comando (así nunca termina en el log).
+    - |
+      if [ -f "$SSH_KEY" ]; then cp "$SSH_KEY" ~/.ssh/id_ed25519; else printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519; fi
+      chmod 600 ~/.ssh/id_ed25519
     - printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
   script:
     - DESTINO="$DEPLOY_USER@$DEPLOY_HOST"
     - DIR=/opt/advanced-ai-lab
     - scp deploy/docker-compose.prod.yml deploy/Caddyfile deploy/desplegar.sh "$DESTINO:$DIR/"
+    - test -f "$ENV_PRODUCCION" || { echo "ENV_PRODUCCION debe ser una variable tipo File"; exit 1; }
     - scp "$ENV_PRODUCCION" "$DESTINO:$DIR/app.env"
     # El token del Registry viaja por stdin; las imágenes llevan el tag del commit (trazable)
     - >
