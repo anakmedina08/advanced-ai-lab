@@ -231,6 +231,21 @@ def test_error_interno_no_filtra_detalle(client):
     assert r["error"]["code"] == -32603 and "sk-123" not in str(r)
 
 
+def test_error_interno_queda_en_el_log_con_el_metodo(client, caplog):
+    # Arrange
+    def falla(*_: object) -> Answer:
+        """Responder que falla: el traceback debe quedar en el log del servidor."""
+        raise RuntimeError("sin llave")
+
+    api.app.dependency_overrides[dependencias.get_responder] = lambda: falla
+    # Act
+    with caplog.at_level("ERROR", logger="sb_asistente.view.rpc"):
+        llamar(client, "asistente.preguntar", {"pregunta": "¿SOAT?"})
+    # Assert
+    registro = next(r for r in caplog.records if r.name == "sb_asistente.view.rpc")
+    assert "asistente.preguntar" in registro.getMessage() and registro.exc_info is not None
+
+
 def test_lote_mantiene_ids_y_omite_notificaciones(client):
     # Arrange
     lote = [

@@ -24,6 +24,7 @@ devuelve qué aseguradoras nombra el mensaje.
 """
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
@@ -71,6 +72,8 @@ PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS, INTERNAL_ERROR =
     -32603,
 )
 NOT_FOUND, NOT_READY, ACCESO_DENEGADO = -32001, -32002, -32003
+
+logger = logging.getLogger(__name__)
 
 
 class RpcError(Exception):
@@ -481,6 +484,7 @@ def ejecutar(llamada: object, ctx: Contexto) -> dict[str, object] | None:
     except ValueError as exc:
         respuesta = _error(INVALID_PARAMS, str(exc), id_)
     except Exception:  # noqa: BLE001 - el detalle va al log, no al cliente
+        logger.exception("Error interno en el método JSON-RPC %s", nombre)
         respuesta = _error(INTERNAL_ERROR, "Error interno del servidor.", id_)
     else:
         respuesta = {"jsonrpc": "2.0", "result": resultado, "id": id_}
