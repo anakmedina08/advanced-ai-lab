@@ -36,6 +36,10 @@ test: ## Ejecuta las pruebas (sin red ni API)
 
 check: lint format-check test ## Verificación completa (lint + formato + pruebas)
 
+.PHONY: secretos
+secretos: ## Busca llaves y tokens en el árbol con gitleaks (vía pre-commit)
+	uv run pre-commit run gitleaks --all-files
+
 .PHONY: madurez
 MINIMO ?= 0
 madurez: ## Auditoría de madurez (9 dimensiones). Puerta: make madurez MINIMO=60
