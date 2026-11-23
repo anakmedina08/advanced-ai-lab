@@ -22,6 +22,7 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 | Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
 | Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
 | Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
+| Despliegue (GitLab CI/CD → Droplet, Caddy y HTTPS) | [`docs/despliegue.md`](docs/despliegue.md) · SPEC-075 |
 | Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
 | Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 

@@ -1,0 +1,49 @@
+name: Espejo a GitLab
+
+# GitHub es el repositorio principal; GitLab recibe una copia de `develop` y `main` para correr
+# su pipeline y desplegar (Gestión, Módulo 4 · SPEC-074, ADR-033). La llave es una deploy key
+# con escritura SOLO en daalrasi/advanced-ai-lab, guardada como secret GITLAB_ESPEJO_KEY.
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: espejo-gitlab-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  espejo:
+    name: Empujar a GitLab
+    runs-on: ubuntu-latest
+    if: github.repository == 'anakmedina08/advanced-ai-lab'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # historial completo: GitLab rechaza un push superficial
+      - name: Empujar la rama
+        env:
+          LLAVE: ${{ secrets.GITLAB_ESPEJO_KEY }}
+          DESTINO: git@gitlab.com:daalrasi/advanced-ai-lab.git
+          # Huella oficial de gitlab.com (ED25519): se verifica antes de confiar en el servidor.
+          HUELLA: SHA256:eUXGGm1YGsMAS7vkcx6JOJdOGHPem5gQp4taiCfCLB8
+        run: |
+          if [ -z "$LLAVE" ]; then
+            echo "::warning::Falta el secret GITLAB_ESPEJO_KEY: no se copió a GitLab."
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$LLAVE" > ~/.ssh/espejo
+          chmod 600 ~/.ssh/espejo
+          ssh-keyscan -t ed25519 gitlab.com > /tmp/gitlab_host 2>/dev/null
+          if ! ssh-keygen -lf /tmp/gitlab_host | grep -q "$HUELLA"; then
+            echo "::error::La llave de gitlab.com no coincide con la huella oficial."
+            exit 1
+          fi
+          cat /tmp/gitlab_host >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/espejo -o IdentitiesOnly=yes"
+          git push --force "$DESTINO" "${GITHUB_SHA}:refs/heads/${GITHUB_REF_NAME}"

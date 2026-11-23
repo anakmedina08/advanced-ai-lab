@@ -46,6 +46,8 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-030](ADR-030-identificar-aseguradora.md) | Identificar la aseguradora con pistas y documentos leídos en memoria, sin LLM | 2026-11-19 |
 | [ADR-031](ADR-031-codigos-acceso.md) | Códigos de acceso con vencimiento y cupo para lo que gasta tokens | 2026-11-19 |
 | [ADR-032](ADR-032-whatsapp-cloud-api.md) | El asistente por WhatsApp con la Cloud API de Meta, con firma y códigos de acceso | 2026-11-19 |
+| [ADR-033](ADR-033-espejo-gitlab.md) | GitHub como repositorio principal y GitLab como espejo para CI/CD y despliegue | 2026-11-21 |
+| [ADR-034](ADR-034-despliegue-droplet-caddy.md) | Despliegue en un Droplet con Docker Compose, Caddy y deploy por SSH desde GitLab | 2026-11-21 |
 
 ## Cómo registrar una decisión nueva en Engram
 

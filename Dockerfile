@@ -39,6 +39,7 @@ COPY src/ src/
 COPY scripts/ scripts/
 COPY evaluacion/ evaluacion/
 COPY .streamlit/ .streamlit/
+COPY .claude/skills/ .claude/skills/
 RUN mkdir -p data/raw data/silver data/gold && chown -R appuser data evaluacion
 
 USER appuser
