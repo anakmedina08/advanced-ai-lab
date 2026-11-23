@@ -20,6 +20,8 @@ from langgraph.store.base import BaseStore
 from langgraph.store.sqlite import SqliteStore
 
 from sb_asistente.model.intencion import extraer_perfil
+from sb_asistente.model.llm.retrieval import normalize_words
+from sb_asistente.model.mercado.registro import cargar_registro, detectar, por_id
 
 USUARIO_VALIDO: Final = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _PALABRA = r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+"
@@ -32,6 +34,51 @@ _PATRONES: Final[dict[str, re.Pattern[str]]] = {
     "ciudad": re.compile(rf"\bvivo en\s+(.{{2,30}}?){_HASTA_FIN}", re.IGNORECASE),
 }
 _DATO_SENSIBLE: Final = re.compile(r"@|\d{5,}")
+# «Tengo el SOAT con Equidad», «estoy asegurado con SURA», «mi póliza de hogar es de MAPFRE»:
+# solo se guarda la aseguradora si la persona dice que tiene un seguro con ella (SPEC-070).
+_TENENCIA: Final = re.compile(
+    r"\b(tengo|mi (seguro|poliza|póliza|soat|arl)|soy cliente"
+    r"|estoy (asegurad[oa]|afiliad[oa]|inscrit[oa]))\b",
+    re.IGNORECASE,
+)
+_SEGUROS: Final[dict[str, str]] = {
+    "soat": "soat",
+    "auto": "autos",
+    "autos": "autos",
+    "carro": "autos",
+    "vehiculo": "autos",
+    "moto": "autos",
+    "hogar": "hogar",
+    "vivienda": "hogar",
+    "casa": "hogar",
+    "salud": "salud",
+    "medicina": "salud",
+    "vida": "vida",
+    "exequial": "vida",
+    "arl": "arl",
+    "mascota": "mascotas",
+    "mascotas": "mascotas",
+}
+
+
+def extraer_aseguradora(mensaje: str) -> dict[str, str]:
+    """Aseguradora y tipos de seguro que la persona dice TENER (no los que solo pregunta).
+
+    Nunca guarda números de póliza ni de documento: solo el nombre de la compañía del registro y
+    las líneas de seguro («soat», «autos», «hogar»…).
+    """
+    if not _TENENCIA.search(mensaje):
+        return {}
+    registro = cargar_registro()
+    ids = detectar(mensaje, registro)
+    if not ids:
+        return {}
+    palabras = set(normalize_words(mensaje))
+    seguros = sorted({linea for palabra, linea in _SEGUROS.items() if palabra in palabras})
+    hechos = {"aseguradora": por_id(registro)[ids[0]].nombre}
+    if seguros:
+        hechos["seguros"] = ", ".join(seguros)
+    return hechos
 
 
 def namespace(usuario_id: str) -> tuple[str, str, str]:
@@ -47,7 +94,7 @@ def namespace(usuario_id: str) -> tuple[str, str, str]:
 
 
 def extraer_hechos(mensaje: str) -> dict[str, str]:
-    """Hechos explícitos del mensaje (nombre, empresa, ciudad y perfil de seguros)."""
+    """Hechos explícitos del mensaje (nombre, empresa, ciudad, perfil y aseguradora que tiene)."""
     hechos: dict[str, str] = {}
     for clave, patron in _PATRONES.items():
         encontrado = patron.search(mensaje)
@@ -59,6 +106,7 @@ def extraer_hechos(mensaje: str) -> dict[str, str]:
                 hechos[clave] = valor[:1].upper() + valor[1:]
     for clave, valor in extraer_perfil(mensaje).conocido().items():
         hechos[clave] = "sí" if valor is True else "no" if valor is False else str(valor)
+    hechos.update(extraer_aseguradora(mensaje))
     return hechos
 
 

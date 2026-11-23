@@ -217,6 +217,24 @@ def test_api_flujo_completo(api_completa):
     assert cuerpo["respuesta"]["cita_fuente"] and cuerpo["recomendaciones"][0]["nombre"] == "SOAT"
 
 
+def test_api_foto_gratis_solo_yolo_y_recomendador_sin_llm():
+    # Arrange: interpretar y responder apagados (como la página pública); el doble de QA anota preguntas
+    asistente = RecordingAssistant()
+    app.dependency_overrides[get_detector] = lambda: lambda: FakeDetector(det("car"))
+    app.dependency_overrides[get_foto_qa] = lambda: lambda proveedor: asistente
+    app.dependency_overrides[get_interprete] = lambda: lambda proveedor: pytest.fail("no debe usar Claude")
+    app.dependency_overrides[get_recomendar] = lambda: FakeRecomendador()
+    try:
+        # Act
+        r = TestClient(app).post("/fotos", files={"archivo": ("carro.png", foto(), "image/png")})
+    finally:
+        app.dependency_overrides.clear()
+    # Assert: el recomendador local sí responde; ningún LLM se llamó
+    cuerpo = r.json()
+    assert r.status_code == 200 and cuerpo["escena"] is None and cuerpo["respuesta"] is None
+    assert cuerpo["recomendaciones"][0]["nombre"] == "SOAT" and asistente.preguntas == []
+
+
 def test_api_interpretar_con_proveedor_sin_vision_responde_503():
     app.dependency_overrides[get_detector] = lambda: lambda: FakeDetector(det("car"))
     try:

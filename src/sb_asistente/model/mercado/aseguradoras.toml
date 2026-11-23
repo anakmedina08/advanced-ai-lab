@@ -86,6 +86,8 @@ nombre = "BMI Colombia"
 sitio = "https://www.bmicos.com"
 prefijo = "/colombia"
 alias = ["bmi seguros", "bmi colombia"]
+activo = false
+nota = "Su sitemap público solo trae las páginas regionales (/seguros, /blog), ninguna de /colombia."
 
 [[aseguradora]]
 id = "equidad"

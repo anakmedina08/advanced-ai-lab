@@ -51,6 +51,16 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Corpus de mercado: información pública (personas + canales) de varias aseguradoras de Colombia,
   registradas en `model/mercado/aseguradoras.toml`, en un corpus aparte del principal; búsqueda por
   aseguradora, comparación y su WhatsApp oficial leído de su propio sitio (SPEC-069, ADR-028).
+- Canales por aseguradora y servicio: la persona declara su aseguradora (se guarda en su perfil,
+  sin pólizas ni documentos) y el asistente la lleva al WhatsApp o a la línea oficial de ese
+  servicio, leídos de las páginas oficiales (SPEC-070, ADR-029).
+- Identificar la aseguradora de la persona: pistas escritas o su recibo/carátula leído en memoria
+  con OCR local (sin LLM); solo sale el nombre del registro, nunca el texto. El agente compara y
+  atiende con todas las aseguradoras (SPEC-071, ADR-030).
+- Códigos de acceso: en el sitio público el chat con IA exige un código (`sb acceso crear`) que
+  vence y trae un cupo de mensajes; se guarda solo su hash (SPEC-072, ADR-031).
+- WhatsApp: número propio con la Cloud API de Meta; el webhook valida la firma de Meta, exige un
+  código de acceso por número y guarda solo el hash del número (SPEC-073, ADR-032).
 
 ### Fuera del alcance (por ahora)
 
@@ -203,6 +213,11 @@ git push
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
 | 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
 | 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
+| 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
+| 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
+| 2026-11-19 | PDF del documento: capa de texto con `pypdf` y, si es escaneado, páginas a imagen con `pypdfium2` + Tesseract (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Los comprobantes PSE y las carátulas llegan casi siempre en PDF; sin LLM y sin escribir en disco |
+| 2026-11-19 | Códigos de acceso con vencimiento y cupo para lo que llama al LLM en el sitio público (SPEC-072, [ADR-031](docs/decisiones/ADR-031-codigos-acceso.md)) | Controlar el gasto de tokens sin cuentas de usuario; lo local sigue libre |
+| 2026-11-19 | Asistente por WhatsApp con la Cloud API de Meta: firma obligatoria, códigos de acceso por número y sin el número en claro (SPEC-073, [ADR-032](docs/decisiones/ADR-032-whatsapp-cloud-api.md)) | Atender donde la gente ya resuelve sus trámites, con el gasto de tokens controlado |
 | 2026-11-21 | GitHub como repositorio principal y GitLab como espejo para el pipeline del Módulo 4 (SPEC-074, [ADR-033](docs/decisiones/ADR-033-espejo-gitlab.md)) | El M4 se demuestra en GitLab sin perder PR, revisiones ni Kanban de GitHub |
 | 2026-11-21 | Build al Container Registry y deploy por SSH a un Droplet con Caddy y HTTPS (SPEC-075, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | Producto en línea con trazabilidad por commit y secretos solo en variables de CI |
 | 2026-11-21 | Yellowdata como sitio público del Droplet; el frontend del curso pasa a `app.` (SPEC-076, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | El cliente ve el producto real; la API se consume por la red interna |

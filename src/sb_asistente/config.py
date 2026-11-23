@@ -92,17 +92,41 @@ MERCADO_WHATSAPP_MAX: Final[int] = 2  # números de WhatsApp que se guardan por 
 # (encabezado o pie). Los que salen en una sola página pueden ser de un asesor (dato personal).
 MERCADO_WHATSAPP_MIN_FRACCION: Final[float] = 0.5
 MERCADO_POR_ASEGURADORA: Final[int] = 2  # páginas por aseguradora en una comparación (por defecto)
+# Si robots.txt no declara sitemaps (o los declarados no traen páginas), se prueban estas rutas
+# comunes en orden (WordPress, Yoast, índices genéricos) antes de rendirse (SPEC-070).
+SITEMAP_RUTAS_COMUNES: Final[tuple[str, ...]] = (
+    "/sitemap.xml",
+    "/sitemap_index.xml",
+    "/wp-sitemap.xml",
+    "/sitemap-index.xml",
+)
+MERCADO_CANALES_JSON: Final[Path] = MERCADO_GOLD_DIR / "canales.json"  # canales por aseguradora y servicio
+MERCADO_CONTEXTO_CANAL: Final[int] = 160  # caracteres alrededor de un número para saber su servicio
+MERCADO_TELEFONOS_MAX: Final[int] = 3  # teléfonos que devuelve mercado.canales por servicio
 MERCADO_ID_PRINCIPAL: Final[str] = "seguros-bolivar"  # su corpus es el del pipeline principal
 MERCADO_PLAN: Final[str] = "plan_captura.json"  # plan de captura en la carpeta de cada aseguradora
 MERCADO_CAPTURA: Final[str] = "capture.jsonl"  # registro de captura en la carpeta de cada aseguradora
 MERCADO_RESUMEN_JSON: Final[Path] = MERCADO_GOLD_DIR / "resumen.json"
 ROBOTS_RUTA: Final[str] = "/robots.txt"
-SITEMAP_RUTA: Final[str] = "/sitemap.xml"  # si robots.txt no declara sitemaps
 BRONZE_HTML_SUBDIR: Final[str] = "html"  # donde BronzeFetcher guarda el HTML crudo
 MERCADO_MAX_COMPARAR: Final[int] = 8  # aseguradoras lado a lado en una comparación
 MERCADO_MAX_POR_ASEGURADORA: Final[int] = 3  # páginas por aseguradora en una comparación
 MERCADO_CANDIDATOS_POR_PAGINA: Final[int] = 4  # pasajes pedidos por página que se quiere mostrar
 MERCADO_CANDIDATOS_RELEVANCIA: Final[int] = 20  # pasajes para elegir las aseguradoras relevantes
+
+# --- ¿Con qué aseguradora está la persona? (SPEC-071): pistas y OCR local, sin LLM ---------
+# El documento (recibo, carátula, extracto) se lee en memoria y se descarta: solo sale el nombre
+# de la aseguradora del registro. PDF digital con pypdf; imagen o PDF escaneado con Tesseract,
+# un binario del sistema:
+#   macOS: brew install tesseract tesseract-lang   ·   Debian: apt-get install tesseract-ocr-spa
+IDENTIFICAR_MAX_BYTES: Final[int] = 8 * 1024 * 1024  # 8 MB por documento
+IDENTIFICAR_PISTAS_MAX: Final[int] = 1000  # caracteres de pistas escritas
+IDENTIFICAR_OCR_IDIOMAS: Final[str] = os.getenv("OCR_IDIOMAS", "spa+eng")  # se usan los instalados
+IDENTIFICAR_OCR_TIMEOUT_S: Final[int] = 30
+IDENTIFICAR_LADO_MIN: Final[int] = 1600  # px: las fotos pequeñas se amplían para que Tesseract lea mejor
+IDENTIFICAR_PDF_PAGINAS: Final[int] = 3  # páginas de un PDF que se leen (el recibo cabe en la primera)
+IDENTIFICAR_PDF_MIN_CARACTERES: Final[int] = 40  # menos texto que esto: PDF escaneado → OCR
+IDENTIFICAR_PDF_ESCALA: Final[float] = 2.0  # ~144 ppp al pasar una página escaneada a imagen
 WHATSAPP_MAX_TEXTO: Final[int] = 1000  # caracteres del resumen en el enlace de traspaso wa.me
 
 # --- Limpieza y chunking -----------------------------------------------------------------
@@ -202,6 +226,31 @@ TRAZAS_N: Final[int] = 10  # turnos que muestra `sb trazas`
 # --- Agente: memoria persistente y trazas -----------------------------------------------------
 MEMORY_DB: Final[Path] = DATA_DIR / "memoria" / "checkpoints.sqlite"
 MEMORY_STORE: Final[Path] = DATA_DIR / "memoria" / "store.sqlite"  # largo plazo: perfil por usuario
+
+# --- Códigos de acceso para lo que gasta tokens (SPEC-072) ------------------------------------
+# En el sitio público (yellowdata) el chat y el agente exigen un código que genera un administrador
+# (`sb acceso crear`); lo que corre en local (YOLO, OCR, canales, comparar) sigue gratis y abierto.
+# Apagado por defecto: el frontend del curso y las pruebas no lo necesitan.
+ACCESO_CODIGO_OBLIGATORIO: Final[bool] = os.getenv("ACCESO_CODIGO_OBLIGATORIO", "0") == "1"
+ACCESO_DB: Final[Path] = DATA_DIR / "acceso" / "codigos.sqlite"  # solo hashes, nunca los códigos
+ACCESO_HORAS: Final[float] = float(os.getenv("ACCESO_HORAS", "24"))  # vigencia por defecto
+ACCESO_CUPO: Final[int] = int(os.getenv("ACCESO_CUPO", "40"))  # mensajes al LLM por código
+ACCESO_HEADER: Final[str] = "X-Codigo-Acceso"
+
+# --- WhatsApp Cloud API de Meta (SPEC-073): el asistente en un número propio -----------------
+# Todo sale del .env (nunca del código). Sin WHATSAPP_VERIFY_TOKEN y WHATSAPP_APP_SECRET el
+# webhook responde 503; sin WHATSAPP_TOKEN y WHATSAPP_PHONE_NUMBER_ID no puede responder.
+WHATSAPP_VERIFY_TOKEN: Final[str] = os.getenv("WHATSAPP_VERIFY_TOKEN", "")  # lo inventa el equipo
+WHATSAPP_APP_SECRET: Final[str] = os.getenv("WHATSAPP_APP_SECRET", "")  # firma de cada evento de Meta
+WHATSAPP_TOKEN: Final[str] = os.getenv("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID: Final[str] = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_GRAPH_VERSION: Final[str] = os.getenv("WHATSAPP_GRAPH_VERSION", "v23.0")
+# El número es público: por defecto la IA solo responde con un código de acceso (SPEC-072).
+WHATSAPP_EXIGE_CODIGO: Final[bool] = os.getenv("WHATSAPP_EXIGE_CODIGO", "1") == "1"
+WHATSAPP_RECORDAR_IDS: Final[int] = 500  # ids de mensaje ya atendidos (Meta reintenta envíos)
+# A quien escribe sin código se le explica cómo pedirlo una sola vez cada tantas horas: cada
+# respuesta de WhatsApp tiene costo (Meta cobra los mensajes de servicio desde octubre de 2026).
+WHATSAPP_AVISO_HORAS: Final[float] = float(os.getenv("WHATSAPP_AVISO_HORAS", "24"))
 TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por turno, sin texto del usuario
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad

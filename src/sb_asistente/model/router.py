@@ -7,7 +7,8 @@ Rutas y herramientas que habilita cada una:
 - ``datos``: preguntas numéricas sobre la cartera («¿cuántas pólizas se vendieron en el T3?»)
   → solo ``consultar_datos`` (cifra exacta, el LLM no calcula).
 - ``rag``: dudas sobre seguros, coberturas, trámites o canales → ``buscar_conocimiento`` (y
-  ``recomendar_seguros`` si pide una sugerencia).
+  ``recomendar_seguros`` si pide una sugerencia) más las tools de mercado: comparar aseguradoras,
+  identificar la de la persona y darle sus canales (SPEC-071).
 - ``mixto``: una parte de la pregunta va a los documentos y otra a los datos → ambas tools.
 - ``fuera_de_alcance``: temas ajenos → respuesta fija, sin LLM.
 
@@ -24,14 +25,16 @@ from sb_asistente.model.intencion import _DOMINIO, _FUERA, clasificar, normaliza
 
 Ruta = Literal["directo", "datos", "rag", "mixto", "fuera_de_alcance"]
 
+# Corpus de mercado (SPEC-071): comparar, identificar la aseguradora de la persona y sus canales.
+MERCADO: Final[tuple[str, ...]] = ("comparar_aseguradoras", "identificar_aseguradora", "canales_aseguradora")
 TOOLS_POR_RUTA: Final[dict[str, tuple[str, ...]]] = {
     "directo": (),
     "datos": ("consultar_datos",),
-    "rag": ("buscar_conocimiento", "recomendar_seguros"),
+    "rag": ("buscar_conocimiento", "recomendar_seguros", *MERCADO),
     "mixto": ("buscar_conocimiento", "consultar_datos"),
     "fuera_de_alcance": (),
 }
-TODAS: Final[tuple[str, ...]] = ("buscar_conocimiento", "recomendar_seguros", "consultar_datos")
+TODAS: Final[tuple[str, ...]] = ("buscar_conocimiento", "recomendar_seguros", "consultar_datos", *MERCADO)
 UMBRAL_CAUTELA: Final[float] = 0.5
 
 _CANTIDAD = r"(cuant[oa]s?|total|suma|promedio|numero de|cifra|monto|cantidad)"

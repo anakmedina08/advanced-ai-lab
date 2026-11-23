@@ -28,6 +28,7 @@ from sb_asistente.config import (
     TRAZAS_N,
 )
 from sb_asistente.controller import (
+    acceso,
     assistant,
     chat,
     experimentos,
@@ -118,6 +119,15 @@ def build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
     ag.add_argument("--usuario", default=None, help="Id del usuario (memoria de largo plazo en el Store)")
+    acc = sub.add_parser("acceso", help="Códigos de acceso para el chat con IA del sitio público (SPEC-072)")
+    acc_sub = acc.add_subparsers(dest="acceso_command", required=True)
+    acc_crear = acc_sub.add_parser("crear", help="Genera un código (se muestra una sola vez)")
+    acc_crear.add_argument("--horas", type=float, default=None, help="Vigencia (por defecto ACCESO_HORAS)")
+    acc_crear.add_argument("--mensajes", type=int, default=None, help="Cupo de mensajes al LLM")
+    acc_crear.add_argument("--nota", default="", help="Para quién es (p. ej. «jurado sustentación»)")
+    acc_sub.add_parser("listar", help="Códigos creados: vigencia y mensajes usados")
+    acc_rev = acc_sub.add_parser("revocar", help="Desactiva un código")
+    acc_rev.add_argument("codigo")
     mer = sub.add_parser("mercado", help="Corpus de mercado: varias aseguradoras (SPEC-069)")
     mer_sub = mer.add_subparsers(dest="mercado_command", required=True)
     mer_sub.add_parser("listar", help="Aseguradoras del registro y su estado")
@@ -135,6 +145,20 @@ def build_parser() -> argparse.ArgumentParser:
     mcmp = mer_sub.add_parser("comparar", help="La misma consulta en varias aseguradoras")
     mcmp.add_argument("consulta")
     mcmp.add_argument("--aseguradoras", nargs="+", required=True, metavar="ID")
+    mcan = mer_sub.add_parser(
+        "canales", help="WhatsApp y teléfonos oficiales de una aseguradora para un servicio"
+    )
+    mcan.add_argument("aseguradora")
+    mcan.add_argument("--servicio", choices=mercado.SERVICIOS_ATENCION, default=None)
+    mcan.add_argument(
+        "--resumen", default="", help="Resumen del caso (deduce el servicio y va en el WhatsApp)"
+    )
+    mid = mer_sub.add_parser(
+        "identificar", help="Con qué aseguradora está la persona (pistas o recibo/carátula, OCR local)"
+    )
+    fuente = mid.add_mutually_exclusive_group(required=True)
+    fuente.add_argument("--pistas", help="Dónde paga, de qué dominio le llegan correos, qué app usa…")
+    fuente.add_argument("--archivo", type=Path, help="Foto, pantallazo o PDF (se lee en memoria)")
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
@@ -366,11 +390,34 @@ def _chat(args: argparse.Namespace) -> int:
     return 0
 
 
+def _acceso(args: argparse.Namespace) -> int:
+    """Subcomandos de ``sb acceso``: crear, listar y revocar códigos."""
+    if args.acceso_command == "crear":
+        try:
+            codigo, info = acceso.crear(args.horas, args.mensajes, args.nota)
+        except ValueError as exc:
+            print(f"No se pudo: {exc}")
+            return 1
+        print(f"Código: {codigo}")
+        print(f"  Vence: {info['expira']} · {info['cupo']} mensajes · {info['nota'] or 'sin nota'}")
+        print("  Guárdalo ahora: no se vuelve a mostrar (solo se guarda su hash).")
+    elif args.acceso_command == "listar":
+        for c in acceso.listar():
+            estado = "revocado" if c["revocado"] else f"{c['restantes']} de {c['cupo']} mensajes"
+            print(f"…{c['pista']}  vence {c['expira']}  {estado}  {c['nota']}")
+    elif args.acceso_command == "revocar":
+        if not acceso.revocar(args.codigo):
+            print("Ese código no existe.")
+            return 1
+        print("Código desactivado.")
+    return 0
+
+
 def _mercado(args: argparse.Namespace) -> int:
     """Subcomandos de ``sb mercado``; los errores (id desconocido, corpus sin generar) salen como mensaje."""
     try:
         return _mercado_comando(args)
-    except (KeyError, FileNotFoundError, ValueError) as exc:
+    except (KeyError, FileNotFoundError, ValueError, mercado.LectorNoDisponibleError) as exc:
         print(f"No se pudo: {exc.args[0] if exc.args else exc}")
         return 1
 
@@ -405,6 +452,29 @@ def _mercado_comando(args: argparse.Namespace) -> int:
                 print("  (no publica información sobre esto)")
             for f in oferta.fragmentos:
                 print(f"  · {f.titulo} — {f.url}")
+    elif args.mercado_command == "canales":
+        r = mercado.canales_para(args.aseguradora, args.servicio, args.resumen)
+        print(f"{r['nombre']} · servicio: {r['servicio']}")
+        wa = r["whatsapp"]
+        print(f"  WhatsApp: {wa['enlace']}" if isinstance(wa, dict) else "  WhatsApp: no publicado")
+        telefonos = r["telefonos"] if isinstance(r["telefonos"], list) else []
+        for t in telefonos:
+            alcance = "(este servicio)" if t["especifico"] else "(línea general)"
+            print(f"  Tel. {t['valor']:<16} {alcance}  {t['fuente']}")
+        if not telefonos:
+            print(f"  Sin teléfonos publicados: ver {r['sitio']}")
+    elif args.mercado_command == "identificar":
+        r = (
+            mercado.identificar_documento(args.archivo.read_bytes())
+            if args.archivo
+            else mercado.identificar_por_pistas(args.pistas)
+        )
+        print(f"Aseguradora: {r['aseguradora'] or 'sin identificar'} · confianza {r['confianza']}")
+        candidatas = r["candidatas"] if isinstance(r["candidatas"], list) else []
+        for c in candidatas:
+            print(f"  · {c['nombre']} ({c['id']}) por {', '.join(c['senales'])}")
+        if r.get("leido") is False:
+            print("  No se pudo leer texto: pruebe con una foto más nítida o un pantallazo.")
     return 0
 
 
@@ -430,6 +500,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _mlflow(args)
     if args.command == "mercado":
         return _mercado(args)
+    if args.command == "acceso":
+        return _acceso(args)
     if args.command == "api":
         import uvicorn
 

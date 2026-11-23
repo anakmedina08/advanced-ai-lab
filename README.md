@@ -193,6 +193,10 @@ make help                     # lista todos los comandos
 make process                  # Bronze → Silver → Gold sin volver a la web
 make mercado                  # corpus de mercado: varias aseguradoras (registro en model/mercado/aseguradoras.toml)
 uv run sb mercado comparar "seguro de hogar humedad" --aseguradoras sura allianz mapfre
+uv run sb mercado canales mapfre --resumen "choque leve, sin heridos"   # WhatsApp y línea del servicio
+uv run sb mercado identificar --pistas "los correos me llegan de mapfre.com.co"  # ¿con qué aseguradora está?
+uv run sb acceso crear --horas 24 --mensajes 40 --nota "jurado"   # código para el chat con IA
+make tunel   # URL pública temporal para registrar /whatsapp/webhook en Meta (cloudflared)
 uv run sb stats               # resumen del corpus Gold
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"

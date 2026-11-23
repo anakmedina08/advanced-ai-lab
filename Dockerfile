@@ -26,6 +26,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
     LLM_PROVIDER=ollama
+# Tesseract (OCR local) para identificar la aseguradora en un recibo o carátula (SPEC-071)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd --create-home appuser
 WORKDIR /app
 

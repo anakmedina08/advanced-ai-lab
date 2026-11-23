@@ -6,7 +6,7 @@ más) o respuestas pobres (tools de menos). Cada tabla cubre una rama de ``enrut
 
 import pytest
 
-from sb_asistente.model.router import TODAS, TOOLS_POR_RUTA, UMBRAL_CAUTELA, Decision, enrutar
+from sb_asistente.model.router import MERCADO, TODAS, TOOLS_POR_RUTA, UMBRAL_CAUTELA, Decision, enrutar
 
 DATOS = [
     "¿Cuántas pólizas se vendieron?",
@@ -144,7 +144,7 @@ def test_preguntas_de_seguros_van_a_rag_con_busqueda_y_recomendacion(mensaje):
     # Assert
     assert (decision.ruta, decision.tools, decision.cautela) == (
         "rag",
-        ("buscar_conocimiento", "recomendar_seguros"),
+        ("buscar_conocimiento", "recomendar_seguros", *MERCADO),
         False,
     )
 

@@ -42,6 +42,10 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-022](ADR-022-mlflow-bitacora.md) | MLflow como bitácora de experimentos | 2026-11-13 |
 | [ADR-025](ADR-025-auditor-madurez.md) | Auditor de madurez como código del proyecto y puerta en la CI | 2026-11-17 |
 | [ADR-028](ADR-028-corpus-mercado-aseguradoras.md) | Corpus de mercado: varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial | 2026-11-18 |
+| [ADR-029](ADR-029-canales-por-aseguradora.md) | Canales por aseguradora: afiliación declarada y canales leídos de los sitios oficiales | 2026-11-19 |
+| [ADR-030](ADR-030-identificar-aseguradora.md) | Identificar la aseguradora con pistas y documentos leídos en memoria, sin LLM | 2026-11-19 |
+| [ADR-031](ADR-031-codigos-acceso.md) | Códigos de acceso con vencimiento y cupo para lo que gasta tokens | 2026-11-19 |
+| [ADR-032](ADR-032-whatsapp-cloud-api.md) | El asistente por WhatsApp con la Cloud API de Meta, con firma y códigos de acceso | 2026-11-19 |
 | [ADR-033](ADR-033-espejo-gitlab.md) | GitHub como repositorio principal y GitLab como espejo para CI/CD y despliegue | 2026-11-21 |
 | [ADR-034](ADR-034-despliegue-droplet-caddy.md) | Despliegue en un Droplet con Docker Compose, Caddy y deploy por SSH desde GitLab | 2026-11-21 |
 
