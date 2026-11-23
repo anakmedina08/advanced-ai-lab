@@ -11,20 +11,33 @@ from pathlib import Path
 from typing import TextIO
 
 from sb_asistente.config import (
+    API_PORT,
     EMBEDDINGS_PROVIDER,
     EMBEDDINGS_PROVIDERS,
     GOLD_DIR,
     LLM_PROVIDER,
     MLFLOW_PUERTO,
     PROVIDERS,
+    RAG_EVAL_KS,
     RAG_K,
     RECO_DIR,
     RECO_K,
+    RECO_K_FOTO,
     RECO_N_CLIENTES,
     RECO_SEMILLA,
+    TRAZAS_N,
 )
-from sb_asistente.controller import assistant, chat, experimentos, pipeline, recomendador, vision
-from sb_asistente.model import skills
+from sb_asistente.controller import (
+    acceso,
+    assistant,
+    chat,
+    experimentos,
+    herramientas,
+    mercado,
+    pipeline,
+    recomendador,
+    vision,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -99,13 +112,53 @@ def build_parser() -> argparse.ArgumentParser:
     bus.add_argument("-k", type=int, default=RAG_K)
     bus.add_argument("--seccion", default=None)
     ev = rag_sub.add_parser("evaluar", help="hit@k de la recuperación con el banco de preguntas")
-    ev.add_argument("-k", type=int, nargs="+", default=[3, 6])
+    ev.add_argument("-k", type=int, nargs="+", default=list(RAG_EVAL_KS))
     ag = sub.add_parser("agente", help="Turno del agente (tools + salida estructurada + memoria)")
     ag.add_argument("mensaje")
     ag.add_argument("--conversacion", default="cli-local", help="Id de la conversación (memoria)")
     ag.add_argument("--provider", default=LLM_PROVIDER, choices=list(PROVIDERS))
     ag.add_argument("--olvidar", action="store_true", help="Borra la memoria de la conversación y sale")
     ag.add_argument("--usuario", default=None, help="Id del usuario (memoria de largo plazo en el Store)")
+    acc = sub.add_parser("acceso", help="Códigos de acceso para el chat con IA del sitio público (SPEC-072)")
+    acc_sub = acc.add_subparsers(dest="acceso_command", required=True)
+    acc_crear = acc_sub.add_parser("crear", help="Genera un código (se muestra una sola vez)")
+    acc_crear.add_argument("--horas", type=float, default=None, help="Vigencia (por defecto ACCESO_HORAS)")
+    acc_crear.add_argument("--mensajes", type=int, default=None, help="Cupo de mensajes al LLM")
+    acc_crear.add_argument("--nota", default="", help="Para quién es (p. ej. «jurado sustentación»)")
+    acc_sub.add_parser("listar", help="Códigos creados: vigencia y mensajes usados")
+    acc_rev = acc_sub.add_parser("revocar", help="Desactiva un código")
+    acc_rev.add_argument("codigo")
+    mer = sub.add_parser("mercado", help="Corpus de mercado: varias aseguradoras (SPEC-069)")
+    mer_sub = mer.add_subparsers(dest="mercado_command", required=True)
+    mer_sub.add_parser("listar", help="Aseguradoras del registro y su estado")
+    for nombre, ayuda in (
+        ("verificar", "robots.txt + sitemap de cada aseguradora → plan (sin descargar páginas)"),
+        ("capturar", "Descarga a Bronze el plan de cada aseguradora (reanudable)"),
+    ):
+        p = mer_sub.add_parser(nombre, help=ayuda)
+        p.add_argument("--solo", nargs="+", default=[], metavar="ID", help="Solo estas aseguradoras")
+    mer_sub.add_parser("procesar", help="Bronze → Silver → Gold de todas (sin volver a la web)")
+    mbus = mer_sub.add_parser("buscar", help="Busca en el corpus de mercado")
+    mbus.add_argument("consulta")
+    mbus.add_argument("-k", type=int, default=RAG_K)
+    mbus.add_argument("--aseguradora", default=None)
+    mcmp = mer_sub.add_parser("comparar", help="La misma consulta en varias aseguradoras")
+    mcmp.add_argument("consulta")
+    mcmp.add_argument("--aseguradoras", nargs="+", required=True, metavar="ID")
+    mcan = mer_sub.add_parser(
+        "canales", help="WhatsApp y teléfonos oficiales de una aseguradora para un servicio"
+    )
+    mcan.add_argument("aseguradora")
+    mcan.add_argument("--servicio", choices=mercado.SERVICIOS_ATENCION, default=None)
+    mcan.add_argument(
+        "--resumen", default="", help="Resumen del caso (deduce el servicio y va en el WhatsApp)"
+    )
+    mid = mer_sub.add_parser(
+        "identificar", help="Con qué aseguradora está la persona (pistas o recibo/carátula, OCR local)"
+    )
+    fuente = mid.add_mutually_exclusive_group(required=True)
+    fuente.add_argument("--pistas", help="Dónde paga, de qué dominio le llegan correos, qué app usa…")
+    fuente.add_argument("--archivo", type=Path, help="Foto, pantallazo o PDF (se lee en memoria)")
     ml = sub.add_parser("mlflow", help="Bitácora de experimentos (requiere uv sync --extra mlflow)")
     ml_sub = ml.add_subparsers(dest="mlflow_command", required=True)
     ml_sub.add_parser("importar", help="Carga en MLflow las evaluaciones guardadas en evaluacion/")
@@ -114,10 +167,10 @@ def build_parser() -> argparse.ArgumentParser:
     srv = ml_sub.add_parser("servidor", help="Servidor de tracking en http://127.0.0.1:5050 (UI + API)")
     srv.add_argument("--port", type=int, default=MLFLOW_PUERTO)
     tr = sub.add_parser("trazas", help="Últimos turnos del agente: ruta, tools y latencia (sin texto)")
-    tr.add_argument("-n", type=int, default=10)
+    tr.add_argument("-n", type=int, default=TRAZAS_N)
     api = sub.add_parser("api", help="Levanta la API FastAPI (documentación en /docs)")
     api.add_argument("--host", default="127.0.0.1")
-    api.add_argument("--port", type=int, default=8000)
+    api.add_argument("--port", type=int, default=API_PORT)
     foto = sub.add_parser("foto", help="Foto → seguro sugerido (YOLO; requiere uv sync --extra vision)")
     foto.add_argument("ruta", type=Path, help="Imagen JPG o PNG")
     foto.add_argument("--interpretar", action="store_true", help="Entiende la situación con Claude (visión)")
@@ -177,13 +230,15 @@ def _reco(args: argparse.Namespace) -> int:
 def _skills(args: argparse.Namespace) -> int:
     """Subcomandos de skills."""
     if args.skills_command == "nueva":
-        ruta = skills.nueva_skill(args.nombre, args.descripcion, args.uso)
-        print(f"Creada {ruta.relative_to(skills.PROJECT_ROOT)} · edítela y ábrala en un PR")
+        ruta = herramientas.nueva_skill(args.nombre, args.descripcion, args.uso)
+        print(f"Creada {ruta.relative_to(herramientas.RAIZ_PROYECTO)} · edítela y ábrala en un PR")
         return 0
-    encontradas, errores = skills.descubrir()
+    encontradas, errores = herramientas.skills_del_proyecto()
     if args.skills_command == "listar":
         for s in encontradas:
-            print(f"{s.nombre:<24} {s.uso:<11} {s.ruta.parent.parent.relative_to(skills.PROJECT_ROOT)}")
+            print(
+                f"{s.nombre:<24} {s.uso:<11} {s.ruta.parent.parent.relative_to(herramientas.RAIZ_PROYECTO)}"
+            )
     print("\n".join(errores) if errores else f"{len(encontradas)} skills válidas")
     return 1 if errores else 0
 
@@ -191,25 +246,19 @@ def _skills(args: argparse.Namespace) -> int:
 def _rag(args: argparse.Namespace) -> int:
     """Subcomandos de la base vectorial."""
     from sb_asistente.controller.agente import recuperador_por_defecto
-    from sb_asistente.model.rag import indice
-    from sb_asistente.model.rag.fuentes import fragmentos_rag
 
     if args.rag_command == "indexar":
-        info = indice.indexar(fragmentos_rag(), args.embeddings, reset=args.reset)
+        info = herramientas.indexar_rag(args.embeddings, args.reset)
         print(f"Índice listo: {info.fragmentos} fragmentos · {info.proveedor}/{info.modelo} → data/vector/")
+        return 0
+    if args.rag_command == "evaluar":
+        modo, resultados = herramientas.evaluar_rag(args.k)
+        print(f"Modo: {modo}\n")
+        for k, r in zip(args.k, resultados, strict=True):
+            print(f"hit@{k}: {r.aciertos}/{r.total} ({r.tasa:.0%})  fallos: {', '.join(r.fallos) or '—'}")
         return 0
     recuperador, modo = recuperador_por_defecto()
     print(f"Modo: {modo}\n")
-    if args.rag_command == "evaluar":
-        from sb_asistente.config import EVAL_QUESTIONS
-        from sb_asistente.model.evaluation import load_questions
-        from sb_asistente.model.rag.evaluacion import hit_at_k
-
-        preguntas = load_questions(EVAL_QUESTIONS)
-        for k in args.k:
-            r = hit_at_k(recuperador, preguntas, k)
-            print(f"hit@{k}: {r.aciertos}/{r.total} ({r.tasa:.0%})  fallos: {', '.join(r.fallos) or '—'}")
-        return 0
     for f in recuperador.buscar(args.consulta, k=args.k, seccion=args.seccion):
         print(f"{f.puntaje:.4f}  {'+'.join(f.origen):<11} {f.titulo[:50]:<50} {f.url}")
     return 0
@@ -229,7 +278,7 @@ def _foto(args: argparse.Namespace) -> int:
         datos,
         asistente=assistant.LiteAssistant.build(args.provider) if args.responder else None,
         interprete=vision.interprete_por_defecto(args.provider) if args.interpretar else None,
-        recomendar=(lambda perfil: recomendador.recomendar_por_perfil(perfil, 3)[0])
+        recomendar=(lambda perfil: recomendador.recomendar_por_perfil(perfil, RECO_K_FOTO)[0])
         if args.responder
         else None,
     )
@@ -262,9 +311,7 @@ def _avisar_mlflow(runs: list[str | None]) -> None:
 
 def _mlflow(args: argparse.Namespace) -> int:
     """Subcomandos de la bitácora de experimentos."""
-    from sb_asistente.model.experimentos import disponible
-
-    if not disponible():
+    if not herramientas.mlflow_disponible():
         print("MLflow no está instalado: uv sync --extra mlflow")
         return 1
     if args.mlflow_command == "importar":
@@ -316,12 +363,9 @@ def _agente(args: argparse.Namespace) -> int:
 
 def _trazas(args: argparse.Namespace) -> int:
     """Resumen de las últimas trazas del agente (``data/logs/turnos.jsonl``)."""
-    from sb_asistente.config import TRAZAS_LOG
-    from sb_asistente.model.trazas import ultimas
-
-    filas = ultimas(TRAZAS_LOG, args.n)
+    ruta, filas = herramientas.ultimas_trazas(args.n)
     if not filas:
-        print(f"Aún no hay trazas en {TRAZAS_LOG}. Converse con el agente (sb agente o la API).")
+        print(f"Aún no hay trazas en {ruta}. Converse con el agente (sb agente o la API).")
         return 0
     for f in filas:
         tools = ", ".join(f"{t['tool']} {t['ms']:.0f} ms" for t in f["tools"]) or "sin tools"
@@ -346,6 +390,94 @@ def _chat(args: argparse.Namespace) -> int:
     return 0
 
 
+def _acceso(args: argparse.Namespace) -> int:
+    """Subcomandos de ``sb acceso``: crear, listar y revocar códigos."""
+    if args.acceso_command == "crear":
+        try:
+            codigo, info = acceso.crear(args.horas, args.mensajes, args.nota)
+        except ValueError as exc:
+            print(f"No se pudo: {exc}")
+            return 1
+        print(f"Código: {codigo}")
+        print(f"  Vence: {info['expira']} · {info['cupo']} mensajes · {info['nota'] or 'sin nota'}")
+        print("  Guárdalo ahora: no se vuelve a mostrar (solo se guarda su hash).")
+    elif args.acceso_command == "listar":
+        for c in acceso.listar():
+            estado = "revocado" if c["revocado"] else f"{c['restantes']} de {c['cupo']} mensajes"
+            print(f"…{c['pista']}  vence {c['expira']}  {estado}  {c['nota']}")
+    elif args.acceso_command == "revocar":
+        if not acceso.revocar(args.codigo):
+            print("Ese código no existe.")
+            return 1
+        print("Código desactivado.")
+    return 0
+
+
+def _mercado(args: argparse.Namespace) -> int:
+    """Subcomandos de ``sb mercado``; los errores (id desconocido, corpus sin generar) salen como mensaje."""
+    try:
+        return _mercado_comando(args)
+    except (KeyError, FileNotFoundError, ValueError, mercado.LectorNoDisponibleError) as exc:
+        print(f"No se pudo: {exc.args[0] if exc.args else exc}")
+        return 1
+
+
+def _mercado_comando(args: argparse.Namespace) -> int:
+    """Subcomandos de ``sb mercado`` (registro, scraping por aseguradora, búsqueda y comparación)."""
+    registro = mercado.cargar_registro()
+    if args.mercado_command == "listar":
+        for fila in mercado.registro_con_datos():
+            estado = "activa" if fila["activo"] else "en registro"
+            wa = ", ".join(fila["whatsapp"]) or "—"
+            sitio = fila["sitio"] or ""
+            print(f"{fila['id']:<20} {estado:<12} docs={fila['documentos']:<4} WhatsApp={wa}  {sitio}")
+    elif args.mercado_command == "verificar":
+        for fila in mercado.descubrir(pipeline.new_session(), registro, args.solo):
+            cuenta = f"{fila['seleccionadas']:>4} de {fila['en_sitemap']:<5}"
+            print(f"{fila['aseguradora']:<20} {cuenta} {fila['estado']}")
+    elif args.mercado_command == "capturar":
+        print(json.dumps(mercado.capturar(pipeline.new_session(), registro, args.solo), indent=2))
+    elif args.mercado_command == "procesar":
+        print(json.dumps(mercado.procesar(registro), ensure_ascii=False, indent=2))
+    elif args.mercado_command == "buscar":
+        for f in mercado.recuperador_mercado().buscar(args.consulta, k=args.k, aseguradora=args.aseguradora):
+            print(f"[{f.aseguradora}] {f.titulo} · {f.seccion} · {f.url}")
+    elif args.mercado_command == "comparar":
+        mercado.aseguradoras(args.aseguradoras)  # ids primero: un tipeo no depende de tener el corpus
+        for oferta in mercado.comparar_aseguradoras(
+            mercado.recuperador_mercado(), args.consulta, args.aseguradoras
+        ):
+            print(f"\n## {oferta.nombre}")
+            if not oferta.tiene_informacion:
+                print("  (no publica información sobre esto)")
+            for f in oferta.fragmentos:
+                print(f"  · {f.titulo} — {f.url}")
+    elif args.mercado_command == "canales":
+        r = mercado.canales_para(args.aseguradora, args.servicio, args.resumen)
+        print(f"{r['nombre']} · servicio: {r['servicio']}")
+        wa = r["whatsapp"]
+        print(f"  WhatsApp: {wa['enlace']}" if isinstance(wa, dict) else "  WhatsApp: no publicado")
+        telefonos = r["telefonos"] if isinstance(r["telefonos"], list) else []
+        for t in telefonos:
+            alcance = "(este servicio)" if t["especifico"] else "(línea general)"
+            print(f"  Tel. {t['valor']:<16} {alcance}  {t['fuente']}")
+        if not telefonos:
+            print(f"  Sin teléfonos publicados: ver {r['sitio']}")
+    elif args.mercado_command == "identificar":
+        r = (
+            mercado.identificar_documento(args.archivo.read_bytes())
+            if args.archivo
+            else mercado.identificar_por_pistas(args.pistas)
+        )
+        print(f"Aseguradora: {r['aseguradora'] or 'sin identificar'} · confianza {r['confianza']}")
+        candidatas = r["candidatas"] if isinstance(r["candidatas"], list) else []
+        for c in candidatas:
+            print(f"  · {c['nombre']} ({c['id']}) por {', '.join(c['senales'])}")
+        if r.get("leido") is False:
+            print("  No se pudo leer texto: pruebe con una foto más nítida o un pantallazo.")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Punto de entrada; devuelve el código de salida."""
     use_utf8()
@@ -366,6 +498,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _foto(args)
     if args.command == "mlflow":
         return _mlflow(args)
+    if args.command == "mercado":
+        return _mercado(args)
+    if args.command == "acceso":
+        return _acceso(args)
     if args.command == "api":
         import uvicorn
 

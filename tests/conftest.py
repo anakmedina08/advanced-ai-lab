@@ -4,6 +4,12 @@ import os
 
 # Las pruebas nunca escriben en la bitácora real de MLflow (data/mlflow.db).
 os.environ["SB_MLFLOW"] = "0"
+# Ni envían trazas a LangSmith: si el .env local trae LANGSMITH_TRACING=true, el trazador
+# recorre el iterador de los modelos falsos y lo agota (StopIteration), además de subir
+# turnos de prueba al proyecto real. load_dotenv no sobrescribe lo que ya está definido aquí.
+os.environ["LANGSMITH_TRACING"] = "false"
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_TRACING"] = "false"
 
 from dataclasses import dataclass
 from pathlib import Path

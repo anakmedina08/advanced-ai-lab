@@ -18,6 +18,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
+from sb_asistente.config import RECO_K
 from sb_asistente.controller import recomendador
 from sb_asistente.model import skills
 from sb_asistente.model.intencion import Intencion, clasificar
@@ -128,7 +129,7 @@ def responder(
     modo: Modo = "auto",
     cliente_id: str | None = None,
     skill: str | None = None,
-    k: int = 5,
+    k: int = RECO_K,
     extraer_fuentes: Callable[[str], list[str]] = lambda _: [],
 ) -> Turno:
     """Resuelve un turno del chat y devuelve la respuesta con su traza.
@@ -196,3 +197,15 @@ def responder(
         )
     turno.traza = traza + turno.traza
     return turno
+
+
+def clasificacion(mensaje: str) -> dict[str, object]:
+    """Lo que entiende el clasificador de un mensaje: intención, confianza, sección, perfil y señales."""
+    r = clasificar(mensaje)
+    return {
+        "intencion": r.etiqueta,
+        "confianza": r.confianza,
+        "seccion": r.seccion,
+        "perfil": r.perfil.conocido(),
+        "senales": r.senales,
+    }

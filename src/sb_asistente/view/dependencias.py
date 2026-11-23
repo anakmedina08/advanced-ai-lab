@@ -7,7 +7,9 @@ Cada función devuelve la dependencia real; las pruebas las reemplazan con
 from collections.abc import Callable
 from functools import lru_cache
 
-from sb_asistente.controller import agente, assistant, chat, recomendador, vision
+from sb_asistente.config import RECO_K_FOTO
+from sb_asistente.controller import agente, assistant, chat, mercado, recomendador, vision
+from sb_asistente.controller import whatsapp as whatsapp_ctrl
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 
@@ -49,6 +51,11 @@ def get_asistente() -> Callable[[str], assistant.KnowledgeAssistant]:
     return assistant.full_assistant
 
 
+def get_whatsapp() -> "whatsapp_ctrl.whatsapp.Enviador | None":
+    """Cliente de WhatsApp (Graph API) o ``None`` si faltan credenciales; las pruebas usan un doble."""
+    return whatsapp_ctrl.enviador_por_defecto()
+
+
 def get_agente() -> Callable[[str], agente.AgenteAsistente]:
     """Fábrica (proveedor → agente con tools, salida estructurada y memoria)."""
     return agente.agente_por_defecto
@@ -62,6 +69,11 @@ def _recuperador() -> tuple[RecuperadorHibrido, str]:
 def get_recuperador() -> Callable[[], tuple[RecuperadorHibrido, str]]:
     """Recuperador híbrido (BM25 + Qdrant, o Chroma) y su modo, para ``conocimiento.buscar``."""
     return _recuperador
+
+
+def get_mercado() -> Callable[[], RecuperadorHibrido]:
+    """Buscador del corpus de mercado (varias aseguradoras), para ``mercado.*`` (SPEC-069)."""
+    return mercado.recuperador_mercado
 
 
 def get_detector() -> Callable[[], vision.Detector]:
@@ -80,5 +92,5 @@ def get_interprete() -> Callable[[str], vision.Interprete]:
 
 
 def get_recomendar() -> vision.Recomendar:
-    """Recomendador por perfil de Gestión (top-3) para las fotos de bienes asegurables."""
-    return lambda perfil: recomendador.recomendar_por_perfil(perfil, 3)[0]
+    """Recomendador por perfil de Gestión (``RECO_K_FOTO`` seguros) para las fotos de bienes asegurables."""
+    return lambda perfil: recomendador.recomendar_por_perfil(perfil, RECO_K_FOTO)[0]

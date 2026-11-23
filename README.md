@@ -22,6 +22,7 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 | Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
 | Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
 | Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
+| Despliegue (GitLab CI/CD → Droplet, Caddy y HTTPS) | [`docs/despliegue.md`](docs/despliegue.md) · SPEC-075 |
 | Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
 | Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 
@@ -190,6 +191,12 @@ sequenceDiagram
 ```bash
 make help                     # lista todos los comandos
 make process                  # Bronze → Silver → Gold sin volver a la web
+make mercado                  # corpus de mercado: varias aseguradoras (registro en model/mercado/aseguradoras.toml)
+uv run sb mercado comparar "seguro de hogar humedad" --aseguradoras sura allianz mapfre
+uv run sb mercado canales mapfre --resumen "choque leve, sin heridos"   # WhatsApp y línea del servicio
+uv run sb mercado identificar --pistas "los correos me llegan de mapfre.com.co"  # ¿con qué aseguradora está?
+uv run sb acceso crear --horas 24 --mensajes 40 --nota "jurado"   # código para el chat con IA
+make tunel   # URL pública temporal para registrar /whatsapp/webhook en Meta (cloudflared)
 uv run sb stats               # resumen del corpus Gold
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"

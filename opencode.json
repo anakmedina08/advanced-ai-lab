@@ -6,5 +6,12 @@
       "*": "allow",
       "jan-project-standard": "ask"
     }
+  },
+  "mcp": {
+    "gitlab": {
+      "type": "remote",
+      "url": "https://gitlab.com/api/v4/mcp",
+      "enabled": true
+    }
   }
 }

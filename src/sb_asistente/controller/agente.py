@@ -36,9 +36,17 @@ from sb_asistente.config import (
     QDRANT_DIR,
     TRAZAS_LOG,
 )
+from sb_asistente.controller import mercado as mercado_ctrl
 from sb_asistente.controller import recomendador
 from sb_asistente.controller.chat import FUERA
-from sb_asistente.model.agente import ContextoTurno, RespuestaAgente, construir_agente, crear_tools
+from sb_asistente.model.agente import (
+    TOOLS_CON_FUENTES,
+    ContextoTurno,
+    HerramientasMercado,
+    RespuestaAgente,
+    construir_agente,
+    crear_tools,
+)
 from sb_asistente.model.datos import crear_tool_datos
 from sb_asistente.model.llm.service import build_llm
 from sb_asistente.model.memoria import PerfilStore, abrir_store, extraer_hechos
@@ -216,6 +224,19 @@ def _pasos_del_turno(mensajes: list[BaseMessage]) -> list[PasoAgente]:
     return pasos
 
 
+def herramientas_mercado() -> HerramientasMercado:
+    """Corpus de mercado real para el agente (SPEC-071); las pruebas inyectan dobles."""
+
+    def canales(aseguradora: str, servicio: str | None) -> dict:
+        return mercado_ctrl.canales_para(mercado_ctrl.resolver_aseguradora(aseguradora), servicio)  # type: ignore[arg-type]
+
+    return HerramientasMercado(
+        comparar=mercado_ctrl.fragmentos_comparados,
+        identificar=mercado_ctrl.identificar_por_pistas,
+        canales=canales,
+    )
+
+
 class AgenteAsistente:
     """Agente con tools, salida estructurada y memoria persistente."""
 
@@ -228,6 +249,7 @@ class AgenteAsistente:
         store: BaseStore | None = None,
         datos: BaseTool | None = None,
         trazas: Path | None = None,
+        mercado: HerramientasMercado | None = None,
     ) -> None:
         """Inyecta modelo, recuperador, memoria de hilo y Store de largo plazo (las pruebas usan dobles)."""
         reco = recomendar or (lambda perfil, k: recomendador.recomendar_por_perfil(perfil, k)[0])
@@ -236,7 +258,10 @@ class AgenteAsistente:
         self.trazas = trazas
         self.perfiles = PerfilStore(store) if store is not None else None
         datos = datos or crear_tool_datos(_tablas)
-        self.grafo = construir_agente(llm, crear_tools(recuperador, reco, datos), checkpointer, store)
+        mercado = mercado or herramientas_mercado()
+        self.grafo = construir_agente(
+            llm, crear_tools(recuperador, reco, datos, mercado), checkpointer, store
+        )
 
     def _preparar(self, mensaje: str, conversacion_id: str, usuario_id: str | None) -> Decision:
         """Valida, guarda los hechos del usuario en el Store y enruta el mensaje."""
@@ -336,10 +361,7 @@ class AgenteAsistente:
         salida: RespuestaAgente = estado.get("structured_response") or SIN_RESPUESTA
         pasos = _pasos_del_turno(estado["messages"])
         vistas = {
-            u.rstrip(".,;:")
-            for p in pasos
-            if p.tool == "buscar_conocimiento"
-            for u in _URL.findall(p.resultado)
+            u.rstrip(".,;:") for p in pasos if p.tool in TOOLS_CON_FUENTES for u in _URL.findall(p.resultado)
         }
         validas = [u for u in salida.fuentes if u in vistas]
         descartadas = [u for u in salida.fuentes if u not in vistas]

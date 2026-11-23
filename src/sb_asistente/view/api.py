@@ -16,12 +16,24 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, File, HTTPException, Path, Query, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from sb_asistente.config import (
+    ACCESO_HEADER,
     BASE_URL,
     CHUNKS_JSONL,
     FRONTEND_ORIGINS,
@@ -31,11 +43,14 @@ from sb_asistente.config import (
     RECO_DIR,
     RECO_K,
 )
+from sb_asistente.controller import acceso as acceso_ctrl
 from sb_asistente.controller import assistant as assistant_ctrl
 from sb_asistente.controller import chat, pipeline, recomendador, vision
 from sb_asistente.controller import experimentos as experimentos_ctrl
+from sb_asistente.controller import mercado as mercado_ctrl
 from sb_asistente.controller import proyecto as proyecto_ctrl
 from sb_asistente.controller import salud as estado_servicio
+from sb_asistente.controller import whatsapp as whatsapp_ctrl
 from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
@@ -51,6 +66,7 @@ from sb_asistente.view.dependencias import (
     get_interprete,
     get_recomendar,
     get_responder,
+    get_whatsapp,
 )
 from sb_asistente.view.schemas import (
     AgenteIn,
@@ -70,6 +86,7 @@ from sb_asistente.view.schemas import (
     ExperimentosOut,
     FotoOut,
     HealthOut,
+    IdentificacionOut,
     PerfilOut,
     PlanOut,
     PreguntaIn,
@@ -88,6 +105,22 @@ from sb_asistente.view.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _exigir_codigo(codigo: str | None) -> None:
+    """403 si el acceso es obligatorio y el código falta, venció o no tiene cupo (SPEC-072)."""
+    try:
+        acceso_ctrl.exigir(codigo)
+    except acceso_ctrl.AccesoDenegadoError as exc:
+        raise HTTPException(403, str(exc)) from exc
+
+
+def requiere_codigo(codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None) -> None:
+    """Dependencia de las rutas que llaman al LLM: gasta un mensaje del código de acceso."""
+    _exigir_codigo(codigo)
+
+
+ConCodigo = Depends(requiere_codigo)
 
 
 @asynccontextmanager
@@ -117,7 +150,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(FRONTEND_ORIGINS),
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Content-Type", "X-Request-ID", ACCESO_HEADER],
     expose_headers=["X-Request-ID", "X-Process-Time-ms"],
 )
 
@@ -279,7 +312,7 @@ def proyecto_entregables() -> ProyectoOut:
     )
 
 
-@app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/preguntas", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def preguntar(entrada: PreguntaIn, responder: Annotated[Responder, Depends(get_responder)]) -> RespuestaOut:
     """Q&A: responde citando la página oficial de donde sale el dato."""
     try:
@@ -289,13 +322,13 @@ def preguntar(entrada: PreguntaIn, responder: Annotated[Responder, Depends(get_r
     return _salida(ans)
 
 
-@app.post("/resumen", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/resumen", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def resumir(entrada: TemaIn, fabrica: Annotated[Callable, Depends(get_asistente)]) -> RespuestaOut:
     """Resumen de un tema para un cliente nuevo."""
     return _salida(fabrica(entrada.proveedor or LLM_PROVIDER).summarize(entrada.tema))
 
 
-@app.post("/faq", response_model=RespuestaOut, tags=["conocimiento"])
+@app.post("/faq", response_model=RespuestaOut, tags=["conocimiento"], dependencies=[ConCodigo])
 def preguntas_frecuentes(
     entrada: TemaIn, fabrica: Annotated[Callable, Depends(get_asistente)]
 ) -> RespuestaOut:
@@ -315,7 +348,7 @@ def recomendaciones(cliente_id: str, k: Annotated[int, Query(ge=1, le=10)] = REC
     return RecomendacionesOut(cliente_id=cliente_id, k=k, recomendaciones=items)
 
 
-@app.post("/chat", response_model=ChatOut, tags=["chat"])
+@app.post("/chat", response_model=ChatOut, tags=["chat"], dependencies=[ConCodigo])
 def conversar(
     entrada: ChatIn, fabrica: Annotated[Callable[[str], chat.Responder], Depends(get_chat_qa)]
 ) -> dict[str, object]:
@@ -340,7 +373,7 @@ def conversar(
     return turno.a_dict()
 
 
-@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"])
+@app.post("/agente/mensajes", response_model=AgenteOut, tags=["agente"], dependencies=[ConCodigo])
 def agente_mensaje(
     entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
 ) -> dict[str, object]:
@@ -361,7 +394,7 @@ def agente_mensaje(
     return turno.a_dict()
 
 
-@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse)
+@app.post("/agente/stream", tags=["agente"], response_class=StreamingResponse, dependencies=[ConCodigo])
 def agente_stream(
     entrada: AgenteIn, fabrica: Annotated[Callable[[str], AgenteAsistente], Depends(get_agente)]
 ) -> StreamingResponse:
@@ -419,6 +452,55 @@ def borrar_perfil(usuario_id: IdSeguro, fabrica: Fabrica) -> None:
     fabrica(LLM_PROVIDER).olvidar_perfil(usuario_id)
 
 
+@app.get("/acceso/estado", tags=["acceso"])
+def estado_acceso(
+    codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None,
+) -> dict[str, object]:
+    """¿Sirve el código de acceso? Vigencia y mensajes restantes, sin gastar cupo (SPEC-072)."""
+    return acceso_ctrl.estado(codigo)
+
+
+@app.get("/whatsapp/webhook", tags=["whatsapp"], response_class=PlainTextResponse)
+def verificar_webhook(
+    modo: Annotated[str | None, Query(alias="hub.mode")] = None,
+    token: Annotated[str | None, Query(alias="hub.verify_token")] = None,
+    reto: Annotated[str | None, Query(alias="hub.challenge", max_length=200)] = None,
+) -> str:
+    """Meta verifica el webhook: devolvemos ``hub.challenge`` solo si el token coincide (SPEC-073)."""
+    if not whatsapp_ctrl.configurado():
+        raise HTTPException(503, "WhatsApp no está configurado en este servidor (.env).")
+    if not whatsapp_ctrl.suscripcion_valida(modo, token) or reto is None:
+        raise HTTPException(403, "Token de verificación inválido.")
+    return reto
+
+
+@app.post("/whatsapp/webhook", tags=["whatsapp"])
+async def recibir_whatsapp(
+    request: Request,
+    tareas: BackgroundTasks,
+    enviador: Annotated[object, Depends(get_whatsapp)],
+    fabrica: Annotated[Callable, Depends(get_agente)],
+    firma: Annotated[str | None, Header(alias="X-Hub-Signature-256")] = None,
+) -> dict[str, bool]:
+    """Mensajes de WhatsApp: se valida la firma de Meta y se responde en segundo plano (SPEC-073).
+
+    Meta espera un 200 rápido; el agente tarda unos segundos, así que la respuesta sale por la Graph
+    API después. Sin firma válida no se procesa nada.
+    """
+    if not whatsapp_ctrl.configurado():
+        raise HTTPException(503, "WhatsApp no está configurado en este servidor (.env).")
+    cuerpo = await request.body()
+    if not whatsapp_ctrl.firma_valida(cuerpo, firma):
+        raise HTTPException(403, "Firma de Meta inválida.")
+    try:
+        evento = json.loads(cuerpo)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(400, "Evento inválido.") from exc
+    if enviador is not None and isinstance(evento, dict):
+        tareas.add_task(whatsapp_ctrl.atender, evento, lambda: fabrica(LLM_PROVIDER), enviador)
+    return {"ok": True}
+
+
 @app.get("/skills", response_model=list[SkillOut], tags=["chat"])
 def listar_skills() -> list[SkillOut]:
     """Skills que el chat puede aplicar (``metadata.uso: asistente``)."""
@@ -426,6 +508,33 @@ def listar_skills() -> list[SkillOut]:
         SkillOut(nombre=s.nombre, descripcion=s.descripcion, licencia=s.licencia)
         for s in skills.skills_asistente()
     ]
+
+
+@app.post("/aseguradoras/identificar", response_model=IdentificacionOut, tags=["mercado"])
+async def identificar_aseguradora(
+    archivo: Annotated[
+        UploadFile, File(description="Recibo, carátula, extracto o certificado (JPG, PNG o PDF; máx. 8 MB)")
+    ],
+) -> IdentificacionOut:
+    """¿Con qué aseguradora está la persona? Lee su documento en memoria y lo descarta (SPEC-071).
+
+    OCR local (Tesseract) o texto del PDF, sin LLM ni tokens. Devuelve solo aseguradoras del
+    registro y la señal que coincidió (nombre o dominio); nunca el texto leído, que puede traer
+    cédula, póliza o dirección. Nada se guarda ni se registra en logs.
+
+    La entrada es un archivo (``UploadFile``, como ``POST /fotos``): se valida por sus primeros
+    bytes y su tamaño; la salida es el modelo ``IdentificacionOut`` (ADR-030).
+    """
+    datos = await archivo.read()
+    try:
+        resultado = await run_in_threadpool(mercado_ctrl.identificar_documento, datos)
+    except mercado_ctrl.DocumentoInvalidoError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except mercado_ctrl.LectorNoDisponibleError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    finally:
+        del datos
+    return IdentificacionOut.model_validate(resultado)
 
 
 @app.post("/fotos", response_model=FotoOut, tags=["vision"])
@@ -443,24 +552,31 @@ async def analizar_foto(
     devolver_imagen: Annotated[
         bool, Query(description="Incluir la imagen difuminada (JPEG base64) para mostrarla en el frontend")
     ] = False,
+    codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None,
 ) -> FotoOut:
     """Foto → ¿qué hago?: privacidad local, situación, respuesta con fuente y recomendaciones.
 
     1. YOLO (local) detecta objetos y **difumina a las personas** antes de que la foto salga.
     2. Con ``interpretar=true``, Claude entiende la situación (accidente, daño en el hogar, robo o
        un bien que asegurar). Si ve un documento, no se procesa.
-    3. Con ``responder=true``, el asistente explica los pasos o el seguro citando la página oficial;
-       para bienes asegurables, el recomendador de Gestión sugiere qué más contratan perfiles similares.
+    3. Con ``responder=true``, el asistente explica los pasos o el seguro citando la página oficial.
+    4. Para bienes asegurables, el recomendador de Gestión (modelo local, sin tokens) sugiere qué más
+       contratan perfiles similares, siempre: no depende de ``responder``.
+
+    Con ``interpretar=false`` y ``responder=false`` el análisis es gratis (solo YOLO y el
+    recomendador, en local): así lo usa la página pública.
     """
     if not (archivo.content_type or "").startswith("image/"):
         raise HTTPException(400, "El archivo debe ser una imagen (JPG o PNG).")
+    if interpretar or responder:  # Claude o el LLM de respuesta: gastan tokens (SPEC-072)
+        _exigir_codigo(codigo)
     datos = await archivo.read()
     llm = proveedor or LLM_PROVIDER
     try:
         interprete = fabrica_interprete(llm) if interpretar else None
         asistente = fabrica_qa(llm) if responder else None
         analisis = await run_in_threadpool(
-            vision.analizar_foto, datos, detector(), asistente, interprete, recomendar if responder else None
+            vision.analizar_foto, datos, detector(), asistente, interprete, recomendar
         )
     except vision.ImagenInvalidaError as exc:
         raise HTTPException(422, str(exc)) from exc
