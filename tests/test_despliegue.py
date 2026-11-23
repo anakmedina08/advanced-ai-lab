@@ -91,6 +91,7 @@ def test_el_script_de_despliegue_espera_healthy_y_cierra_la_sesion_del_registry(
     assert "set -eu" in script
     assert "--password-stdin" in script and "docker logout" in script
     assert "Health.Status" in script and "healthy" in script
+    assert "--force-recreate caddy" in script and "sha256sum Caddyfile" in script
 
 
 def test_el_servidor_queda_con_firewall_usuario_sin_root_y_ssh_solo_con_llave():

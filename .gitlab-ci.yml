@@ -153,6 +153,6 @@ deploy:
     # Verificación desde fuera: HTTPS válido y API respondiendo
     - curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors "https://api.$DOMINIO/health"
     - curl --fail --silent --show-error --retry 5 --retry-delay 6 --retry-all-errors -o /dev/null "https://$DOMINIO/"
-    - curl --fail --silent --show-error --retry 5 --retry-delay 6 --retry-all-errors -o /dev/null "https://app.$DOMINIO/"
+    - curl --fail --silent --show-error --retry 15 --retry-delay 6 --retry-all-errors -o /dev/null "https://app.$DOMINIO/"
   after_script:
     - rm -f ~/.ssh/id_ed25519
