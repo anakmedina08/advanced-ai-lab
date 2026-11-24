@@ -112,17 +112,20 @@ def test_opencode_conecta_el_mcp_oficial_de_gitlab():
 
 
 def test_ningun_archivo_de_despliegue_trae_secretos():
-    # Arrange
-    archivos = [*DEPLOY.iterdir(), RAIZ / ".gitlab-ci.yml", RAIZ / "opencode.json"]
-    plantilla = (DEPLOY / "app.env.example").read_text(encoding="utf-8")
+    # Arrange: incluye los subdirectorios de deploy/ (p. ej. openclaw/, SPEC-077)
+    del_repo = [RAIZ / ".gitlab-ci.yml", RAIZ / "opencode.json"]
+    archivos = [*(ruta for ruta in DEPLOY.rglob("*") if ruta.is_file()), *del_repo]
+    plantillas = sorted(DEPLOY.rglob("*.env.example"))
     # Act / Assert
-    assert not (DEPLOY / "app.env").exists()
+    assert not list(DEPLOY.rglob("*.env")), "los .env de despliegue viven solo en el servidor"
     for archivo in archivos:
         texto = archivo.read_text(encoding="utf-8")
         assert "PRIVATE KEY" not in texto and "sk-ant-" not in texto, archivo.name
-    for linea in plantilla.splitlines():
-        if linea.split("=")[0].endswith("_KEY"):
-            assert linea.endswith("="), linea
+    assert plantillas, "debe haber al menos una plantilla .env.example"
+    for plantilla in plantillas:
+        for linea in plantilla.read_text(encoding="utf-8").splitlines():
+            if linea.split("=")[0].endswith(("_KEY", "_TOKEN")):
+                assert linea.endswith("="), f"{plantilla.name}: {linea}"
 
 
 def test_yellowdata_es_el_sitio_publico_y_llama_a_la_api_por_la_red_interna():
