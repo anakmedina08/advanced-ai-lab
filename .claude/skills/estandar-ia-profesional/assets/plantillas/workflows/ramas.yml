@@ -1,0 +1,54 @@
+name: Ramas
+
+# Higiene: solo main y develop son permanentes. Borra la rama de un PR fusionado y lista las
+# ramas viejas sin PR abierto. Nunca borra main, develop ni ramas con PR abierto.
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  borrar-fusionada:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # solo este job borra ramas
+      pull-requests: read
+    steps:
+      - name: Borrar la rama del PR fusionado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAMA: ${{ github.event.pull_request.head.ref }}
+          MISMO_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          case "$RAMA" in main|develop) echo "Rama protegida: $RAMA"; exit 0;; esac
+          [ "$MISMO_REPO" = "true" ] || { echo "Rama de un fork: no se toca"; exit 0; }
+          abiertos=$(gh pr list -R "$GITHUB_REPOSITORY" --head "$RAMA" --state open --json number --jq length)
+          [ "$abiertos" = "0" ] || { echo "La rama tiene PR abierto: no se borra"; exit 0; }
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$RAMA" && echo "Borrada: $RAMA" || echo "Ya no existía: $RAMA"
+
+  reporte-semanal:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Ramas distintas de main/develop y su estado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## Ramas fuera de main/develop"
+            echo "| Rama | PR abierto |"
+            echo "|---|---|"
+            gh api --paginate "repos/$GITHUB_REPOSITORY/branches" --jq '.[].name' | grep -vE '^(main|develop)$' | while read -r rama; do
+              n=$(gh pr list -R "$GITHUB_REPOSITORY" --head "$rama" --state open --json number --jq 'map(.number|tostring)|join(", ")')
+              echo "| \`$rama\` | ${n:-—} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

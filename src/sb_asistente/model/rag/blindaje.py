@@ -15,6 +15,7 @@ demostrarlo en vivo (se suma al índice léxico con ``SB_CORPUS_DEMO=1``).
 """
 
 import re
+import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
@@ -24,7 +25,7 @@ from sb_asistente.model.rag.hibrido import Fragmento
 PATRONES_INYECCION: Final[tuple[str, ...]] = (
     r"ignor[ae]\w*\s+(todas\s+)?(las\s+)?instrucciones",
     r"ignore\s+(all\s+)?(the\s+)?previous",
-    r"olvida\w*\s+(tus|las)\s+(reglas|instrucciones)",
+    r"olvida\w*\s+(de\s+)?(tus|las)\s+(reglas|instrucciones)",
     r"system\s+prompt",
     r"prompt\s+del\s+sistema",
     r"a\s+partir\s+de\s+ahora\s+(eres|responde|actua)",
@@ -35,9 +36,13 @@ _PATRON = re.compile("|".join(PATRONES_INYECCION), re.IGNORECASE)
 REPO_DEMO = "https://github.com/anakmedina08/advanced-ai-lab/blob/develop/evaluacion/corpus_demo/"
 
 
+def _sin_tildes(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
+
+
 def es_sospechoso(texto: str) -> bool:
-    """El texto contiene una frase típica de inyección de instrucciones."""
-    return bool(_PATRON.search(texto))
+    """El texto contiene una frase típica de inyección de instrucciones (con o sin tildes)."""
+    return bool(_PATRON.search(_sin_tildes(texto)))
 
 
 def _escapar(texto: str) -> str:
@@ -55,8 +60,9 @@ def formatear_pasajes(fragmentos: Sequence[Fragmento]) -> tuple[str, int]:
     for f in fragmentos:
         marca = es_sospechoso(f.texto) or es_sospechoso(f.titulo)
         sospechosos += marca
+        aseguradora = f' aseguradora="{_atributo(f.aseguradora)}"' if f.aseguradora else ""
         partes.append(
-            f'<documento id="{_atributo(f.chunk_id)}" titulo="{_atributo(f.titulo)}" '
+            f'<documento id="{_atributo(f.chunk_id)}"{aseguradora} titulo="{_atributo(f.titulo)}" '
             f'fuente="{_atributo(f.url)}" sospechoso="{"si" if marca else "no"}">\n'
             f"{_escapar(f.texto)}\n</documento>"
         )

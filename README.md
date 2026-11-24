@@ -22,6 +22,7 @@ Proyectos en IA y CD** el módulo de recomendación de seguros. Ambos se exponen
 | Specs SDD (spec, plan y tasks) | [`openspec/specs/`](openspec/specs/) · índice en [`openspec/project.md`](openspec/project.md) |
 | Diagrama de arquitectura | [`docs/arquitectura.html`](docs/arquitectura.html) · agente y memoria en [`docs/arquitectura.md`](docs/arquitectura.md) |
 | Model Card del modelo de la API | [`docs/model-card.md`](docs/model-card.md) |
+| Despliegue (GitLab CI/CD → Droplet, Caddy y HTTPS) | [`docs/despliegue.md`](docs/despliegue.md) · SPEC-075 |
 | Evaluación (prompts, modos, recall@10/nDCG@10, YOLO) | [`docs/evaluacion-resultados.md`](docs/evaluacion-resultados.md) |
 | Guion de las sustentaciones | [`docs/sustentacion.md`](docs/sustentacion.md) |
 
@@ -190,6 +191,12 @@ sequenceDiagram
 ```bash
 make help                     # lista todos los comandos
 make process                  # Bronze → Silver → Gold sin volver a la web
+make mercado                  # corpus de mercado: varias aseguradoras (registro en model/mercado/aseguradoras.toml)
+uv run sb mercado comparar "seguro de hogar humedad" --aseguradoras sura allianz mapfre
+uv run sb mercado canales mapfre --resumen "choque leve, sin heridos"   # WhatsApp y línea del servicio
+uv run sb mercado identificar --pistas "los correos me llegan de mapfre.com.co"  # ¿con qué aseguradora está?
+uv run sb acceso crear --horas 24 --mensajes 40 --nota "jurado"   # código para el chat con IA
+make tunel   # URL pública temporal para registrar /whatsapp/webhook en Meta (cloudflared)
 uv run sb stats               # resumen del corpus Gold
 uv run sb ask "¿Cuál es el WhatsApp de atención?"
 uv run sb summary --topic "Seguros de hogar, arrendamiento y mascotas"
@@ -353,6 +360,20 @@ make skill-add REPO=anthropics/skills SKILL=skill-creator     # instala para Cla
 ```
 Una skill externa entra como herramienta de desarrollo; para usarla en el chat se marca
 `uso: asistente` en un PR revisado (ADR-014).
+
+### Estándar profesional y madurez (SPEC-049)
+
+| Skill | Para qué | Se comparte |
+|---|---|---|
+| [`estandar-ia-profesional`](.claude/skills/estandar-ia-profesional/SKILL.md) | Audita el repo en 8 dimensiones (fundamentos, calidad, seguridad, CI/CD, documentación, proceso, IA/ML responsable y gobernanza de agentes) y aplica mejoras por oleadas | Sí (solo instrucciones y plantillas) |
+| [`seguimiento-anuncios-curso`](.claude/skills/seguimiento-anuncios-curso/SKILL.md) | Lee los anuncios del profesor (solo lectura) y los contrasta con el repo en `docs/anuncios/` | No: es propia del equipo |
+
+```bash
+make madurez               # informe: puntaje global, nivel por dimensión y brechas por peso
+make madurez MINIMO=60     # falla si el puntaje baja de 60 (lo usa la CI)
+```
+
+El informe vigente está en [`docs/madurez.md`](docs/madurez.md).
 
 ## Recomendador (curso de Gestión)
 

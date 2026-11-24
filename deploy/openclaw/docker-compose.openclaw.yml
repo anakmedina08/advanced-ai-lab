@@ -1,0 +1,45 @@
+# Gateway de OpenClaw en el Droplet · Técnicas, Módulo 3 (SPEC-077, anuncio 551462-007).
+#
+#   WhatsApp (dispositivo vinculado, QR) ──▶ openclaw-gateway ──▶ DeepSeek (+ fallback)
+#                                                   └──▶ MCP del asistente (SPEC-078)
+#
+# Proyecto de Compose **aparte** del de la aplicación (`name: openclaw`), en
+# /home/deploy/openclaw, para que un deploy del curso no recree ni tumbe el gateway.
+#
+# El puerto queda **solo en loopback** del Droplet: la Control UI se alcanza por un túnel SSH
+#   ssh -L 18789:127.0.0.1:18789 deploy@<droplet>
+# Las imágenes de contenedor de OpenClaw traen el *bind* expuesto por defecto, así que además
+# se fija gateway.bind=loopback en la configuración (R077.2).
+#
+# Secretos: solo en openclaw.env (ver openclaw.env.example). Nunca en este archivo ni en el repo.
+name: openclaw
+
+services:
+  gateway:
+    # Imagen prearmada: compilar desde fuente pide 6 GB de RAM y el Droplet tiene 2 GB.
+    image: ghcr.io/openclaw/openclaw:${OPENCLAW_TAG:-latest}
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    env_file:
+      - openclaw.env
+    # Red del host: el gateway se ata a `loopback` (R077.2) y publicar el puerto con `ports:` NO
+    # funciona en ese modo, porque Docker entrega el tráfico a la IP del contenedor y el socket solo
+    # escucha el loopback de dentro. Con `network_mode: host`, ese loopback es el del Droplet: el
+    # puerto queda en 127.0.0.1:18789 y no se expone a internet.
+    network_mode: host
+    volumes:
+      # Estado del gateway: configuración, sesiones y **credenciales de WhatsApp**.
+      # Nunca se versiona ni se copia fuera del servidor (R077.6).
+      - openclaw_estado:/home/node/.openclaw
+    # Con 2 GB de RAM compartidos con api, frontend, caddy y yellowdata.
+    # Medido en el Droplet: 640m dejaba el gateway al 98 % (arranque en bucle); el uso real de la
+    # pila es ~950 MB y `api` tiene 1,2 GB de techo con 270 MB usados, así que hay holgura.
+    mem_limit: 1024m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  openclaw_estado:

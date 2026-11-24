@@ -4,7 +4,8 @@ Cada requisito de los dos cursos con su evidencia en este repositorio. Estados:
 **✅ cumplido** · **🟡 en curso** · **⏳ pendiente** · **⛔ no planeado** (cerrado como *not planned* con su motivo).
 La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia, el subagente
 `documentador` actualiza esta tabla en el mismo Pull Request. Actualizada para los anuncios 006
-(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026; guion en
+(Técnicas, Módulo 2) y 007 (Gestión, Módulo 3) del 13 de noviembre de 2026, y 008 (Gestión, Módulo 4)
+del 19 de noviembre de 2026; guion en
 [`sustentacion.md`](sustentacion.md). La interfaz la muestra en
 **Sustentación › Entregables por curso** (`view/app_pages/sustentacion.py`).
 
@@ -39,6 +40,9 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Auditoría de sesgo | ⛔ | no planeada para el Módulo 3 (T-25); los sesgos del modelo de la API están en la [Model Card](model-card.md) |
 | Front web | ✅ | frontend propio React (SPEC-022 a 032); el chat de yellowdata.com.co sigue disponible |
 | Despliegue reproducible | ✅ | `docker compose build` construye la API y el frontend; los contenedores responden (`/health` ok y nginx sirve la SPA) · `docker-compose.yml` (SPEC-041, SPEC-048); cPanel no planeado (T-33) |
+| M3 · Piso de 8 PR y 8 specs por integrante (anuncio 007) | 🟡 | verificar el reparto con `gh pr list --state merged --json author`; Daniel: SPEC-049, 050, 053, 055 y 057 · Katherine: SPEC-051, 052, 054, 056 y 058 |
+| M3 · Kanban público y enlazado en el README (anuncio 007) | 🟡 | confirmar la visibilidad del tablero |
+| M4 · MLOps, despliegue, CI/CD y credenciales (sustentación 28/11) | 🟡 | oleadas 2 y 4 de `estandar-ia-profesional`; anuncios en [`docs/anuncios/`](anuncios/README.md) |
 
 ## Técnicas Avanzadas de IA en Modelos de Lenguaje
 
@@ -72,6 +76,9 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | M2 · Trazas (LangSmith o logs equivalentes) | ✅ | logs estructurados equivalentes: `data/logs/turnos.jsonl` con latencia por tool, `sb trazas`, `X-Request-ID` (SPEC-009, 021); LangSmith sin clave |
 | M2 · Diagramas: grafo del agente, checkpointer vs. Store, router | ✅ | [`arquitectura.md`](arquitectura.md), [`arquitectura.html`](arquitectura.html) (SPEC-038) |
 | M2 · Evaluación del retrieval (recall@10, nDCG@10) | ✅ | 21 consultas etiquetadas, 5 métodos, MLflow (SPEC-036) · [`evaluacion-resultados.md`](evaluacion-resultados.md) §5 |
+| Clase 3 · Engram con decisiones reales y SkillSpector sobre skills de terceros (anuncio 004) | 🟡 | oleada 3 |
+| Módulo 2 · Deseables: JEV System One, Ragas, Playwright, time travel, LLM Wiki/OKF, despliegue (anuncio 006) | 🟡 | oleada 3 |
+| Módulo 3 · Canal Telegram / WhatsApp y OpenFang (anuncio 001) | 🟡 | oleada 4 |
 
 ## Comunes a los dos cursos (gobernanza y herramientas)
 
@@ -100,3 +107,10 @@ La regla del equipo es que ningún requisito quede sin evidencia: si algo cambia
 | Panel en vivo del desarrollo con agentes | ⛔ | no planeado (T-22): los eventos quedan en `logs/agent-events.jsonl` |
 | Diagrama del flujo de inferencia en el README | ✅ | [`README.md`](../README.md#flujo-de-inferencia) |
 | Ética de datos (robots.txt, Ley 1581, sin datos reales versionados) | ✅ | `docs/alcance.md`, `.gitignore`, hook `forbid-data-and-secrets`, validación en `schemas.py`, personas difuminadas en fotos |
+| M4 · Proyecto en GitLab con `.gitlab-ci.yml` (lint → test → build → deploy) (Gestión 008) | ⏳ | historias M4-01 y M4-02 · [resumen del anuncio](anuncios/551475-anuncio-008.md) |
+| M4 · Imagen publicada en el Container Registry o Docker Hub con tag trazable | ⏳ | historia M4-02 |
+| M4 · Droplet/VPS con Docker, firewall y proxy inverso con HTTPS | ⏳ | historias M4-03 y M4-04 |
+| M4 · Deploy en vivo por SSH con healthcheck *healthy* y sin caída | ⏳ | historia M4-05; `HEALTHCHECK` ya en el `Dockerfile` |
+| M4 · Secretos solo en variables de CI enmascaradas | 🟡 | `.env` fuera de Git y hook `forbid-data-and-secrets`; faltan las variables de CI (M4-06) |
+| M4 · GitLab MCP conectado en OpenCode y `glab` autenticado | ⏳ | historia M4-07 |
+| Sin Streamlit, Gradio ni Dash en el proyecto (Técnicas 006, Gestión 007) | 🟡 | `streamlit` sigue como herramienta interna (ADR-021); se retira en SPEC-052 · catálogo en [`docs/anuncios/herramientas.md`](anuncios/herramientas.md) |

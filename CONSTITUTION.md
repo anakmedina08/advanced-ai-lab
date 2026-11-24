@@ -48,6 +48,21 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 - Foto → «¿qué hago?»: YOLO difumina personas en local, Claude con visión entiende la situación
   (accidente, daño en el hogar, robo o bien a asegurar) y el asistente explica pasos o seguro con su
   fuente; la foto no se guarda (ADR-020).
+- Corpus de mercado: información pública (personas + canales) de varias aseguradoras de Colombia,
+  registradas en `model/mercado/aseguradoras.toml`, en un corpus aparte del principal; búsqueda por
+  aseguradora, comparación y su WhatsApp oficial leído de su propio sitio (SPEC-069, ADR-028).
+- Canales por aseguradora y servicio: la persona declara su aseguradora (se guarda en su perfil,
+  sin pólizas ni documentos) y el asistente la lleva al WhatsApp o a la línea oficial de ese
+  servicio, leídos de las páginas oficiales (SPEC-070, ADR-029).
+- Identificar la aseguradora de la persona: pistas escritas o su recibo/carátula leído en memoria
+  con OCR local (sin LLM); solo sale el nombre del registro, nunca el texto. El agente compara y
+  atiende con todas las aseguradoras (SPEC-071, ADR-030).
+- Códigos de acceso: en el sitio público el chat con IA exige un código (`sb acceso crear`) que
+  vence y trae un cupo de mensajes; se guarda solo su hash (SPEC-072, ADR-031).
+- WhatsApp por **OpenClaw** (dispositivo vinculado por QR, el mecanismo de WhatsApp Web vía
+  Baileys): gateway en contenedor en el Droplet, `bind: loopback`, token y allowlist E.164
+  (SPEC-077, ADR-035). El webhook de la **Cloud API de Meta** (SPEC-073, ADR-032) se conserva como
+  alternativa documentada, pero no es el canal evaluado en la sustentación.
 
 ### Fuera del alcance (por ahora)
 
@@ -71,7 +86,7 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
 | **Interfaz** | Front web (consume la API), Streamlit (`app.py`) y CLI `sb` |
 | **Testing** | [`pytest`](https://docs.pytest.org/) (AAA, sin red ni API) |
 | **Linting / Formato** | [Ruff](https://docs.astral.sh/ruff/) |
-| **Pre-commit** | higiene + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + Conventional Commits |
+| **Pre-commit** | higiene + gitleaks + Ruff + `uv lock --check` + GGA (revisión con IA contra `AGENTS.md`) + filtro de coautor de IA + Conventional Commits |
 | **Contenedor** | Docker multi-stage (CPU), `make docker-build` |
 | **CI/CD** | [GitHub Actions](.github/workflows/ci.yml) |
 | **Dependencias automáticas** | [Dependabot](.github/dependabot.yml) |
@@ -94,10 +109,13 @@ advanced-ai-lab/
 │   │   ├── processing/            #   clean (Silver) · gold (Markdown, corpus, chunks)
 │   │   ├── llm/                   #   prompts · service · knowledge · keyword_search · vector_store · agent · assistants
 │   │   ├── evaluation.py          #   banco de preguntas y métricas
+│   │   ├── mercado/               #   registro de aseguradoras · alcance y secciones · WhatsApp · comparar
 │   │   └── recomendador/          #   sintético · contrato · líneas base · métricas (Gestión)
 │   ├── controller/                # C · casos de uso
 │   │   ├── pipeline.py            #   descubrir → extraer → limpiar → deduplicar → enriquecer
 │   │   ├── assistant.py           #   arma los modos completo/reducido/rag/agente, evaluación
+│   │   ├── mercado.py             #   corpus de mercado: descubrir → Bronze → Gold por aseguradora, comparar
+│   │   ├── herramientas.py        #   skills, índice y evaluación del RAG, trazas y MLflow para la vista
 │   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
 │       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
@@ -105,16 +123,16 @@ advanced-ai-lab/
 │       ├── app_pages/             #   una página por archivo (asistente, foto, guías, configuración…)
 │       ├── ui.py                  #   recursos cacheados y ajustes compartidos por las páginas
 │       └── cli.py                 #   comando `sb`
-├── scripts/                       # scrape_empresa.py, crear_kanban.py, check_commit_msg.py
+├── scripts/                       # scrape_empresa.py, crear_kanban.py, check_commit_msg.py, auditar_madurez.py
 ├── tests/                         # pytest por capa (AAA, fixtures HTML, LLM falso)
 ├── evaluacion/preguntas.yaml      # banco de 24 preguntas
 ├── openspec/                      # Spec-Driven Development (spec, plan, tasks)
-├── docs/                          # requisitos, arquitectura, decisiones (ADR / Engram), gestion (M2), capturas
+├── docs/                          # requisitos, arquitectura, decisiones (ADR / Engram), madurez.md, gestion (M2), capturas
 ├── informe/                       # artículo IEEE (LaTeX)
 ├── data/raw · silver · gold       # Medallion (NO versionado)
 ├── Dockerfile · .dockerignore     # imagen multi-stage CPU
 ├── .github/                       # PR/issue templates, CI, Dependabot, labels
-├── .claude/                       # agents/ (subagentes) · settings.json (hooks) · skills/
+├── .claude/                       # agents/ (subagentes) · settings.json (hooks) · skills/ (incluye estandar-ia-profesional y seguimiento-anuncios-curso)
 ├── .opencode/rules/               # reglas para agentes (tgrep)
 ├── AGENTS.md · .gga               # reglas para agentes y revisión GGA en pre-commit
 ├── CONSTITUTION.md                # este archivo — verdad central
@@ -145,7 +163,8 @@ advanced-ai-lab/
 |-------------|-----|---------|
 | `uv` | Entornos y dependencias | `make install` |
 | Ruff | Lint + formato | `make lint` / `make format` |
-| `pytest` | Pruebas (≈ 150, sin red) | `make test` |
+| `pytest` | Pruebas (≈ 660, sin red) | `make test` |
+| Auditor de madurez | 9 dimensiones con puntaje; puerta en la CI ([ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | `make madurez MINIMO=N` |
 | `pre-commit` | Hooks antes de cada commit (incluye GGA) | `make pre-commit` |
 | Docker | Imagen multi-stage CPU | `make docker-build` / `make docker-run` |
 | GitHub Actions | CI (lint + formato + pruebas + build Docker) | `.github/workflows/ci.yml` |
@@ -194,6 +213,19 @@ git push
 | 2026-11-11 | Foto → «¿qué hago?» con YOLO local, Claude con visión y FastAPI, adaptado de `ejercicio_gestion_fastapi` ([ADR-020](docs/decisiones/ADR-020-foto-seguro-yolo.md)) | YOLO solo daba una tabla obvia; la situación es lo que la persona necesita resolver |
 | 2026-11-11 | Interfaz en dos áreas (cliente / equipo), chat y tema corporativo neutro ([ADR-021](docs/decisiones/ADR-021-interfaz-empresarial.md)) | El cliente no debe ver detalles técnicos; no imitar la marca de la compañía |
 | 2026-11-13 | MLflow como bitácora de experimentos, local y opcional ([ADR-022](docs/decisiones/ADR-022-mlflow-bitacora.md)) | Trazabilidad de cada resultado: configuración, métricas y commit |
+| 2026-11-17 | Skills `estandar-ia-profesional` y `seguimiento-anuncios-curso`; auditor `make madurez` como puerta en la CI (SPEC-049, [ADR-025](docs/decisiones/ADR-025-auditor-madurez.md)) | Medir la madurez en 9 dimensiones y evitar que retroceda; la skill de buenas prácticas queda compartible |
+| 2026-11-17 | Commits y PRs sin coautor de IA: `attribution` vacío + hook `commit-msg` ([ADR-023](docs/decisiones/ADR-023-atribucion-ia.md)) | La autoría del repo es de las personas; el uso de IA se declara en la política |
+| 2026-11-17 | gitleaks en pre-commit y en la CI (historial completo) — SPEC-053 | Ninguna llave puede llegar al repo público; M4 de Gestión (credenciales) |
+| 2026-11-18 | Corpus de mercado con varias aseguradoras en un corpus aparte, comparación y WhatsApp oficial (SPEC-069, [ADR-028](docs/decisiones/ADR-028-corpus-mercado-aseguradoras.md)) | Orientar entre compañías sin romper el modo de contexto completo ni las evaluaciones de la Fase 1 |
+| 2026-11-19 | Canales por aseguradora y servicio; afiliación declarada en el perfil; rutas comunes de sitemap (SPEC-070, [ADR-029](docs/decisiones/ADR-029-canales-por-aseguradora.md)) | Llevar a la persona al canal oficial de su aseguradora sin pedir datos personales ni escribir números a mano |
+| 2026-11-19 | Identificar la aseguradora por pistas o documento (OCR local) y agente con todas las aseguradoras (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Llevar a la persona a su aseguradora aunque no sepa cuál es, sin datos personales ni tokens |
+| 2026-11-19 | PDF del documento: capa de texto con `pypdf` y, si es escaneado, páginas a imagen con `pypdfium2` + Tesseract (SPEC-071, [ADR-030](docs/decisiones/ADR-030-identificar-aseguradora.md)) | Los comprobantes PSE y las carátulas llegan casi siempre en PDF; sin LLM y sin escribir en disco |
+| 2026-11-19 | Códigos de acceso con vencimiento y cupo para lo que llama al LLM en el sitio público (SPEC-072, [ADR-031](docs/decisiones/ADR-031-codigos-acceso.md)) | Controlar el gasto de tokens sin cuentas de usuario; lo local sigue libre |
+| 2026-11-19 | Asistente por WhatsApp con la Cloud API de Meta: firma obligatoria, códigos de acceso por número y sin el número en claro (SPEC-073, [ADR-032](docs/decisiones/ADR-032-whatsapp-cloud-api.md)) | Atender donde la gente ya resuelve sus trámites, con el gasto de tokens controlado |
+| 2026-11-21 | GitHub como repositorio principal y GitLab como espejo para el pipeline del Módulo 4 (SPEC-074, [ADR-033](docs/decisiones/ADR-033-espejo-gitlab.md)) | El M4 se demuestra en GitLab sin perder PR, revisiones ni Kanban de GitHub |
+| 2026-11-21 | Build al Container Registry y deploy por SSH a un Droplet con Caddy y HTTPS (SPEC-075, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | Producto en línea con trazabilidad por commit y secretos solo en variables de CI |
+| 2026-11-21 | Yellowdata como sitio público del Droplet; el frontend del curso pasa a `app.` (SPEC-076, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | El cliente ve el producto real; la API se consume por la red interna |
+| 2026-11-23 | WhatsApp por **OpenClaw** como dispositivo vinculado (QR); la Cloud API queda como alternativa (SPEC-077, [ADR-035](docs/decisiones/ADR-035-openclaw-gateway-whatsapp.md)) | Lo exige la rúbrica del anuncio 007 (gateway, bind loopback, token, allowlist); un número de la Cloud API no se puede vincular después |
 
 ## 10. Notas y tareas pendientes
 

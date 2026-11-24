@@ -17,22 +17,47 @@ Errores (especificación JSON-RPC 2.0, más códigos de servidor -32000 a -32099
 | -32603 | error interno |
 | -32001 | recurso no encontrado (cliente, skill) |
 | -32002 | datos no listos (falta generar el corpus, el índice o el recomendador) |
+
+Corpus de mercado (SPEC-069): ``mercado.aseguradoras``, ``mercado.buscar`` y ``mercado.comparar``
+trabajan sobre la información pública de varias aseguradoras; ``clasificador.clasificar`` además
+devuelve qué aseguradoras nombra el mensaje.
 """
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError, field_validator
 from starlette.concurrency import run_in_threadpool
 
-from sb_asistente.config import LLM_PROVIDER, PROVIDERS, RAG_K, RECO_K
-from sb_asistente.controller import chat, recomendador
-from sb_asistente.model import skills
-from sb_asistente.model.intencion import clasificar
+from sb_asistente.config import (
+    ACCESO_HEADER,
+    CONSULTA_MAX,
+    CONSULTA_MIN,
+    ID_ASEGURADORA_MAX,
+    IDENTIFICAR_PISTAS_MAX,
+    LLM_PROVIDER,
+    MENSAJE_MAX,
+    MERCADO_MAX_COMPARAR,
+    MERCADO_MAX_POR_ASEGURADORA,
+    MERCADO_POR_ASEGURADORA,
+    PROVIDERS,
+    RAG_K,
+    RAG_K_MAX,
+    RECO_K,
+    RECO_K_MAX,
+    RPC_MAX_LOTE,
+    WHATSAPP_MAX_TEXTO,
+)
+from sb_asistente.controller import acceso as acceso_ctrl
+from sb_asistente.controller import chat, herramientas, recomendador
+from sb_asistente.controller import mercado as mercado_ctrl
+from sb_asistente.controller.agente import AgenteAsistente
+from sb_asistente.model.rag.hibrido import Fragmento, RecuperadorHibrido
 from sb_asistente.model.rag.indice import IndiceError
 from sb_asistente.view import dependencias as deps
 from sb_asistente.view.schemas import ChatIn, PreguntaIn, extraer_fuentes, rechazar_datos_personales
@@ -46,8 +71,9 @@ PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS, INTERNAL_ERROR =
     -32602,
     -32603,
 )
-NOT_FOUND, NOT_READY = -32001, -32002
-MAX_LOTE = 10
+NOT_FOUND, NOT_READY, ACCESO_DENEGADO = -32001, -32002, -32003
+
+logger = logging.getLogger(__name__)
 
 
 class RpcError(Exception):
@@ -73,8 +99,8 @@ class SinParams(_Params):
 class BuscarParams(_Params):
     """``conocimiento.buscar``."""
 
-    consulta: Annotated[str, Field(min_length=2, max_length=300)]
-    k: Annotated[int, Field(ge=1, le=20)] = RAG_K
+    consulta: Annotated[str, Field(min_length=CONSULTA_MIN, max_length=CONSULTA_MAX)]
+    k: Annotated[int, Field(ge=1, le=RAG_K_MAX)] = RAG_K
     seccion: str | None = None
 
 
@@ -84,7 +110,7 @@ ConversacionId = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{6,64}$", examples
 class AgenteParams(_Params):
     """``agente.conversar``."""
 
-    mensaje: Annotated[str, Field(min_length=1, max_length=800)]
+    mensaje: Annotated[str, Field(min_length=1, max_length=MENSAJE_MAX)]
     conversacion_id: ConversacionId
     usuario_id: ConversacionId | None = None
     proveedor: str | None = None
@@ -112,7 +138,7 @@ class RecomendarParams(_Params):
     """``recomendador.recomendar``."""
 
     cliente_id: Annotated[str, Field(pattern=r"^C\d{6}$")]
-    k: Annotated[int, Field(ge=1, le=10)] = RECO_K
+    k: Annotated[int, Field(ge=1, le=RECO_K_MAX)] = RECO_K
 
 
 class PerfilParams(_Params):
@@ -122,13 +148,77 @@ class PerfilParams(_Params):
     vivienda: Literal["propia", "arrendada", "familiar"] | None = None
     tiene_mascota: bool | None = None
     tiene_credito: bool | None = None
-    k: Annotated[int, Field(ge=1, le=10)] = RECO_K
+    k: Annotated[int, Field(ge=1, le=RECO_K_MAX)] = RECO_K
+
+
+ServicioCanal = Literal["autos", "soat", "hogar", "salud", "vida", "arl", "pqr", "general"]
+SeccionMercado = Annotated[
+    str, AfterValidator(mercado_ctrl.validar_seccion), Field(examples=["hogar_y_mascotas", "movilidad"])
+]
+IdAseguradora = Annotated[str, Field(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$", max_length=ID_ASEGURADORA_MAX)]
+
+
+class MercadoBuscarParams(_Params):
+    """``mercado.buscar``."""
+
+    consulta: Annotated[str, Field(min_length=CONSULTA_MIN, max_length=CONSULTA_MAX)]
+    k: Annotated[int, Field(ge=1, le=RAG_K_MAX)] = RAG_K
+    seccion: SeccionMercado | None = None
+    aseguradora: IdAseguradora | None = None
+
+    @field_validator("consulta")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+
+class CompararParams(_Params):
+    """``mercado.comparar``: la misma consulta en varias aseguradoras (todas si no se indican)."""
+
+    consulta: Annotated[str, Field(min_length=CONSULTA_MIN, max_length=CONSULTA_MAX)]
+    aseguradoras: Annotated[list[IdAseguradora], Field(max_length=MERCADO_MAX_COMPARAR)] = []
+    por_aseguradora: Annotated[int, Field(ge=1, le=MERCADO_MAX_POR_ASEGURADORA)] = MERCADO_POR_ASEGURADORA
+    seccion: SeccionMercado | None = None
+
+    @field_validator("consulta")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
+
+
+class CanalesParams(_Params):
+    """``mercado.canales``: a dónde llevar a la persona según su aseguradora y lo que necesita."""
+
+    aseguradora: IdAseguradora
+    servicio: ServicioCanal | None = None
+    resumen: Annotated[str, Field(max_length=WHATSAPP_MAX_TEXTO)] = ""
+
+    @field_validator("resumen")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor) if valor else valor
+
+
+class IdentificarParams(_Params):
+    """``mercado.identificar``: pistas que escribió la persona sobre su aseguradora (SPEC-071)."""
+
+    pistas: Annotated[str, Field(min_length=2, max_length=IDENTIFICAR_PISTAS_MAX)]
+
+    @field_validator("pistas")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
 
 
 class ClasificarParams(_Params):
     """``clasificador.clasificar``."""
 
-    mensaje: Annotated[str, Field(min_length=1, max_length=800)]
+    mensaje: Annotated[str, Field(min_length=1, max_length=MENSAJE_MAX)]
+
+    @field_validator("mensaje")
+    @classmethod
+    def _sin_datos_personales(cls, valor: str) -> str:
+        return rechazar_datos_personales(valor)
 
 
 # --- Contexto con las dependencias inyectadas --------------------------------------------------
@@ -139,9 +229,13 @@ class Contexto:
     """Dependencias de los procedimientos (reemplazables en pruebas)."""
 
     responder: deps.Responder
-    chat_qa: Callable
-    agente: Callable
-    recuperador: Callable
+    chat_qa: Callable[[str], chat.Responder]
+    agente: Callable[[str], AgenteAsistente]
+    recuperador: Callable[[], tuple[RecuperadorHibrido, str]]
+    # Buscador del corpus de mercado (SPEC-069).
+    mercado: Callable[[], RecuperadorHibrido] = mercado_ctrl.recuperador_mercado
+    # Código de acceso del encabezado X-Codigo-Acceso (SPEC-072); solo lo piden los métodos con LLM.
+    codigo: str | None = None
 
 
 def _salud(_: SinParams, ctx: Contexto) -> dict[str, object]:
@@ -150,23 +244,72 @@ def _salud(_: SinParams, ctx: Contexto) -> dict[str, object]:
     return salud().model_dump()
 
 
+def _fragmento(f: Fragmento) -> dict[str, object]:
+    """Fragmento como JSON (con su aseguradora, si viene del corpus de mercado)."""
+    return {
+        "chunk_id": f.chunk_id,
+        "url": f.url,
+        "titulo": f.titulo,
+        "seccion": f.seccion,
+        "texto": f.texto,
+        "puntaje": f.puntaje,
+        "origen": list(f.origen),
+        "aseguradora": f.aseguradora or None,
+    }
+
+
+def _mercado_aseguradoras(_: SinParams, ctx: Contexto) -> list[dict[str, object]]:
+    """Registro de aseguradoras con documentos y WhatsApp oficial."""
+    return mercado_ctrl.registro_con_datos()
+
+
+def _mercado_buscar(p: MercadoBuscarParams, ctx: Contexto) -> dict[str, object]:
+    """Búsqueda en el corpus de mercado, opcionalmente en una sola aseguradora."""
+    if p.aseguradora:
+        mercado_ctrl.aseguradoras([p.aseguradora])  # KeyError (-32001) si no está registrada
+    fragmentos = ctx.mercado().buscar(p.consulta, k=p.k, seccion=p.seccion, aseguradora=p.aseguradora)
+    return {"fragmentos": [_fragmento(f) for f in fragmentos]}
+
+
+def _mercado_canales(p: CanalesParams, ctx: Contexto) -> dict[str, object]:
+    """WhatsApp y teléfonos oficiales de la aseguradora para el servicio que necesita la persona."""
+    return mercado_ctrl.canales_para(p.aseguradora, p.servicio, p.resumen)
+
+
+def _acceso_estado(_: SinParams, ctx: Contexto) -> dict[str, object]:
+    """Vigencia y mensajes restantes del código del encabezado, sin gastar cupo."""
+    return acceso_ctrl.estado(ctx.codigo)
+
+
+def _mercado_identificar(p: IdentificarParams, ctx: Contexto) -> dict[str, object]:
+    """Aseguradoras del registro que sugieren las pistas (sin LLM; el texto no se guarda)."""
+    return mercado_ctrl.identificar_por_pistas(p.pistas)
+
+
+def _mercado_comparar(p: CompararParams, ctx: Contexto) -> dict[str, object]:
+    """La misma consulta en varias aseguradoras (las pedidas o las más relevantes)."""
+    ofertas = mercado_ctrl.comparar_aseguradoras(
+        ctx.mercado(), p.consulta, p.aseguradoras, p.por_aseguradora, p.seccion
+    )
+    return {
+        "consulta": p.consulta,
+        "ofertas": [
+            {
+                "aseguradora": o.aseguradora,
+                "nombre": o.nombre,
+                "fragmentos": [_fragmento(f) for f in o.fragmentos],
+            }
+            for o in ofertas
+        ],
+    }
+
+
 def _buscar(p: BuscarParams, ctx: Contexto) -> dict[str, object]:
     recuperador, modo = ctx.recuperador()
     fragmentos = recuperador.buscar(p.consulta, k=p.k, seccion=p.seccion)
     return {
         "modo": modo,
-        "fragmentos": [
-            {
-                "chunk_id": f.chunk_id,
-                "url": f.url,
-                "titulo": f.titulo,
-                "seccion": f.seccion,
-                "texto": f.texto,
-                "puntaje": f.puntaje,
-                "origen": list(f.origen),
-            }
-            for f in fragmentos
-        ],
+        "fragmentos": [_fragmento(f) for f in fragmentos],
     }
 
 
@@ -222,21 +365,11 @@ def _por_perfil(p: PerfilParams, ctx: Contexto) -> dict[str, object]:
 
 
 def _clasificar(p: ClasificarParams, ctx: Contexto) -> dict[str, object]:
-    r = clasificar(p.mensaje)
-    return {
-        "intencion": r.etiqueta,
-        "confianza": r.confianza,
-        "seccion": r.seccion,
-        "perfil": r.perfil.conocido(),
-        "senales": r.senales,
-    }
+    return chat.clasificacion(p.mensaje) | {"aseguradoras": mercado_ctrl.detectar_aseguradoras(p.mensaje)}
 
 
 def _skills(_: SinParams, ctx: Contexto) -> list[dict[str, object]]:
-    return [
-        {"nombre": s.nombre, "descripcion": s.descripcion, "licencia": s.licencia}
-        for s in skills.skills_asistente()
-    ]
+    return herramientas.skills_del_asistente()
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,6 +379,7 @@ class Metodo:
     params: type[BaseModel]
     funcion: Callable[[Any, Contexto], object]
     descripcion: str
+    usa_llm: bool = False  # gasta tokens: exige código de acceso en el sitio público (SPEC-072)
 
 
 METODOS: dict[str, Metodo] = {
@@ -253,9 +387,18 @@ METODOS: dict[str, Metodo] = {
     "conocimiento.buscar": Metodo(
         BuscarParams, _buscar, "Búsqueda híbrida (BM25 + vectores) en la base pública."
     ),
-    "asistente.preguntar": Metodo(PreguntaIn, _preguntar, "Q&A con fuentes (contexto reducido o completo)."),
-    "asistente.chat": Metodo(ChatIn, _chat, "Turno del chat orquestado: clasificador → herramienta."),
-    "agente.conversar": Metodo(AgenteParams, _conversar, "Agente con tools, salida estructurada y memoria."),
+    "asistente.preguntar": Metodo(
+        PreguntaIn, _preguntar, "Q&A con fuentes (contexto reducido o completo).", usa_llm=True
+    ),
+    "asistente.chat": Metodo(
+        ChatIn, _chat, "Turno del chat orquestado: clasificador → herramienta.", usa_llm=True
+    ),
+    "agente.conversar": Metodo(
+        AgenteParams, _conversar, "Agente con tools, salida estructurada y memoria.", usa_llm=True
+    ),
+    "acceso.estado": Metodo(
+        SinParams, _acceso_estado, "¿Sirve el código de acceso del encabezado? (sin gastar cupo)"
+    ),
     "agente.historial": Metodo(ConversacionParams, _historial, "Mensajes guardados de una conversación."),
     "agente.olvidar": Metodo(ConversacionParams, _olvidar, "Borra la memoria de una conversación."),
     "recomendador.recomendar": Metodo(RecomendarParams, _recomendar, "Top-k para un cliente sintético."),
@@ -264,6 +407,21 @@ METODOS: dict[str, Metodo] = {
         ClasificarParams, _clasificar, "Intención, sección y perfil de un mensaje."
     ),
     "skills.listar": Metodo(SinParams, _skills, "Skills que el asistente puede aplicar."),
+    "mercado.aseguradoras": Metodo(
+        SinParams, _mercado_aseguradoras, "Aseguradoras del registro con documentos y WhatsApp oficial."
+    ),
+    "mercado.buscar": Metodo(
+        MercadoBuscarParams, _mercado_buscar, "Búsqueda en la información pública de varias aseguradoras."
+    ),
+    "mercado.canales": Metodo(
+        CanalesParams, _mercado_canales, "WhatsApp y teléfonos oficiales de una aseguradora para un servicio."
+    ),
+    "mercado.identificar": Metodo(
+        IdentificarParams, _mercado_identificar, "Con qué aseguradora está la persona, según sus pistas."
+    ),
+    "mercado.comparar": Metodo(
+        CompararParams, _mercado_comparar, "La misma consulta en varias aseguradoras, lado a lado."
+    ),
 }
 
 
@@ -312,9 +470,13 @@ def ejecutar(llamada: object, ctx: Contexto) -> dict[str, object] | None:
             except ValidationError as exc:
                 errores = [{"campo": ".".join(map(str, e["loc"])), "mensaje": e["msg"]} for e in exc.errors()]
                 raise RpcError(INVALID_PARAMS, "Parámetros inválidos.", errores) from exc
+            if metodo.usa_llm:
+                acceso_ctrl.exigir(ctx.codigo)  # gasta un mensaje del cupo antes de llamar al LLM
             resultado = metodo.funcion(validados, ctx)
     except RpcError as exc:
         respuesta = _error(exc.code, exc.message, id_, exc.data)
+    except acceso_ctrl.AccesoDenegadoError as exc:
+        respuesta = _error(ACCESO_DENEGADO, str(exc), id_)
     except KeyError as exc:
         respuesta = _error(NOT_FOUND, str(exc.args[0]) if exc.args else "No encontrado.", id_)
     except (FileNotFoundError, IndiceError) as exc:
@@ -322,6 +484,7 @@ def ejecutar(llamada: object, ctx: Contexto) -> dict[str, object] | None:
     except ValueError as exc:
         respuesta = _error(INVALID_PARAMS, str(exc), id_)
     except Exception:  # noqa: BLE001 - el detalle va al log, no al cliente
+        logger.exception("Error interno en el método JSON-RPC %s", nombre)
         respuesta = _error(INTERNAL_ERROR, "Error interno del servidor.", id_)
     else:
         respuesta = {"jsonrpc": "2.0", "result": resultado, "id": id_}
@@ -330,12 +493,14 @@ def ejecutar(llamada: object, ctx: Contexto) -> dict[str, object] | None:
 
 def get_contexto(
     responder: Annotated[deps.Responder, Depends(deps.get_responder)],
-    chat_qa: Annotated[Callable, Depends(deps.get_chat_qa)],
-    agente: Annotated[Callable, Depends(deps.get_agente)],
-    recuperador: Annotated[Callable, Depends(deps.get_recuperador)],
+    chat_qa: Annotated[Callable[[str], chat.Responder], Depends(deps.get_chat_qa)],
+    agente: Annotated[Callable[[str], AgenteAsistente], Depends(deps.get_agente)],
+    recuperador: Annotated[Callable[[], tuple[RecuperadorHibrido, str]], Depends(deps.get_recuperador)],
+    mercado: Annotated[Callable[[], RecuperadorHibrido], Depends(deps.get_mercado)],
+    codigo: Annotated[str | None, Header(alias=ACCESO_HEADER)] = None,
 ) -> Contexto:
-    """Reúne las dependencias (cada una sobreescribible en pruebas)."""
-    return Contexto(responder, chat_qa, agente, recuperador)
+    """Reúne las dependencias (cada una sobreescribible en pruebas) y el código de acceso."""
+    return Contexto(responder, chat_qa, agente, recuperador, mercado, codigo)
 
 
 @router.post(
@@ -353,8 +518,8 @@ async def rpc(request: Request, ctx: Annotated[Contexto, Depends(get_contexto)])
     if isinstance(cuerpo, list):
         if not cuerpo:
             return JSONResponse(_error(INVALID_REQUEST, "El lote está vacío."))
-        if len(cuerpo) > MAX_LOTE:
-            return JSONResponse(_error(INVALID_REQUEST, f"Máximo {MAX_LOTE} llamadas por lote."))
+        if len(cuerpo) > RPC_MAX_LOTE:
+            return JSONResponse(_error(INVALID_REQUEST, f"Máximo {RPC_MAX_LOTE} llamadas por lote."))
         respuestas = [r for r in [await run_in_threadpool(ejecutar, c, ctx) for c in cuerpo] if r is not None]
         return JSONResponse(respuestas) if respuestas else Response(status_code=204)
     respuesta = await run_in_threadpool(ejecutar, cuerpo, ctx)  # el LLM no bloquea el event loop

@@ -6,6 +6,7 @@ registra método, ruta, status y milisegundos, **nunca el cuerpo** (puede traer 
 
 import json
 import logging
+import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -13,6 +14,24 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 
 logger = logging.getLogger("sb.api")
+
+# Parámetros de la URL que nunca deben quedar en un log: Meta manda el token de verificación del
+# webhook de WhatsApp en la query (SPEC-073), y el log de acceso de uvicorn imprime la URL completa.
+_SECRETOS_EN_URL = re.compile(r"((?:hub[._]verify_token|access_token|token|codigo)=)[^&\s\"]+", re.IGNORECASE)
+
+
+def ocultar_secretos(texto: str) -> str:
+    """Reemplaza el valor de los parámetros sensibles de una URL por ``***``."""
+    return _SECRETOS_EN_URL.sub(r"\1***", texto)
+
+
+class SinSecretos(logging.Filter):
+    """Filtro para ``uvicorn.access``: la ruta con query se registra sin tokens."""
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102
+        if isinstance(record.args, tuple):
+            record.args = tuple(ocultar_secretos(a) if isinstance(a, str) else a for a in record.args)
+        return True
 
 
 class FormatoJSON(logging.Formatter):
@@ -47,6 +66,9 @@ async def medir(request: Request, siguiente: Callable[[Request], Awaitable[Respo
 
 
 def registrar(app: FastAPI) -> None:
-    """Instala el middleware y el formato JSON."""
+    """Instala el middleware, el formato JSON y el filtro que oculta tokens del log de acceso."""
     configurar_logs()
+    acceso = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, SinSecretos) for f in acceso.filters):
+        acceso.addFilter(SinSecretos())
     app.middleware("http")(medir)

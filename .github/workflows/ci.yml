@@ -21,6 +21,8 @@ jobs:
       - run: uv run ruff format --check .
       # Sin red ni API: fixtures HTML locales y LLM falso (no se gasta saldo de la API de Anthropic)
       - run: uv run pytest -v --cov --cov-report=term-missing --cov-fail-under=85
+      # Auditoría de madurez (SPEC-049): el puntaje no puede bajar del mínimo; sube con cada oleada.
+      - run: make madurez MINIMO=60
 
   frontend:
     name: Frontend (tipos, Vitest y build)

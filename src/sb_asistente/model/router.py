@@ -7,7 +7,8 @@ Rutas y herramientas que habilita cada una:
 - ``datos``: preguntas numéricas sobre la cartera («¿cuántas pólizas se vendieron en el T3?»)
   → solo ``consultar_datos`` (cifra exacta, el LLM no calcula).
 - ``rag``: dudas sobre seguros, coberturas, trámites o canales → ``buscar_conocimiento`` (y
-  ``recomendar_seguros`` si pide una sugerencia).
+  ``recomendar_seguros`` si pide una sugerencia) más las tools de mercado: comparar aseguradoras,
+  identificar la de la persona y darle sus canales (SPEC-071).
 - ``mixto``: una parte de la pregunta va a los documentos y otra a los datos → ambas tools.
 - ``fuera_de_alcance``: temas ajenos → respuesta fija, sin LLM.
 
@@ -24,14 +25,16 @@ from sb_asistente.model.intencion import _DOMINIO, _FUERA, clasificar, normaliza
 
 Ruta = Literal["directo", "datos", "rag", "mixto", "fuera_de_alcance"]
 
+# Corpus de mercado (SPEC-071): comparar, identificar la aseguradora de la persona y sus canales.
+MERCADO: Final[tuple[str, ...]] = ("comparar_aseguradoras", "identificar_aseguradora", "canales_aseguradora")
 TOOLS_POR_RUTA: Final[dict[str, tuple[str, ...]]] = {
     "directo": (),
     "datos": ("consultar_datos",),
-    "rag": ("buscar_conocimiento", "recomendar_seguros"),
+    "rag": ("buscar_conocimiento", "recomendar_seguros", *MERCADO),
     "mixto": ("buscar_conocimiento", "consultar_datos"),
     "fuera_de_alcance": (),
 }
-TODAS: Final[tuple[str, ...]] = ("buscar_conocimiento", "recomendar_seguros", "consultar_datos")
+TODAS: Final[tuple[str, ...]] = ("buscar_conocimiento", "recomendar_seguros", "consultar_datos", *MERCADO)
 UMBRAL_CAUTELA: Final[float] = 0.5
 
 _CANTIDAD = r"(cuant[oa]s?|total|suma|promedio|numero de|cifra|monto|cantidad)"
@@ -66,7 +69,8 @@ _PERSONAL: Final[tuple[str, ...]] = (
     r"\bque (sabes|recuerdas) de mi\b",
     r"^(muchas )?gracias\b",
 )
-_SEPARADORES = re.compile(r"\b(y|con|frente a|versus|vs|ademas|tambien)\b|[,;]")
+_SEPARADORES = re.compile(r"\b(y|con|frente a|versus|vs|ademas|tambien)\b")
+_PUNTUACION = re.compile(r"[,;]")
 
 
 @dataclass(slots=True)
@@ -121,8 +125,12 @@ def enrutar(mensaje: str) -> Decision:
         return _decision("fuera_de_alcance", intencion.confianza, intencion.senales)
     if _hay(texto, _FUERA) and not _hay(texto, _DOMINIO):  # «recomiéndame una película»
         return _decision("fuera_de_alcance", 0.85, ["tema ajeno sin vocabulario de seguros"])
+    # Se parte por «,» y «;» antes de normalizar: normalizar() borra los signos de puntuación.
     clausulas = [
-        c.strip() for c in _SEPARADORES.split(texto) if c and c.strip() and not _SEPARADORES.fullmatch(c)
+        c.strip()
+        for parte in _PUNTUACION.split(mensaje)
+        for c in _SEPARADORES.split(normalizar(parte))
+        if c and c.strip() and not _SEPARADORES.fullmatch(c)
     ]
     datos = [c for c in clausulas if _es_datos(c)]
     if datos:

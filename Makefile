@@ -5,8 +5,8 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help api frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
-	data process index app eval docker-build docker-run docker-up
+.PHONY: help api tunel frontend frontend-build mlflow-server mlflow-yolo mlflow-registro vision foto mlflow mlflow-importar reco agentes chat skills skill-new skill-find skill-add rag rag-buscar agente rpc-demo langsmith-dataset install dev pre-commit-install pre-commit lint format format-check test check build clean \
+	data process mercado index app eval docker-build docker-run docker-up
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -36,11 +36,25 @@ test: ## Ejecuta las pruebas (sin red ni API)
 
 check: lint format-check test ## Verificación completa (lint + formato + pruebas)
 
+.PHONY: secretos
+secretos: ## Busca llaves y tokens en el árbol con gitleaks (vía pre-commit)
+	uv run pre-commit run gitleaks --all-files
+
+.PHONY: madurez
+MINIMO ?= 0
+madurez: ## Auditoría de madurez (9 dimensiones). Puerta: make madurez MINIMO=60
+	uv run python scripts/auditar_madurez.py --path . --minimo $(MINIMO)
+
 data: ## Scraping completo: descubrir → Bronze → Silver → Gold (~4 min, respeta robots.txt)
 	uv run python scripts/scrape_empresa.py
 
 process: ## Reprocesa Bronze → Silver → Gold sin volver a la web (segundos)
 	uv run python scripts/scrape_empresa.py --solo-proceso
+
+mercado: ## Corpus de mercado: varias aseguradoras (robots.txt + sitemap → Bronze → Gold; ~2 min por aseguradora)
+	uv run sb mercado verificar
+	uv run sb mercado capturar
+	uv run sb mercado procesar
 
 index: ## Fase 2: embeddings de los chunks en Qdrant (requiere: ollama pull embeddinggemma)
 	uv run sb index
@@ -53,6 +67,11 @@ eval: ## Evalúa el banco (PROVIDER=anthropic|deepseek|ollama, VERSION=v1..v4, M
 
 api: ## Levanta la API FastAPI en http://127.0.0.1:8000/docs
 	uv run sb api
+
+tunel: ## URL pública temporal hacia la API para el webhook de WhatsApp (requiere cloudflared)
+	@command -v cloudflared >/dev/null || { echo "Instale cloudflared: brew install cloudflared"; exit 1; }
+	@echo "Copie la URL https://….trycloudflare.com y agréguele /whatsapp/webhook en Meta"
+	cloudflared tunnel --url http://127.0.0.1:8000
 
 frontend: ## Frontend propio (React + Vite) en http://localhost:5173 (requiere Node 20+)
 	cd frontend && npm install --no-audit --no-fund && npm run dev
