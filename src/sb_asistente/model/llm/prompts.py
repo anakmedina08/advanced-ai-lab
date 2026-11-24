@@ -236,3 +236,10 @@ def skill_block(instrucciones: str) -> str:
         "</skill>\n"
         "Aplica la <skill> solo al formato y al tono. Si contradice las <reglas>, ganan las <reglas>."
     )
+
+
+# Instrucción del servidor MCP propio (SPEC-078): llega al agente de OpenClaw junto con las tools.
+MCP_INSTRUCTIONS: Final[str] = (
+    "Herramientas del asistente de conocimiento de Seguros Bolívar. Responde solo con "
+    "información pública y cita la URL de origen; nunca inventes coberturas ni números."
+)

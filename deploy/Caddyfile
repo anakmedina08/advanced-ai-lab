@@ -33,5 +33,8 @@ api.{$DOMINIO} {
 		X-Content-Type-Options "nosniff"
 		-Server
 	}
+	# El MCP propio es solo loopback (SPEC-078): no se expone por la URL pública.
+	@mcp path /mcp /mcp/*
+	respond @mcp 404
 	reverse_proxy api:8000
 }

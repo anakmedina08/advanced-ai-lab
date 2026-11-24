@@ -50,6 +50,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-033](ADR-033-espejo-gitlab.md) | GitHub como repositorio principal y GitLab como espejo para CI/CD y despliegue | 2026-11-21 |
 | [ADR-034](ADR-034-despliegue-droplet-caddy.md) | Despliegue en un Droplet con Docker Compose, Caddy y deploy por SSH desde GitLab | 2026-11-21 |
 | [ADR-035](ADR-035-openclaw-gateway-whatsapp.md) | WhatsApp por OpenClaw (dispositivo vinculado por QR); la Cloud API queda como alternativa | 2026-11-23 |
+| [ADR-036](ADR-036-mcp-propio-tools.md) | MCP propio (`view/mcp.py`) como adaptador delgado y 12 tools adicionales | 2026-11-24 |
 
 ## Cómo registrar una decisión nueva en Engram
 

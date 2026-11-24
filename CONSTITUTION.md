@@ -109,6 +109,7 @@ advanced-ai-lab/
 │   │   ├── processing/            #   clean (Silver) · gold (Markdown, corpus, chunks)
 │   │   ├── llm/                   #   prompts · service · knowledge · keyword_search · vector_store · agent · assistants
 │   │   ├── evaluation.py          #   banco de preguntas y métricas
+│   │   ├── herramientas.py        #   12 tools adicionales del agente (SPEC-079)
 │   │   ├── mercado/               #   registro de aseguradoras · alcance y secciones · WhatsApp · comparar
 │   │   └── recomendador/          #   sintético · contrato · líneas base · métricas (Gestión)
 │   ├── controller/                # C · casos de uso
@@ -119,6 +120,7 @@ advanced-ai-lab/
 │   │   └── recomendador.py        #   generar, validar, comparar y recomendar
 │   └── view/                      # V · presentación
 │       ├── api.py · schemas.py    #   API FastAPI + contratos Pydantic
+│       ├── mcp.py                 #   MCP propio: adaptador delgado de las tools (SPEC-078)
 │       ├── streamlit_app.py       #   interfaz web: navegación en dos áreas (cliente / equipo)
 │       ├── app_pages/             #   una página por archivo (asistente, foto, guías, configuración…)
 │       ├── ui.py                  #   recursos cacheados y ajustes compartidos por las páginas
@@ -226,6 +228,7 @@ git push
 | 2026-11-21 | Build al Container Registry y deploy por SSH a un Droplet con Caddy y HTTPS (SPEC-075, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | Producto en línea con trazabilidad por commit y secretos solo en variables de CI |
 | 2026-11-21 | Yellowdata como sitio público del Droplet; el frontend del curso pasa a `app.` (SPEC-076, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | El cliente ve el producto real; la API se consume por la red interna |
 | 2026-11-23 | WhatsApp por **OpenClaw** como dispositivo vinculado (QR); la Cloud API queda como alternativa (SPEC-077, [ADR-035](docs/decisiones/ADR-035-openclaw-gateway-whatsapp.md)) | Lo exige la rúbrica del anuncio 007 (gateway, bind loopback, token, allowlist); un número de la Cloud API no se puede vincular después |
+| 2026-11-24 | **MCP propio** (`view/mcp.py`) como adaptador delgado de las tools, y 12 tools nuevas en `model/herramientas.py` (SPEC-078/079, [ADR-036](docs/decisiones/ADR-036-mcp-propio-tools.md)) | Ítems 3.4 y 1.1; el MCP no duplica la lógica y las tools de perfil no se exponen sin autenticación |
 
 ## 10. Notas y tareas pendientes
 

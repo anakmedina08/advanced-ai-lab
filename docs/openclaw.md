@@ -222,6 +222,35 @@ docker stats --no-stream openclaw-gateway   # RAM (el Droplet tiene 2 GB)
 
 > Reiniciar el contenedor **no** pide QR de nuevo: la sesión vive en el volumen `openclaw_estado`.
 
+## 6½ · MCP propio (ítem 3.4, SPEC-078)
+
+El asistente expone sus tools por un servidor **MCP** montado en la API (`/mcp`, streamable HTTP).
+Para que OpenClaw las use, la API se publica **solo en loopback** (`127.0.0.1:8000:8000`, ya en
+`deploy/docker-compose.prod.yml`) y el gateway se conecta como cliente:
+
+```bash
+# en el Droplet, una vez desplegada la API con el MCP (uv add mcp ya incluido):
+docker compose -f ~/openclaw/docker-compose.openclaw.yml exec -T gateway \
+  openclaw mcp add sb-asistente \
+  --url http://127.0.0.1:8000/mcp --transport streamable-http
+
+docker compose -f ~/openclaw/docker-compose.openclaw.yml exec -T gateway \
+  openclaw mcp doctor sb-asistente --probe
+```
+
+Las tools quedan como `sb-asistente__<tool>` (p. ej. `sb-asistente__buscar_conocimiento`) y pasan
+por las políticas de tools del gateway. Verificación local del endpoint:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8000/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}'
+```
+
+> El MCP se monta en el *lifespan* de la API y solo si el corpus está disponible: sin `data/gold/`
+> (p. ej. en CI) `/mcp` simplemente no existe y el resto de la API sigue funcionando.
+
 ## 7 · El día de la demo
 
 - [ ] Los números de los invitados ya están en `allowFrom` (si alguien llega sin registrar, su

@@ -47,7 +47,29 @@ from sb_asistente.model.agente import (
     construir_agente,
     crear_tools,
 )
+from sb_asistente.model.agente import (
+    Seccion as Seccion,
+)
+from sb_asistente.model.agente import (
+    ServicioCanal as ServicioCanal,
+)
+from sb_asistente.model.agente import (
+    Vehiculo as Vehiculo,
+)
+from sb_asistente.model.agente import (
+    Vivienda as Vivienda,
+)
 from sb_asistente.model.datos import crear_tool_datos
+from sb_asistente.model.herramientas import (
+    LINEAS as LINEAS,
+)
+from sb_asistente.model.herramientas import (
+    TIPOS_SINIESTRO as TIPOS_SINIESTRO,
+)
+from sb_asistente.model.herramientas import (
+    crear_tools_extra,
+)
+from sb_asistente.model.llm.prompts import MCP_INSTRUCTIONS as MCP_INSTRUCTIONS
 from sb_asistente.model.llm.service import build_llm
 from sb_asistente.model.memoria import PerfilStore, abrir_store, extraer_hechos
 from sb_asistente.model.rag import indice
@@ -140,6 +162,12 @@ def recuperador_por_defecto(
         return RecuperadorHibrido(chunks, indice.abrir()), "híbrido (BM25 + Chroma)"
     except indice.IndiceError:
         return RecuperadorHibrido(chunks), "solo BM25 (falta el índice: make index)"
+
+
+@lru_cache(maxsize=1)
+def recuperador_cached() -> tuple[RecuperadorHibrido, str]:
+    """El recuperador híbrido compartido por el agente y el MCP (una sola instancia en memoria)."""
+    return recuperador_por_defecto()
 
 
 @lru_cache(maxsize=1)
@@ -237,6 +265,46 @@ def herramientas_mercado() -> HerramientasMercado:
     )
 
 
+def escalar_a_humano(aseguradora: str, motivo: str) -> dict[str, object]:
+    """Canal oficial (PQR) para escalar a un humano, con el resumen del caso ya escrito."""
+    return mercado_ctrl.canales_para(
+        mercado_ctrl.resolver_aseguradora(aseguradora), servicio="pqr", resumen=motivo
+    )
+
+
+# Tools seguras para exponer por el MCP (SPEC-078): sin las de perfil (datos personales sin
+# autenticación por usuario), ni acceso (necesita la base de códigos), ni medios (base64).
+TOOLS_MCP: frozenset[str] = frozenset(
+    {
+        "buscar_conocimiento",
+        "recomendar_seguros",
+        "comparar_aseguradoras",
+        "identificar_aseguradora",
+        "canales_aseguradora",
+        "listar_productos",
+        "citar_fuente",
+        "explicar_termino",
+        "guia_tramite",
+        "checklist_siniestro",
+        "escalar_a_humano",
+    }
+)
+
+
+@lru_cache(maxsize=1)
+def tools_mcp() -> dict[str, BaseTool]:
+    """Diccionario (nombre → tool) de las tools del agente aptas para el MCP."""
+    recuperador, _ = recuperador_cached()
+    reco = lambda perfil, k: recomendador.recomendar_por_perfil(perfil, k)[0]  # noqa: E731
+    datos = crear_tool_datos(_tablas)
+    mercado = herramientas_mercado()
+    todas = crear_tools(recuperador, reco, datos, mercado) + crear_tools_extra(
+        recuperador=recuperador,
+        escalar=escalar_a_humano,
+    )
+    return {t.name: t for t in todas if t.name in TOOLS_MCP}
+
+
 class AgenteAsistente:
     """Agente con tools, salida estructurada y memoria persistente."""
 
@@ -259,9 +327,18 @@ class AgenteAsistente:
         self.perfiles = PerfilStore(store) if store is not None else None
         datos = datos or crear_tool_datos(_tablas)
         mercado = mercado or herramientas_mercado()
-        self.grafo = construir_agente(
-            llm, crear_tools(recuperador, reco, datos, mercado), checkpointer, store
+        tools = crear_tools(recuperador, reco, datos, mercado)
+        # Tools de medios y acceso quedan sin inyectar aquí a propósito:
+        # - `estado_codigo_acceso` se valida en la frontera de la API (dependencia `ConCodigo`),
+        #   no dentro del turno del agente.
+        # - `analizar_foto` y `leer_documento` viven en flujos dedicados (`POST /fotos` y
+        #   `POST /aseguradoras/identificar`) con su propio cableado de YOLO/OCR; no cargan en el chat.
+        tools += crear_tools_extra(
+            perfil=self.perfiles,
+            recuperador=recuperador,
+            escalar=escalar_a_humano,
         )
+        self.grafo = construir_agente(llm, tools, checkpointer, store)
 
     def _preparar(self, mensaje: str, conversacion_id: str, usuario_id: str | None) -> Decision:
         """Valida, guarda los hechos del usuario en el Store y enruta el mensaje."""
@@ -422,7 +499,7 @@ class AgenteAsistente:
 @lru_cache(maxsize=3)
 def agente_por_defecto(proveedor: str = LLM_PROVIDER) -> AgenteAsistente:
     """Agente real: LLM del proveedor, RAG híbrido y memoria SQLite (una instancia por proveedor)."""
-    recuperador, _ = recuperador_por_defecto()
+    recuperador, _ = recuperador_cached()
     return AgenteAsistente(
         build_llm(proveedor), recuperador, abrir_memoria(), store=abrir_store(MEMORY_STORE), trazas=TRAZAS_LOG
     )

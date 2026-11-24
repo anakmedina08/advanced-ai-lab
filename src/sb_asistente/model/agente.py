@@ -2,7 +2,7 @@
 
 Piezas (cada una cubre un tema de clase):
 
-- **Tools**: ``buscar_conocimiento`` (RAG híbrido sobre Chroma), ``recomendar_seguros``
+- **Tools**: ``buscar_conocimiento`` (RAG híbrido sobre Qdrant, o Chroma de respaldo), ``recomendar_seguros``
   (recomendador por perfil), ``clasificar_intencion`` (clasificador del chat) y, con el corpus de
   mercado (SPEC-069/070/071), ``comparar_aseguradoras``, ``identificar_aseguradora`` y
   ``canales_aseguradora``: el agente ya no responde solo por Seguros Bolívar.
@@ -48,6 +48,8 @@ from sb_asistente.model.rag.hibrido import CorpusVacioError, Fragmento, Recupera
 from sb_asistente.model.trazas import medir_tools
 
 Seccion = Literal["canales_y_servicio", "movilidad", "hogar_y_mascotas", "vida_y_ahorro", "salud", "arl"]
+Vehiculo = Literal["ninguno", "carro", "moto", "electrico"]
+Vivienda = Literal["propia", "arrendada", "familiar"]
 
 
 class RespuestaAgente(BaseModel):
@@ -131,7 +133,14 @@ class HerramientasMercado:
 
 
 # Tools cuyas URLs cuentan como fuentes válidas de la respuesta.
-TOOLS_CON_FUENTES: tuple[str, ...] = ("buscar_conocimiento", "comparar_aseguradoras", "canales_aseguradora")
+TOOLS_CON_FUENTES: tuple[str, ...] = (
+    "buscar_conocimiento",
+    "comparar_aseguradoras",
+    "canales_aseguradora",
+    "citar_fuente",
+    "guia_tramite",
+    "explicar_termino",
+)
 
 ServicioCanal = Literal["autos", "soat", "hogar", "salud", "vida", "arl", "pqr", "general"]
 
@@ -271,8 +280,8 @@ def crear_tools(
 
     @tool
     def recomendar_seguros(
-        vehiculo: Literal["ninguno", "carro", "moto", "electrico"] | None = None,
-        vivienda: Literal["propia", "arrendada", "familiar"] | None = None,
+        vehiculo: Vehiculo | None = None,
+        vivienda: Vivienda | None = None,
         tiene_mascota: bool | None = None,
         tiene_credito: bool | None = None,
         k: int = 3,

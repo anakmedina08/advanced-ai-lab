@@ -31,6 +31,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.routing import Mount
 
 from sb_asistente.config import (
     ACCESO_HEADER,
@@ -55,7 +56,7 @@ from sb_asistente.controller.agente import AgenteAsistente
 from sb_asistente.model import skills
 from sb_asistente.model.llm.service import Answer
 from sb_asistente.model.vision.privacidad import a_jpeg_b64
-from sb_asistente.view import errores, observabilidad
+from sb_asistente.view import errores, mcp, observabilidad
 from sb_asistente.view.dependencias import (
     Responder,
     get_agente,
@@ -124,15 +125,28 @@ ConCodigo = Depends(requiere_codigo)
 
 
 @asynccontextmanager
-async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Precarga YOLO al arrancar (si está el extra ``vision``) para que la primera foto no espere."""
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Precarga YOLO y monta el MCP (SPEC-078); ambos son opcionales y no tumban la API."""
     if find_spec("ultralytics") is not None:
         try:
             await run_in_threadpool(vision.detector_por_defecto().cargar)
             logger.info("Modelo YOLO cargado para POST /fotos.")
         except Exception as exc:  # noqa: BLE001 - la API sigue sirviendo el resto de endpoints
             logger.warning("No se pudo precargar YOLO (%s); /fotos lo intentará al primer uso.", exc)
-    yield
+
+    mcp_lifespan = None
+    try:
+        mcp_app = mcp.app_mcp()
+        app.router.routes.append(Mount("/mcp", app=mcp_app))
+        mcp_lifespan = mcp_app.router.lifespan_context(mcp_app)
+    except Exception as exc:  # noqa: BLE001 - sin corpus (p. ej. CI), /mcp simplemente no existe
+        logger.warning("MCP no montado (%s); /mcp no estará disponible.", exc)
+
+    if mcp_lifespan is None:
+        yield
+    else:
+        async with mcp_lifespan:
+            yield
 
 
 app = FastAPI(
