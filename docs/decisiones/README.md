@@ -49,6 +49,7 @@ Formato de cada registro (Clase 3): **título, categoría, Why, Where y lección
 | [ADR-032](ADR-032-whatsapp-cloud-api.md) | El asistente por WhatsApp con la Cloud API de Meta, con firma y códigos de acceso | 2026-11-19 |
 | [ADR-033](ADR-033-espejo-gitlab.md) | GitHub como repositorio principal y GitLab como espejo para CI/CD y despliegue | 2026-11-21 |
 | [ADR-034](ADR-034-despliegue-droplet-caddy.md) | Despliegue en un Droplet con Docker Compose, Caddy y deploy por SSH desde GitLab | 2026-11-21 |
+| [ADR-035](ADR-035-openclaw-gateway-whatsapp.md) | WhatsApp por OpenClaw (dispositivo vinculado por QR); la Cloud API queda como alternativa | 2026-11-23 |
 
 ## Cómo registrar una decisión nueva en Engram
 

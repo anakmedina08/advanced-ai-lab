@@ -59,8 +59,10 @@ no reemplaza a un asesor. No redistribuye el contenido extraído (`data/` no se 
   atiende con todas las aseguradoras (SPEC-071, ADR-030).
 - Códigos de acceso: en el sitio público el chat con IA exige un código (`sb acceso crear`) que
   vence y trae un cupo de mensajes; se guarda solo su hash (SPEC-072, ADR-031).
-- WhatsApp: número propio con la Cloud API de Meta; el webhook valida la firma de Meta, exige un
-  código de acceso por número y guarda solo el hash del número (SPEC-073, ADR-032).
+- WhatsApp por **OpenClaw** (dispositivo vinculado por QR, el mecanismo de WhatsApp Web vía
+  Baileys): gateway en contenedor en el Droplet, `bind: loopback`, token y allowlist E.164
+  (SPEC-077, ADR-035). El webhook de la **Cloud API de Meta** (SPEC-073, ADR-032) se conserva como
+  alternativa documentada, pero no es el canal evaluado en la sustentación.
 
 ### Fuera del alcance (por ahora)
 
@@ -223,6 +225,7 @@ git push
 | 2026-11-21 | GitHub como repositorio principal y GitLab como espejo para el pipeline del Módulo 4 (SPEC-074, [ADR-033](docs/decisiones/ADR-033-espejo-gitlab.md)) | El M4 se demuestra en GitLab sin perder PR, revisiones ni Kanban de GitHub |
 | 2026-11-21 | Build al Container Registry y deploy por SSH a un Droplet con Caddy y HTTPS (SPEC-075, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | Producto en línea con trazabilidad por commit y secretos solo en variables de CI |
 | 2026-11-21 | Yellowdata como sitio público del Droplet; el frontend del curso pasa a `app.` (SPEC-076, [ADR-034](docs/decisiones/ADR-034-despliegue-droplet-caddy.md)) | El cliente ve el producto real; la API se consume por la red interna |
+| 2026-11-23 | WhatsApp por **OpenClaw** como dispositivo vinculado (QR); la Cloud API queda como alternativa (SPEC-077, [ADR-035](docs/decisiones/ADR-035-openclaw-gateway-whatsapp.md)) | Lo exige la rúbrica del anuncio 007 (gateway, bind loopback, token, allowlist); un número de la Cloud API no se puede vincular después |
 
 ## 10. Notas y tareas pendientes
 
