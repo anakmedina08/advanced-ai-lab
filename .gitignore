@@ -67,3 +67,6 @@ logs/
 docs/arquitectura.*.json
 data/acceso/
 deploy/app.env
+
+# Guiones y handoff internos del equipo: local-only, nunca se versionan (SPEC-058)
+docs/sustentacion/
