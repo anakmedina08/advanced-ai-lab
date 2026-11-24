@@ -24,6 +24,7 @@ dice explícitamente.
 | 551462 | 004 | clase | Grabación Clase 3 — Consolas Agénticas | 2026-10-22 | — | [resumen](551462-anuncio-004.md) | SkillSpector, Spec-Kit (opcionales) |
 | 551462 | 005 | entrega | Sustentación del Módulo 1 | 2026-10-29 | 2026-10-31 | ⏳ por resumir | — |
 | 551462 | 006 | entrega | Sustentación del Módulo 2 | 2026-11-13 | 2026-11-14 | [resumen](551462-anuncio-006.md) | ⛔ Streamlit en el repo |
+| 551462 | 007 | entrega | Sustentación final del Módulo 3 | 2026-11-23 | 2026-11-28 (8:00–11:00; grupo 10 a las 9:00) | [resumen](551462-anuncio-007.md) | ✅ WhatsApp por OpenClaw (no Cloud API); 20 tools; workspace; MCP propio |
 | 551475 | 005 | clase | Grabación Clase 3 — Consolas Agénticas (OpenCode) | 2026-10-22 | — | [resumen](551475-anuncio-005.md) | — |
 | 551475 | 006 | entrega | Sustentación M1 + documento del M2 | 2026-10-29 | 2026-10-31 | ⏳ por resumir | — |
 | 551475 | 007 | entrega | Sustentación del Módulo 3 | 2026-11-13 | 2026-11-14 | [resumen](551475-anuncio-007.md) | ⛔ Streamlit; piso de 8 PR y 8 specs por persona |

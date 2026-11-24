@@ -42,9 +42,15 @@ auditor (K4) falla si el proyecto usa una herramienta ⛔.
 | Time travel (replay/fork) | — | ⚠️ deseable | 006 | — | 🟡 verificar |
 | Vercel/Netlify + Render/Fly.io/HF Spaces | — | ⚠️ deseable | 006 | — | ❌ |
 | Playwright (tests de UI) | — | ⚠️ deseable | 006 | — | ❌ |
-| WhatsApp / Telegram | — | ✅ exigida en M3 | 001 | Despliegue en canal real | ❌ |
-| OpenFang | — | ✅ exigida en M3 | 001 | Sistema operativo de agentes con adaptadores de canales (Telegram, WhatsApp) | ❌ planeado (oleada 4) |
+| WhatsApp / Telegram | — | ✅ exigida en M3 | 001 · 007 | Despliegue en canal real; **desde el 007, por OpenClaw** | ❌ |
+| OpenFang | — | ✅ exigida en M3 | 001 | Sistema operativo de agentes con adaptadores de canales (Telegram, WhatsApp) | ❌ reemplazado por OpenClaw en el 007 |
+| **OpenClaw** (gateway + plugin de WhatsApp) | `@openclaw/whatsapp` | ✅ exigida en M3 | 007 | Gateway con `openclaw.json`, `bind: loopback`, token, allowlist E.164 y `security audit` | ❌ |
+| **WhatsApp Cloud API de Meta** (webhook) | — | ⛔ no permitida como canal evaluado | 007 | OpenClaw como dispositivo vinculado (QR); un número de la Cloud API **no** se puede vincular después | 🟡 SPEC-073 queda como alternativa documentada |
 | ReAct + Function Calling | — | ✅ exigida en M3 | 001 | — | ✅ |
+| **20 tools `@tool` con Pydantic, trazables** | — | ✅ exigida en M3 | 007 | — | ❌ 8 de 20 |
+| **MCP propio conectado al gateway** | — | ✅ exigida en M3 | 007 | Cubre el ítem 3.4 (skill o MCP propio) | ❌ |
+| **t-SNE o UMAP del corpus** | `scikit-learn` / `umap-learn` | ✅ exigida en M3 | 007 | Acompaña a recall@10 y nDCG@10 | ❌ |
+| **Ollama como motor de la demo** | `langchain-ollama` | ⛔ no permitida | 007 | Claude en producción; embeddings en la nube (Voyage) | 🟡 `langchain-ollama` es dependencia directa y `EMBEDDINGS_PROVIDER=ollama` es el valor por defecto |
 
 ## 551475 · Gestión de Proyectos en IA y CD
 
