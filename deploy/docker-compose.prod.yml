@@ -30,7 +30,7 @@ services:
     # que corre con `network_mode: host` y lo alcanza en 127.0.0.1:8000. No se publica a internet.
     ports:
       - "127.0.0.1:8000:8000"
-    mem_limit: 1200m
+    mem_limit: 1800m  # PyTorch + YOLO (SPEC-081); el Droplet debe tener 4 GB
 
   frontend:
     image: ${IMAGEN_FRONTEND:?falta IMAGEN_FRONTEND}
