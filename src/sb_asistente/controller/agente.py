@@ -26,7 +26,6 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.store.base import BaseStore
 
 from sb_asistente.config import (
-    CHUNKS_JSONL,
     CORPUS_DEMO,
     CORPUS_DEMO_DIR,
     LANGSMITH_PROJECT,
@@ -74,7 +73,6 @@ from sb_asistente.model.llm.service import build_llm
 from sb_asistente.model.memoria import PerfilStore, abrir_store, extraer_hechos
 from sb_asistente.model.rag import indice
 from sb_asistente.model.rag.blindaje import cargar_corpus_demo
-from sb_asistente.model.rag.fuentes import fragmentos_rag
 from sb_asistente.model.rag.hibrido import RecuperadorHibrido
 from sb_asistente.model.rag.qdrant import BuscadorQdrant
 from sb_asistente.model.router import Decision, enrutar
@@ -128,17 +126,16 @@ def abrir_memoria(ruta: Path = MEMORY_DB) -> SqliteSaver:
 
 
 def _qdrant(
-    chunks_path: Path, qdrant_dir: Path, demo: list[dict[str, object]] | None = None
+    chunks: list[dict[str, object]], qdrant_dir: Path, demo: list[dict[str, object]] | None = None
 ) -> BuscadorQdrant:
-    """Índice Qdrant de los fragmentos Gold, el mismo del modo «rag» (``make index``).
+    """Índice Qdrant de los fragmentos de todas las aseguradoras, el del modo «rag» (``make index``).
 
     Se indexan los chunks tal cual (sin el bloque de canales) para que la huella coincida con la
     colección existente y no se recalculen los embeddings.
     """
-    from sb_asistente.model.llm import knowledge, vector_store  # noqa: PLC0415 - carga perezosa
+    from sb_asistente.model.llm import vector_store  # noqa: PLC0415 - carga perezosa
 
     cliente = vector_store.open_client(qdrant_dir)
-    chunks = knowledge.load_chunks(chunks_path)
     embeddings = vector_store.build_embeddings()
     principal = vector_store.build_index(chunks, embeddings, cliente)
     extra = None
@@ -148,14 +145,17 @@ def _qdrant(
 
 
 def recuperador_por_defecto(
-    chunks_path: Path = CHUNKS_JSONL, qdrant_dir: Path = QDRANT_DIR, incluir_demo: bool = CORPUS_DEMO
+    qdrant_dir: Path = QDRANT_DIR, incluir_demo: bool = CORPUS_DEMO
 ) -> tuple[RecuperadorHibrido, str]:
-    """BM25 + Qdrant (ANN con filtro de payload); si no hay Qdrant, BM25 + Chroma; si no, solo BM25."""
-    chunks = fragmentos_rag(chunks_path)
+    """BM25 + Qdrant (ANN con filtro de payload); si no hay Qdrant, BM25 + Chroma; si no, solo BM25.
+
+    El corpus es el de todas las aseguradoras (Bolívar + mercado, SPEC-069), no solo el principal.
+    """
+    base = mercado_ctrl.chunks_mercado()
     demo = cargar_corpus_demo(CORPUS_DEMO_DIR) if incluir_demo else []
-    chunks = chunks + demo
+    chunks = base + demo
     try:
-        return RecuperadorHibrido(chunks, _qdrant(chunks_path, qdrant_dir, demo)), "híbrido (BM25 + Qdrant)"
+        return RecuperadorHibrido(chunks, _qdrant(base, qdrant_dir, demo)), "híbrido (BM25 + Qdrant)"
     except Exception:  # noqa: BLE001 - sin Ollama o sin índice: se prueba el siguiente
         pass
     try:

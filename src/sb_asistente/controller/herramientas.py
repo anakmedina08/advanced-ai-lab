@@ -36,11 +36,11 @@ def nueva_skill(nombre: str, descripcion: str, uso: str) -> Path:
 
 
 def indexar_rag(embeddings: str, reset: bool) -> "InfoIndice":
-    """Indexa los fragmentos Gold en la base vectorial local."""
+    """Indexa los fragmentos de todas las aseguradoras (Bolívar + mercado) en la base vectorial."""
+    from sb_asistente.controller import mercado
     from sb_asistente.model.rag import indice
-    from sb_asistente.model.rag.fuentes import fragmentos_rag
 
-    return indice.indexar(fragmentos_rag(), embeddings, reset=reset)
+    return indice.indexar(mercado.chunks_mercado(), embeddings, reset=reset)
 
 
 def evaluar_rag(ks: list[int]) -> tuple[str, list["ResultadoHit"]]:

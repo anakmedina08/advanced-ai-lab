@@ -1,7 +1,6 @@
 # Gentleman Guardian Angel · revisión con IA contra AGENTS.md en cada commit
-# Revisión con OpenCode (usa el proveedor/modelo configurado en OpenCode, hoy DeepSeek),
-# para no depender del saldo de la API de Anthropic en cada commit.
-PROVIDER="opencode"
+# Revisión con Claude (API de Anthropic); la clave va en ANTHROPIC_API_KEY.
+PROVIDER="claude"
 FILE_PATTERNS="*.py,*.toml,*.yml,*.yaml,Dockerfile"
 EXCLUDE_PATTERNS="uv.lock,tests/fixtures/*,.claude/*"
 RULES_FILE="AGENTS.md"
