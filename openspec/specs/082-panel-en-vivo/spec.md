@@ -23,6 +23,8 @@ la CI publiquen sus eventos.
 - **R082.4** Todo es opcional: sin `AGENT_EVENTS_URL` y `AGENT_EVENTS_TOKEN` no se envía nada.
 - **R082.5** Un fallo del panel NUNCA rompe una respuesta ni un job (timeout corto, errores
   ignorados, `|| true`), y el token nunca aparece en el repositorio ni en el log.
+- **R082.6** Yellowdata DEBE guardar los eventos en un volumen (`yellowdata_eventos`) para que el
+  panel no vuelva a «DEMOSTRACIÓN» después de cada deploy.
 
 ## Criterios de aceptación
 - **AC1** · `tests/test_panel_eventos.py`: sin variables no hay petición; con variables, solo los

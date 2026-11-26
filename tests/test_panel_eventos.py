@@ -141,3 +141,13 @@ def test_cada_job_del_pipeline_avisa_al_panel_sin_valores_en_el_repo():
     assert all(aviso in pasos for pasos in jobs.values())
     assert ci["deploy"]["after_script"][0] == "rm -f ~/.ssh/id_ed25519"  # la llave se borra primero
     assert "$AGENT_EVENTS_TOKEN" in aviso and "|| true" in aviso
+
+
+def test_el_panel_conserva_sus_eventos_entre_deploys():
+    # Arrange
+    compose = yaml.safe_load((RAIZ / "deploy/docker-compose.prod.yml").read_text(encoding="utf-8"))
+    yellowdata = compose["services"]["yellowdata"]
+    # Act / Assert
+    assert yellowdata["environment"]["AGENT_EVENTS_DIR"] == "/app/.data"
+    assert "yellowdata_eventos:/app/.data" in yellowdata["volumes"]
+    assert "yellowdata_eventos" in compose["volumes"]

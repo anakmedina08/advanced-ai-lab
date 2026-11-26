@@ -45,9 +45,12 @@ services:
     restart: unless-stopped
     environment:
       ASSISTANT_API_URL: "http://api:8000"  # por la red interna: sin salir a internet
+      AGENT_EVENTS_DIR: /app/.data  # eventos del panel en vivo (SPEC-082)
     env_file:
       - path: yellowdata.env  # opcional (p. ej. AGENT_EVENTS_TOKEN); nunca en el repositorio
         required: false
+    volumes:
+      - yellowdata_eventos:/app/.data  # el panel conserva sus eventos entre deploys (SPEC-082)
     expose:
       - "3000"
     mem_limit: 384m
@@ -77,5 +80,6 @@ services:
         condition: service_started
 
 volumes:
+  yellowdata_eventos:
   caddy_datos:
   caddy_config:
