@@ -20,7 +20,12 @@ ssh -i ~/.ssh/gitlab_deploy deploy@<IP> 'docker ps && ufw status'
 
 # Datos públicos del corpus (no van en la imagen ni en Git)
 rsync -az -e "ssh -i ~/.ssh/gitlab_deploy" data/gold data/recomendador deploy@<IP>:/opt/advanced-ai-lab/data/
+
+# Pesos de YOLO (foto → seguro, SPEC-081): no van en Git ni en la imagen
+ssh -i ~/.ssh/gitlab_deploy deploy@<IP> 'mkdir -p /opt/advanced-ai-lab/data/modelos'
+rsync -az -e "ssh -i ~/.ssh/gitlab_deploy" data/modelos/yolo26l.pt deploy@<IP>:/opt/advanced-ai-lab/data/modelos/
 ```
+PyTorch y YOLO piden ~1.5 GB de RAM en la API: usar un Droplet de **4 GB** (Resize → solo CPU y RAM).
 
 ## 2. Variables de CI en GitLab
 **Settings → CI/CD → Variables** (todas *Protected*; las ramas `main` y `develop` deben estar en

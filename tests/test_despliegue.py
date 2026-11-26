@@ -157,3 +157,12 @@ def test_yellowdata_es_el_sitio_publico_y_llama_a_la_api_por_la_red_interna():
     assert "ports" not in yellowdata
     assert "app.{$DOMINIO} {" in caddy and "reverse_proxy yellowdata:3000" in caddy
     assert "https://app." in compose["api"]["environment"]["FRONTEND_ORIGINS"]
+
+
+def test_la_imagen_trae_yolo_con_pytorch_de_cpu_y_las_librerias_de_opencv():
+    # Arrange / Act
+    dockerfile = (RAIZ / "Dockerfile").read_text(encoding="utf-8")
+    # Assert: sin esto, POST /fotos responde 503 en producción (SPEC-081)
+    assert "--torch-backend cpu" in dockerfile and "ultralytics==" in dockerfile
+    assert "libgl1" in dockerfile and "libglib2.0-0" in dockerfile
+    assert dockerfile.index("--extra voyage\n\n# Visión") < dockerfile.index("--torch-backend cpu")

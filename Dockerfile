@@ -20,15 +20,21 @@ RUN uv sync --frozen --no-dev --no-install-project --extra voyage
 COPY src/ src/
 RUN uv sync --frozen --no-dev --extra voyage
 
+# Visión (SPEC-081): ultralytics con PyTorch de CPU. El torch del lock trae las librerías de GPU
+# (varios GB); aquí se instala la variante CPU. Va DESPUÉS de `uv sync`, que borra lo que no está en
+# el lock. Misma versión que uv.lock. Los pesos (yolo26l.pt) no van en la imagen: viven en data/modelos.
+RUN uv pip install --python /app/.venv/bin/python --torch-backend cpu "ultralytics==8.4.216"
+
 # ---------- Etapa 2: runtime ----------
 FROM python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
     LLM_PROVIDER=ollama
-# Tesseract (OCR local) para identificar la aseguradora en un recibo o carátula (SPEC-071)
+# Tesseract (OCR local) para identificar la aseguradora en un recibo o carátula (SPEC-071);
+# libgl1 y libglib2.0-0 los pide OpenCV, que usa YOLO (SPEC-081)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd --create-home appuser
 WORKDIR /app
