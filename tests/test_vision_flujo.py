@@ -246,6 +246,27 @@ def test_api_interpretar_con_proveedor_sin_vision_responde_503():
     assert r.status_code == 503 and "solo procesa texto" in r.json()["detalle"]
 
 
+def test_api_interpretar_usa_el_proveedor_con_vision_si_el_texto_va_por_deepseek(monkeypatch):
+    # Arrange: el LLM por defecto (DeepSeek) no ve imágenes; la escena debe pedirse a Anthropic
+    monkeypatch.setattr("sb_asistente.view.api.LLM_PROVIDER", "deepseek")
+    pedidos: list[str] = []
+
+    def fabrica(proveedor: str):
+        pedidos.append(proveedor)
+        return FakeInterprete(escena("asegurar_bien", vehiculo="carro"))
+
+    app.dependency_overrides[get_detector] = lambda: lambda: FakeDetector(det("car"))
+    app.dependency_overrides[get_interprete] = lambda: fabrica
+    app.dependency_overrides[get_recomendar] = lambda: FakeRecomendador()
+    try:
+        # Act
+        r = TestClient(app).post("/fotos?interpretar=true", files={"archivo": ("a.png", foto(), "image/png")})
+    finally:
+        app.dependency_overrides.clear()
+    # Assert
+    assert r.status_code == 200 and pedidos == ["anthropic"]
+
+
 def test_cli_foto_con_interpretacion(monkeypatch, capsys, tmp_path):
     ruta = tmp_path / "choque.png"
     ruta.write_bytes(foto())
