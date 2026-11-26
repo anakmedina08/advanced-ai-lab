@@ -4,7 +4,9 @@
 #                         ├──▶ frontend:80     (https://app.$DOMINIO)  panel del equipo
 #                         └──▶ api:8000        (https://api.$DOMINIO)
 #
-# Solo Caddy publica puertos (80 y 443); la API y el frontend quedan en la red interna de Docker.
+# Solo Caddy publica puertos a internet (80 y 443); la API y el frontend quedan en la red interna.
+# Excepción: la API se publica también en loopback (127.0.0.1:8000) para el MCP propio (SPEC-078),
+# que el gateway de OpenClaw (network_mode: host) alcanza sin exponer nada a internet.
 # Las imágenes vienen del Container Registry de GitLab con el tag del commit (trazable).
 # El job `deploy` exporta IMAGEN_API, IMAGEN_FRONTEND y DOMINIO; los secretos van en app.env
 # (variable de CI tipo archivo ENV_PRODUCCION), nunca en este archivo ni en el repositorio.
@@ -24,6 +26,10 @@ services:
       - ./data:/app/data  # datos públicos del corpus, subidos una vez con rsync
     expose:
       - "8000"
+    # Solo loopback: el MCP propio (SPEC-078) se expone en /mcp para el gateway de OpenClaw,
+    # que corre con `network_mode: host` y lo alcanza en 127.0.0.1:8000. No se publica a internet.
+    ports:
+      - "127.0.0.1:8000:8000"
     mem_limit: 1200m
 
   frontend:

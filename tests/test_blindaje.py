@@ -1,7 +1,10 @@
 """Pruebas del blindaje del RAG contra inyección indirecta (``model/rag/blindaje.py``)."""
 
-from sb_asistente.config import CORPUS_DEMO_DIR
+import re
+
+from sb_asistente.config import AGENTE_MAX_BUSQUEDAS, AGENTE_MAX_LLAMADAS_TOOLS, CORPUS_DEMO_DIR
 from sb_asistente.model.agente import SYSTEM_PROMPT, crear_tools
+from sb_asistente.model.llm.prompts import AGENTE_SYSTEM
 from sb_asistente.model.rag.blindaje import cargar_corpus_demo, es_sospechoso, formatear_pasajes
 from sb_asistente.model.rag.hibrido import Fragmento, RecuperadorHibrido
 
@@ -74,3 +77,41 @@ def test_la_tool_del_agente_entrega_el_documento_inyectado_marcado():
     # Assert
     assert 'sospechoso="si"' in salida
     assert salida.startswith("<documentos_recuperados")
+
+
+def test_prompt_agente_no_supone_servicio_ni_aseguradora_del_perfil() -> None:
+    # Arrange
+    prompt = AGENTE_SYSTEM
+
+    # Act
+    frases = (
+        "No supongas el tipo de seguro",
+        "la que me indicó antes",
+        "solo las aseguradoras que lo ofrecen",
+    )
+
+    # Assert
+    assert all(frase in prompt for frase in frases)
+
+
+def test_reglas_del_prompt_agente_estan_en_orden() -> None:
+    # Arrange
+    prompt = AGENTE_SYSTEM
+
+    # Act
+    numeros = [int(n) for n in re.findall(r"(?m)^(\d+)\. ", prompt)]
+
+    # Assert
+    assert numeros == list(range(1, len(numeros) + 1))
+
+
+def test_limites_de_busqueda_son_coherentes_con_las_llamadas_a_tools() -> None:
+    # Arrange
+    busquedas = AGENTE_MAX_BUSQUEDAS
+
+    # Act
+    cabe = busquedas <= AGENTE_MAX_LLAMADAS_TOOLS
+
+    # Assert
+    assert cabe
+    assert f"máximo {busquedas} búsquedas" in AGENTE_SYSTEM

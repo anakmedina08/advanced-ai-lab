@@ -69,6 +69,20 @@ def test_cada_ruta_tiene_su_conjunto_de_tools():
     assert set(TOOLS_POR_RUTA) == {"directo", "datos", "rag", "mixto", "fuera_de_alcance"}
 
 
+def test_las_tools_nuevas_de_conocimiento_quedan_habilitadas_para_el_modelo():
+    # Assert: sin esto, filtrar_tools las bloquea siempre y las 12 extra nunca se llaman (SPEC-079).
+    esperadas = {
+        "citar_fuente",
+        "explicar_termino",
+        "guia_tramite",
+        "checklist_siniestro",
+        "listar_productos",
+        "escalar_a_humano",
+    }
+    assert esperadas <= set(TOOLS_POR_RUTA["rag"])
+    assert esperadas <= set(TODAS)
+
+
 def test_mensaje_vacio_es_un_error():
     # Act / Assert
     with pytest.raises(ValueError, match="vacío"):

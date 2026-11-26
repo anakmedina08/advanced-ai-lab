@@ -255,6 +255,10 @@ TRAZAS_LOG: Final[Path] = DATA_DIR / "logs" / "turnos.jsonl"  # una línea por t
 MEMORY_MAX_MESSAGES: Final[int] = 20  # mensajes del historial que el agente relee por turno
 # Contexto multi-turno (SPEC-016): se resume lo antiguo y se recorta por tokens como red de seguridad
 MEMORY_SUMMARY_TOKENS: Final[int] = int(os.getenv("MEMORY_SUMMARY_TOKENS", "8000"))
+AGENTE_MAX_BUSQUEDAS: Final[int] = 3  # búsquedas por turno que el prompt le pide al agente
+AGENTE_MAX_LLAMADAS_MODELO: Final[int] = 6  # llamadas al modelo por turno
+AGENTE_MAX_LLAMADAS_TOOLS: Final[int] = 5  # llamadas a tools por turno
+AGENTE_MAX_RECOMENDACIONES: Final[int] = 5  # productos que puede sugerir recomendar_seguros
 MEMORY_KEEP_MESSAGES: Final[int] = 12  # mensajes recientes que el resumen deja intactos
 MEMORY_MAX_TOKENS: Final[int] = 12_000  # tope de tokens del historial enviado al modelo
 LANGSMITH_PROJECT: Final[str] = os.getenv("LANGSMITH_PROJECT", "sb-asistente")

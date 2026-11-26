@@ -59,8 +59,12 @@ el panel de yellowdata.com.co/casos. No desactivar los hooks ni enviar datos pri
 ## RAG, agente y RPC
 - La vista nueva es `view/rpc.py` (JSON-RPC 2.0); todo método nuevo se registra en `METODOS` con su
   modelo Pydantic de parámetros y su prueba en `tests/test_rpc.py`.
-- Las tools del agente viven en `model/agente.py` y reciben sus dependencias inyectadas; nunca leen
-  `.env` ni archivos fuera de `data/gold/`.
+- Las tools del agente viven en `model/agente.py` (las originales) y `model/herramientas.py` (las 12
+  adicionales, SPEC-079), con sus dependencias inyectadas; nunca leen `.env` ni archivos fuera de
+  `data/gold/`. El MCP propio (SPEC-078) es `view/mcp.py`, un adaptador delgado que las expone; no
+  duplica su lógica.
+- Las tools que tocan el perfil toman el `usuario_id` del `runtime.context` (nunca del modelo) y no
+  se exponen por MCP.
 - Antes de cambiar la recuperación (`model/rag/`), correr `uv run sb rag evaluar` y registrar el hit@k.
 - `data/vector/` y `data/memoria/` no se versionan (contienen texto de usuarios y del sitio).
 

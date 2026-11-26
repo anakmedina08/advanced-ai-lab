@@ -27,14 +27,30 @@ Ruta = Literal["directo", "datos", "rag", "mixto", "fuera_de_alcance"]
 
 # Corpus de mercado (SPEC-071): comparar, identificar la aseguradora de la persona y sus canales.
 MERCADO: Final[tuple[str, ...]] = ("comparar_aseguradoras", "identificar_aseguradora", "canales_aseguradora")
+# Tools de conocimiento y derivación (SPEC-079): citar fuentes, explicar términos, guiar trámites,
+# checklist de siniestro, listar productos y escalar a un humano.
+CONOCIMIENTO: Final[tuple[str, ...]] = (
+    "citar_fuente",
+    "explicar_termino",
+    "guia_tramite",
+    "checklist_siniestro",
+    "listar_productos",
+    "escalar_a_humano",
+)
 TOOLS_POR_RUTA: Final[dict[str, tuple[str, ...]]] = {
     "directo": (),
     "datos": ("consultar_datos",),
-    "rag": ("buscar_conocimiento", "recomendar_seguros", *MERCADO),
+    "rag": ("buscar_conocimiento", "recomendar_seguros", *CONOCIMIENTO, *MERCADO),
     "mixto": ("buscar_conocimiento", "consultar_datos"),
     "fuera_de_alcance": (),
 }
-TODAS: Final[tuple[str, ...]] = ("buscar_conocimiento", "recomendar_seguros", "consultar_datos", *MERCADO)
+TODAS: Final[tuple[str, ...]] = (
+    "buscar_conocimiento",
+    "recomendar_seguros",
+    "consultar_datos",
+    *CONOCIMIENTO,
+    *MERCADO,
+)
 UMBRAL_CAUTELA: Final[float] = 0.5
 
 _CANTIDAD = r"(cuant[oa]s?|total|suma|promedio|numero de|cifra|monto|cantidad)"

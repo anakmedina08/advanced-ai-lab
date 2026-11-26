@@ -1,5 +1,5 @@
 # Gentleman Guardian Angel · revisión con IA contra AGENTS.md en cada commit
-# Para código de Seguros Bolívar se recomienda un modelo local (ollama) o un proveedor sin retención.
+# Revisión con Claude (API de Anthropic); la clave va en ANTHROPIC_API_KEY.
 PROVIDER="claude"
 FILE_PATTERNS="*.py,*.toml,*.yml,*.yaml,Dockerfile"
 EXCLUDE_PATTERNS="uv.lock,tests/fixtures/*,.claude/*"

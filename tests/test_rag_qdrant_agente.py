@@ -99,10 +99,10 @@ def test_si_la_base_vectorial_falla_sigue_con_bm25():
 
 def test_recuperador_por_defecto_prefiere_qdrant(monkeypatch, tmp_path):
     # Arrange
-    monkeypatch.setattr(agente, "fragmentos_rag", lambda _ruta: CHUNKS)
+    monkeypatch.setattr(agente.mercado_ctrl, "chunks_mercado", lambda: CHUNKS)
     monkeypatch.setattr(agente, "_qdrant", lambda *_: object())
     # Act
-    _, modo = agente.recuperador_por_defecto(tmp_path / "chunks.jsonl", tmp_path / "qdrant")
+    _, modo = agente.recuperador_por_defecto(tmp_path / "qdrant")
     # Assert
     assert modo == "híbrido (BM25 + Qdrant)"
 
@@ -115,11 +115,11 @@ def test_sin_qdrant_ni_chroma_queda_solo_bm25(monkeypatch, tmp_path):
     def sin_chroma():
         raise agente.indice.IndiceError("sin índice")
 
-    monkeypatch.setattr(agente, "fragmentos_rag", lambda _ruta: CHUNKS)
+    monkeypatch.setattr(agente.mercado_ctrl, "chunks_mercado", lambda: CHUNKS)
     monkeypatch.setattr(agente, "_qdrant", sin_qdrant)
     monkeypatch.setattr(agente.indice, "abrir", sin_chroma)
     # Act
-    _, modo = agente.recuperador_por_defecto(tmp_path / "chunks.jsonl", tmp_path / "qdrant")
+    _, modo = agente.recuperador_por_defecto(tmp_path / "qdrant")
     # Assert
     assert modo.startswith("solo BM25")
 

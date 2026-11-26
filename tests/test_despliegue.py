@@ -66,11 +66,20 @@ def test_el_deploy_lee_los_secretos_solo_de_variables_de_ci():
 def test_solo_caddy_publica_puertos_y_la_api_tiene_su_env_fuera_del_repo():
     # Arrange
     compose = _yaml(DEPLOY / "docker-compose.prod.yml")["services"]
+
+    def expuesto(servicio: dict) -> bool:
+        """True si publica algún puerto fuera de loopback (internet)."""
+        return any(
+            not str(puerto).split(":")[0].startswith("127.0.0.1") for puerto in servicio.get("ports", [])
+        )
+
     # Act
-    con_puertos = {nombre for nombre, servicio in compose.items() if "ports" in servicio}
+    con_puertos = {nombre for nombre, servicio in compose.items() if expuesto(servicio)}
     # Assert
     assert con_puertos == {"caddy"}
     assert {"80:80", "443:443"} <= set(compose["caddy"]["ports"])
+    # La API se publica solo en loopback para el MCP (SPEC-078); no se expone a internet.
+    assert compose["api"]["ports"] == ["127.0.0.1:8000:8000"]
     assert compose["api"]["env_file"] == ["app.env"]
     assert compose["caddy"]["depends_on"]["api"]["condition"] == "service_healthy"
 
@@ -82,6 +91,14 @@ def test_caddy_enruta_el_frontend_y_la_api_con_https():
     assert "{$DOMINIO} {" in caddy and "api.{$DOMINIO} {" in caddy
     assert "reverse_proxy frontend:80" in caddy and "reverse_proxy api:8000" in caddy
     assert "Strict-Transport-Security" in caddy
+
+
+def test_caddy_no_expone_el_mcp_por_la_url_publica():
+    # Arrange / Act
+    caddy = (DEPLOY / "Caddyfile").read_text(encoding="utf-8")
+    # Assert: el MCP propio es solo loopback (SPEC-078), así que la ruta pública lo bloquea.
+    assert "@mcp path /mcp" in caddy
+    assert "respond @mcp 404" in caddy
 
 
 def test_el_script_de_despliegue_espera_healthy_y_cierra_la_sesion_del_registry():

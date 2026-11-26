@@ -14,11 +14,11 @@ WORKDIR /app
 
 # Dependencias primero (capa cacheable: solo cambia si cambia el lock)
 COPY pyproject.toml uv.lock README.md LICENSE ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project --extra voyage
 
 # Código del paquete (editable: config.py ubica data/ relativo a /app)
 COPY src/ src/
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --extra voyage
 
 # ---------- Etapa 2: runtime ----------
 FROM python:3.13-slim AS runtime
