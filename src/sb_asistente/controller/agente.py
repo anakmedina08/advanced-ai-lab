@@ -38,6 +38,7 @@ from sb_asistente.config import (
 from sb_asistente.controller import mercado as mercado_ctrl
 from sb_asistente.controller import recomendador
 from sb_asistente.controller.chat import FUERA
+from sb_asistente.model import panel
 from sb_asistente.model.agente import (
     TOOLS_CON_FUENTES,
     ContextoTurno,
@@ -391,6 +392,7 @@ class AgenteAsistente:
         turno.ms_total = round((time.perf_counter() - inicio) * 1000, 1)
         if self.trazas is not None:
             registrar_turno(self.trazas, linea_turno(turno.a_dict(), turno.ms_total, error))
+        panel.turno_trazado(turno.ms_total, error)  # panel en vivo (SPEC-082), solo con LangSmith activo
         return turno
 
     def transmitir(
