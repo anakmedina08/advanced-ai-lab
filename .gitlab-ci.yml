@@ -37,6 +37,23 @@ variables:
 default:
   interruptible: true
 
+# Panel en vivo de Yellowdata (SPEC-082): cada job avisa su resultado al grafo de /casos. Opcional:
+# sin las variables de CI enmascaradas AGENT_EVENTS_URL y AGENT_EVENTS_TOKEN no hace nada. El log
+# muestra el nombre de la variable, nunca su valor, y un fallo del aviso no cambia el resultado del job.
+.aviso_panel:
+  after_script:
+    - &aviso_panel |
+      if [ -n "$AGENT_EVENTS_URL" ] && [ -n "$AGENT_EVENTS_TOKEN" ]; then
+        OK=false; [ "$CI_JOB_STATUS" = "success" ] && OK=true
+        export CUERPO="{\"evento\":\"CI\",\"agente\":\"gitlab-ci\",\"herramienta\":\"$CI_JOB_NAME\",\"rama\":\"$CI_COMMIT_REF_NAME\",\"comando\":\"$CI_PROJECT_NAME@$CI_COMMIT_SHORT_SHA\",\"ok\":$OK}"
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -c 'import os, urllib.request as u; u.urlopen(u.Request(os.environ["AGENT_EVENTS_URL"], data=os.environ["CUERPO"].encode(), headers={"Authorization": "Bearer " + os.environ["AGENT_EVENTS_TOKEN"], "Content-Type": "application/json"}), timeout=10)' || true
+        else
+          command -v curl >/dev/null 2>&1 || apk add --no-cache -q curl >/dev/null 2>&1 || true
+          curl -fsS -m 10 -o /dev/null -H "Authorization: Bearer $AGENT_EVENTS_TOKEN" -H "Content-Type: application/json" --data "$CUERPO" "$AGENT_EVENTS_URL" || true
+        fi
+      fi
+
 # Base de los jobs de Python. No va en `default`: el job `secret_detection` de la plantilla
 # usa su propia imagen (sin uv) y heredaría el `before_script`, fallando con «uv: not found».
 .uv:
@@ -47,6 +64,8 @@ default:
     paths: [.uv-cache]
   before_script:
     - uv sync --frozen
+  after_script:
+    - *aviso_panel
 
 lint:
   extends: .uv
@@ -84,6 +103,7 @@ test:
     - printf '%s' "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   after_script:
     - docker logout "$CI_REGISTRY"
+    - *aviso_panel
 
 build_api:
   extends: .docker
@@ -156,3 +176,4 @@ deploy:
     - curl --fail --silent --show-error --retry 15 --retry-delay 6 --retry-all-errors -o /dev/null "https://app.$DOMINIO/"
   after_script:
     - rm -f ~/.ssh/id_ed25519
+    - *aviso_panel

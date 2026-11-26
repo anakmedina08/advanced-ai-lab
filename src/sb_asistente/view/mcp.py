@@ -9,6 +9,7 @@ el gateway no autentica por usuario (ver ``controller.agente.tools_mcp``).
 """
 
 from functools import lru_cache
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from mcp.server.mcpserver import MCPServer
@@ -25,10 +26,29 @@ from sb_asistente.controller.agente import (
     Vehiculo,
     Vivienda,
 )
+from sb_asistente.model.panel import tool_por_mcp
+
+
+class _ConAviso:
+    """Tool envuelta: avisa al panel en vivo (SPEC-082) y delega en el ``BaseTool`` de LangChain."""
+
+    def __init__(self, nombre: str, tool: BaseTool) -> None:
+        self.nombre = nombre
+        self.tool = tool
+
+    def invoke(self, entrada: dict[str, Any]) -> Any:  # noqa: ANN401 - devuelve lo mismo que la tool
+        """Publica solo el nombre de la tool (nunca sus argumentos) y la ejecuta."""
+        tool_por_mcp(self.nombre)
+        return self.tool.invoke(entrada)
 
 
 def crear_mcp(tools: dict[str, BaseTool]) -> MCPServer:
-    """Servidor MCP con las tools dadas, como adaptador delgado sobre LangChain (sin duplicar lógica)."""
+    """Servidor MCP con las tools dadas, como adaptador delgado sobre LangChain (sin duplicar lógica).
+
+    Cada llamada se avisa al panel en vivo de Yellowdata como un evento del canal WhatsApp, porque en
+    producción el único cliente del MCP es el gateway de OpenClaw.
+    """
+    tools = {nombre: _ConAviso(nombre, tool) for nombre, tool in tools.items()}  # type: ignore[misc]
     server = MCPServer(
         name="sb-asistente",
         title="Asistente Seguros Bolívar (Yelo)",
