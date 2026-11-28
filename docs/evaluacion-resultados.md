@@ -134,6 +134,44 @@ Es un sesgo conocido del banco y no escala a paráfrasis («me chocaron»). El n
 híbrido indica que el fragmento correcto llega, pero no siempre en la primera posición. La
 siguiente mejora es un *re-ranker*.
 
+## 6. Proyección t-SNE de los embeddings · SPEC-084
+
+Mapa 2D de los 414 fragmentos del índice Qdrant y de las 21 preguntas del banco que están dentro del
+alcance, embebidos con el mismo modelo del índice (`embeddinggemma`). Cada pregunta se marca como
+acierto (estrella verde) o fallo (X roja) de la búsqueda densa sola: top-10 por coseno con un
+fragmento relevante según sus palabras clave (la regla de §5). Script:
+`uv run python scripts/proyectar_embeddings.py` (corrida `proyeccion-tsne` en MLflow, experimento
+`recuperacion`).
+
+![t-SNE de los embeddings](figuras/tsne-embeddings.png)
+
+| Medida | Valor |
+|---|---|
+| Fragmentos | 414 |
+| Sección más grande | `seguros_davivienda`: 253 (61 %) |
+| *Silhouette* por sección (coseno, espacio original) | −0,04 |
+| hit@10 de la búsqueda densa sola | 67 % (14/21) |
+| Fallos | C02, P02, P03, P05, P07, P10, P11 |
+
+**Diagnóstico.**
+- **Desbalance:** el 61 % del corpus son páginas de Seguros Davivienda. Esa nube azul ocupa el centro
+  del mapa y **P03 (hogar), P05 (arrendamiento) y P07 (vida) caen dentro de ella**: los vecinos más
+  cercanos son páginas de Davivienda que mencionan esos productos, y desplazan a la página propia del
+  producto. Es la causa principal de los fallos densos.
+- **Secciones subrepresentadas:** `movilidad` tiene 10 fragmentos y `salud`, 4. **P02 (todo riesgo) y
+  P11 (carros eléctricos)** quedan lejos de cualquier grupo de movilidad: hay poca evidencia que
+  recuperar.
+- **Lo que sí agrupa bien:** la ARL forma un grupo propio (abajo) y P09 (afiliación ARL) acierta; los
+  canales (C01, C03 a C08) aciertan casi todos.
+- **Silhouette ≈ 0:** las secciones del sitio no son temas semánticos separados. Davivienda vende los
+  mismos productos (vida, hogar, deudores), así que sus fragmentos se mezclan con los de cada sección.
+- **C02 (línea 01 8000):** la respuesta es un número exacto; el embedding denso no lo distingue. Es el
+  caso que resuelve la parte léxica (BM25) del híbrido, como se vio en §3.
+
+**Qué se hace con esto.** Confirma la decisión de §5: el agente usa el híbrido BM25 + Qdrant, que
+recupera los números exactos. Las mejoras siguientes son submuestrear o filtrar por *payload* la
+sección Davivienda cuando la pregunta no la menciona, y ampliar el corpus de movilidad y salud.
+
 ## Pendiente
 
 - **T-66:** subir el banco de preguntas como dataset de LangSmith (`make langsmith-dataset`).
