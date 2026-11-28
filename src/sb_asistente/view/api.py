@@ -43,6 +43,7 @@ from sb_asistente.config import (
     MLFLOW_PUERTO,
     RECO_DIR,
     RECO_K,
+    VISION_PROVIDERS,
 )
 from sb_asistente.controller import acceso as acceso_ctrl
 from sb_asistente.controller import assistant as assistant_ctrl
@@ -586,8 +587,11 @@ async def analizar_foto(
         _exigir_codigo(codigo)
     datos = await archivo.read()
     llm = proveedor or LLM_PROVIDER
+    # La escena exige un modelo con visión: si el proveedor por defecto solo procesa texto (p. ej.
+    # DeepSeek), se usa el de visión; un proveedor pedido de forma explícita se respeta (y da 503).
+    llm_vision = proveedor or (LLM_PROVIDER if LLM_PROVIDER in VISION_PROVIDERS else VISION_PROVIDERS[0])
     try:
-        interprete = fabrica_interprete(llm) if interpretar else None
+        interprete = fabrica_interprete(llm_vision) if interpretar else None
         asistente = fabrica_qa(llm) if responder else None
         analisis = await run_in_threadpool(
             vision.analizar_foto, datos, detector(), asistente, interprete, recomendar
