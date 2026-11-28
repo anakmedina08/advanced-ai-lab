@@ -70,12 +70,16 @@ dev = [
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "pytest-playwright>=0.10.0",
     "ruff>=0.17.2",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# Las pruebas e2e (SPEC-083) recorren la app desplegada: dependen de la red, así que la suite normal
+# y la CI las saltan. Auditoría: uv run pytest tests/e2e -m e2e
+addopts = "-ra -m 'not e2e'"
+markers = ["e2e: auditoría con Playwright sobre la app desplegada (requiere red)"]
 
 [tool.coverage.run]
 source = ["sb_asistente"]
