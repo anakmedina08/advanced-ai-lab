@@ -1,0 +1,30 @@
+{
+  "metodo": "tsne",
+  "modelo_embeddings": "embeddinggemma:latest",
+  "fragmentos": 414,
+  "preguntas": 21,
+  "secciones": {
+    "seguros_davivienda": 253,
+    "arl": 49,
+    "canales_y_servicio": 41,
+    "hogar_y_mascotas": 31,
+    "vida_y_ahorro": 17,
+    "movilidad": 10,
+    "institucional": 5,
+    "otros": 4,
+    "salud": 4
+  },
+  "seccion_mayor": "seguros_davivienda",
+  "proporcion_seccion_mayor": 0.611,
+  "silhouette_secciones_coseno": -0.038,
+  "hit@10_denso": 0.667,
+  "fallos_top10": [
+    "C02",
+    "P02",
+    "P03",
+    "P05",
+    "P07",
+    "P10",
+    "P11"
+  ]
+}
